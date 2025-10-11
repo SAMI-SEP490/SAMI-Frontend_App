@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -15,11 +15,14 @@ import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
-import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
+import { GuestRegistrationContext } from "../../contexts/GuestRegistrationContext";
 
 export default function CreateGuestRegistration() {
   const navigation = useNavigation();
+  const { guestRegistration, setGuestRegistration } = useContext(
+    GuestRegistrationContext
+  ); // 👈 lấy context
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -29,7 +32,6 @@ export default function CreateGuestRegistration() {
   );
   const [reason, setReason] = useState("Thăm người thân");
   const [note, setNote] = useState("");
-
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
 
@@ -52,7 +54,7 @@ export default function CreateGuestRegistration() {
   };
 
   const handleCancel = () => {
-    navigation.navigate("Dashboard");
+    navigation.goBack(); // 👈 quay lại trang trước
   };
 
   const handleSubmit = () => {
@@ -69,20 +71,27 @@ export default function CreateGuestRegistration() {
       return;
     }
 
-    const payload = {
-      fullName,
+    const newGuest = {
+      id: guestRegistration.length
+        ? Math.max(...guestRegistration.map((g) => g.id)) + 1
+        : 1, // Tạo ID tự động
+      name: fullName,
       phone,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       reason,
       note,
+      status: "Chờ xử lý", // 👈 thêm trạng thái mặc định
     };
 
-    console.log("CreateGuestRegistration payload:", payload);
+    // 👇 Cập nhật vào context
+    setGuestRegistration([...guestRegistration, newGuest]);
+
     Alert.alert("Thành công", "Đăng ký tạm trú đã được gửi.", [
       {
         text: "OK",
-        onPress: () => navigation.navigate("Dashboard"),
+        onPress: () =>
+          navigation.navigate("Main", { screen: "GuestRegistrationList" }), // 👈 quay lại danh sách
       },
     ]);
   };
@@ -92,7 +101,6 @@ export default function CreateGuestRegistration() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* Header */}
       <View style={{ paddingTop: spacing.lg }}>
         <Header />
       </View>
@@ -101,7 +109,6 @@ export default function CreateGuestRegistration() {
         style={styles.container}
         contentContainerStyle={{ padding: 20 }}
       >
-        {/* Form card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Đăng kí tạm trú cho khách</Text>
 
@@ -175,7 +182,6 @@ export default function CreateGuestRegistration() {
             onChangeText={setNote}
           />
 
-          {/* Buttons */}
           <View style={styles.buttonsRow}>
             <Pressable
               style={[styles.btn, styles.btnCancel]}
@@ -200,19 +206,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f4f6fa",
-  },
-  header: {
-    backgroundColor: "#2b6be6",
-    height: 56,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  headerText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 18,
   },
   card: {
     backgroundColor: "#fff",
