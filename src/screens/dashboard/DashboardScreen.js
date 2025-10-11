@@ -14,6 +14,7 @@ import {
   MaterialCommunityIcons,
   MaterialIcons,
 } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 const FEATURES = [
   {
@@ -55,7 +56,7 @@ const FEATURES = [
   {
     key: "maintenance",
     label: "Yêu cầu bảo trì",
-    icon: (p) => <MaterialIcons name="build-outline" size={26} color={p} />,
+    icon: (p) => <MaterialIcons name="build" size={26} color={p} />,
     bg: "#FFF5F0",
   },
   {
@@ -69,6 +70,8 @@ const FEATURES = [
 ];
 
 export default function DashboardScreen() {
+  const navigation = useNavigation();
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle="light-content" />
@@ -171,7 +174,11 @@ export default function DashboardScreen() {
             }}
             renderItem={({ item }) => (
               <Pressable
-                onPress={() => {}}
+                onPress={() => {
+                  if (item.key === "residence") {
+                    navigation.navigate("CreateGuestRegistration");
+                  }
+                }}
                 style={{ width: "30%", alignItems: "center", gap: 8 }}
               >
                 <View
