@@ -14,6 +14,9 @@ import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import Header from "../../components/Header";
+import { colors } from "../../theme/colors";
+import { spacing } from "../../theme/spacing";
 
 export default function CreateGuestRegistration() {
   const navigation = useNavigation();
@@ -89,15 +92,15 @@ export default function CreateGuestRegistration() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      {/* Header */}
+      <View style={{ paddingTop: spacing.lg }}>
+        <Header />
+      </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ padding: 20 }}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerText}>SAMI</Text>
-        </View>
-
         {/* Form card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Đăng kí tạm trú cho khách</Text>

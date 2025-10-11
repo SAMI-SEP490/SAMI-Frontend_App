@@ -15,6 +15,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import Header from "../../components/Header";
 
 const FEATURES = [
   {
@@ -87,49 +88,7 @@ export default function DashboardScreen() {
           borderBottomRightRadius: 20,
         }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: spacing.lg,
-          }}
-        >
-          <Text
-            style={{ color: "white", fontSize: 18, fontWeight: "800", flex: 1 }}
-          >
-            SAMI
-          </Text>
-
-          <View style={{ marginRight: spacing.md }}>
-            <Ionicons name="notifications-outline" size={24} color="#fff" />
-            <View
-              style={{
-                position: "absolute",
-                top: -6,
-                right: -6,
-                backgroundColor: "#EF4444",
-                borderRadius: 10,
-                paddingHorizontal: 5,
-                height: 18,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>
-                3
-              </Text>
-            </View>
-          </View>
-
-          <Ionicons
-            name="person-circle-outline"
-            size={26}
-            color="#fff"
-            style={{ marginRight: spacing.md }}
-          />
-          <Ionicons name="share-social-outline" size={22} color="#fff" />
-        </View>
-
+        <Header />
         <Text style={{ color: "#CFE1FF", fontSize: 14, marginBottom: 6 }}>
           Xin chào!
         </Text>
