@@ -4,6 +4,7 @@ import TabNavigation from "./TabNavigation";
 import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrationScreen";
 import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrationScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
+import EditProfileScreen from "../screens/profile/EditProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -20,6 +21,7 @@ export default function RootNavigation() {
         component={UpdateGuestRegistrationScreen}
       />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </Stack.Navigator>
   );
 }

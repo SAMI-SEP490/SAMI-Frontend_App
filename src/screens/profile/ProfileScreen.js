@@ -82,7 +82,7 @@ export default function ProfileScreen({ navigation }) {
             <Button
               title="Sửa"
               variant="filled"
-              onPress={() => {}}
+              onPress={() => navigation.navigate("EditProfile", { user })}
               style={{ flex: 1, backgroundColor: colors.brand }}
             />
           </View>
