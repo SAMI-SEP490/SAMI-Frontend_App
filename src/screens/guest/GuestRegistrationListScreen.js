@@ -12,7 +12,7 @@ import { spacing } from "../../theme/spacing";
 import { GuestRegistrationContext } from "../../contexts/GuestRegistrationContext";
 import { useNavigation } from "@react-navigation/native";
 
-export default function GuestRegistrationList() {
+export default function GuestRegistrationListScreen() {
   const { guestRegistration } = useContext(GuestRegistrationContext); // 👈 lấy data từ context
   const navigation = useNavigation();
   return (
@@ -27,7 +27,7 @@ export default function GuestRegistrationList() {
         <TouchableOpacity style={styles.addButton}>
           <Text
             style={styles.addButtonText}
-            onPress={() => navigation.navigate("CreateGuestRegistration")}
+            onPress={() => navigation.navigate("CreateGuestRegistrationScreen")}
           >
             Tạo đơn
           </Text>
@@ -75,7 +75,9 @@ export default function GuestRegistrationList() {
                 <TouchableOpacity
                   style={styles.iconButton}
                   onPress={() =>
-                    navigation.navigate("UpdateGuestRegistration", { guest })
+                    navigation.navigate("UpdateGuestRegistrationScreen", {
+                      guest,
+                    })
                   }
                 >
                   <MaterialIcons name="edit" size={20} color="#007bff" />

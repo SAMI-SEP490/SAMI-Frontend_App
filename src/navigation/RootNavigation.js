@@ -1,9 +1,11 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import TabNavigation from "./TabNavigation";
+import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrationScreen";
+import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrationScreen";
+import ProfileScreen from "../screens/profile/ProfileScreen";
+import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
-import CreateGuestRegistration from "../screens/guest/CreateGuestRegistration";
-import UpdateGuestRegistration from "../screens/guest/UpdateGuestRegistration";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
@@ -11,17 +13,20 @@ export default function RootNavigation() {
       <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={TabNavigation} />
       <Stack.Screen
-        name="CreateGuestRegistration"
-        component={CreateGuestRegistration}
+        name="CreateGuestRegistrationScreen"
+        component={CreateGuestRegistrationScreen}
       />
       <Stack.Screen
-        name="UpdateGuestRegistration"
-        component={UpdateGuestRegistration}
+        name="UpdateGuestRegistrationScreen"
+        component={UpdateGuestRegistrationScreen}
       />
+      
       <Stack.Screen
         name="Login"
         component={LoginScreen}
        />
-       </Stack.Navigator>
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+    </Stack.Navigator>
   );
 }
