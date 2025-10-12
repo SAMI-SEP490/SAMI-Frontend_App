@@ -1,20 +1,22 @@
+// src/components/Header.js
 import React from "react";
+import { View, Text, Pressable } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
-import {
-  SafeAreaView,
-  StatusBar,
-  View,
-  Text,
-  FlatList,
-  Pressable,
-} from "react-native";
-import {
-  Ionicons,
-  MaterialCommunityIcons,
-  MaterialIcons,
-} from "@expo/vector-icons";
-function Header() {
+
+export default function Header() {
+  const navigation = useNavigation();
+
+  // Vì 'Profile' khai báo ở RootNavigation, còn Header dùng trong màn thuộc Tab,
+  // nên cần "leo" lên navigator cha (Root) rồi mới navigate.
+  const goProfile = () => {
+    const rootNav =
+      navigation.getParent()?.getParent?.() || navigation.getParent();
+    rootNav?.navigate("Profile");
+  };
+
   return (
     <View
       style={{
@@ -39,6 +41,7 @@ function Header() {
           SAMI
         </Text>
 
+        {/* Chuông + badge */}
         <View style={{ marginRight: spacing.md }}>
           <Ionicons name="notifications-outline" size={24} color="#fff" />
           <View
@@ -60,16 +63,13 @@ function Header() {
           </View>
         </View>
 
-        <Ionicons
-          name="person-circle-outline"
-          size={26}
-          color="#fff"
-          style={{ marginRight: spacing.md }}
-        />
+        {/* Icon người → bấm để mở Profile */}
+        <Pressable onPress={goProfile} style={{ marginRight: spacing.md }}>
+          <Ionicons name="person-circle-outline" size={26} color="#fff" />
+        </Pressable>
+
         <Ionicons name="share-social-outline" size={22} color="#fff" />
       </View>
     </View>
   );
 }
-
-export default Header;

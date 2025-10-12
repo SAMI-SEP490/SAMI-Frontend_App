@@ -3,6 +3,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import TabNavigation from "./TabNavigation";
 import CreateGuestRegistration from "../screens/guest/CreateGuestRegistration";
 import UpdateGuestRegistration from "../screens/guest/UpdateGuestRegistration";
+import ProfileScreen from "../screens/profile/ProfileScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
@@ -17,6 +19,7 @@ export default function RootNavigation() {
         name="UpdateGuestRegistration"
         component={UpdateGuestRegistration}
       />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 }
