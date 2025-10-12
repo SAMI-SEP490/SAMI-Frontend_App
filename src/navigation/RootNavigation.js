@@ -1,8 +1,8 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import TabNavigation from "./TabNavigation";
-import CreateGuestRegistration from "../screens/guest/CreateGuestRegistration";
-import UpdateGuestRegistration from "../screens/guest/UpdateGuestRegistration";
+import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrationScreen";
+import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrationScreen";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
@@ -10,12 +10,12 @@ export default function RootNavigation() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={TabNavigation} />
       <Stack.Screen
-        name="CreateGuestRegistration"
-        component={CreateGuestRegistration}
+        name="CreateGuestRegistrationScreen"
+        component={CreateGuestRegistrationScreen}
       />
       <Stack.Screen
-        name="UpdateGuestRegistration"
-        component={UpdateGuestRegistration}
+        name="UpdateGuestRegistrationScreen"
+        component={UpdateGuestRegistrationScreen}
       />
     </Stack.Navigator>
   );
