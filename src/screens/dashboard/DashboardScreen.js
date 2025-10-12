@@ -57,7 +57,7 @@ const FEATURES = [
   },
   {
     key: "maintenance",
-    label: "Yêu cầu bảo trì",
+    label: "Bảo trì",
     icon: (p) => <MaterialIcons name="build" size={26} color={p} />,
     bg: "#FFF5F0",
   },
@@ -137,6 +137,9 @@ export default function DashboardScreen() {
                 onPress={() => {
                   if (item.key === "residence") {
                     navigation.navigate("GuestRegistrationListScreen");
+                  }
+                  if (item.key === "maintenance") {
+                    navigation.navigate("MaintenanceListScreen");
                   }
                 }}
                 style={{ width: "30%", alignItems: "center", gap: 8 }}
