@@ -17,6 +17,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Header from "../../components/Header";
 
+
 const FEATURES = [
   {
     key: "bill",
