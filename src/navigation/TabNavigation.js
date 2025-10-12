@@ -1,8 +1,8 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import DashboardScreen from "../screens/dashboard/DashboardScreen";
-import CreateGuestRegistration from "../screens/guest/CreateGuestRegistration";
-import GuestRegistrationList from "../screens/guest/GuestRegistrationList";
+import CreateGuestRegistration from "../screens/guest/CreateGuestRegistrationScreen";
+import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -15,8 +15,8 @@ export default function TabNavigation() {
         options={{ title: "Trang chủ" }}
       />
       <Tab.Screen
-        name="GuestRegistrationList"
-        component={GuestRegistrationList}
+        name="GuestRegistrationListScreen"
+        component={GuestRegistrationListScreen}
         options={{ title: "Danh sách đăng ký khách" }}
       />
     </Tab.Navigator>

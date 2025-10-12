@@ -12,88 +12,96 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
-import { spacing } from "../../theme/spacing";
 import { GuestRegistrationContext } from "../../contexts/GuestRegistrationContext";
 
-export default function CreateGuestRegistration() {
+export default function UpdateGuestRegistrationScreen() {
   const navigation = useNavigation();
-  const { guestRegistration, setGuestRegistration } = useContext(
-    GuestRegistrationContext
-  ); // 👈 lấy context
+  const route = useRoute();
+  const { guest } = route.params;
 
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(
-    new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+  const { updateGuestRegistration, deleteGuestRegistration } = useContext(
+    GuestRegistrationContext
   );
-  const [reason, setReason] = useState("Thăm người thân");
-  const [note, setNote] = useState("");
+
+  // Hàm parse DD/MM/YYYY sang Date
+  const parseDate = (str) => {
+    if (!str) return new Date();
+    const [dd, mm, yyyy] = str.split("/");
+    return new Date(yyyy, mm - 1, dd);
+  };
+
+  const [fullName, setFullName] = useState(guest.name || "");
+  const [phone, setPhone] = useState(guest.phone || "");
+  const [startDate, setStartDate] = useState(parseDate(guest.startDate));
+  const [endDate, setEndDate] = useState(parseDate(guest.endDate));
+  const [reason, setReason] = useState(guest.reason || "Thăm người thân");
+  const [note, setNote] = useState(guest.note || "");
+
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
 
-  function formatDate(d) {
+  const formatDate = (d) => {
     if (!d) return "";
     const dd = String(d.getDate()).padStart(2, "0");
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const yyyy = d.getFullYear();
     return `${dd}/${mm}/${yyyy}`;
-  }
-
-  const onChangeStart = (event, selectedDate) => {
-    setShowStartPicker(false);
-    if (selectedDate) setStartDate(selectedDate);
   };
 
-  const onChangeEnd = (event, selectedDate) => {
-    setShowEndPicker(false);
-    if (selectedDate) setEndDate(selectedDate);
-  };
-
-  const handleCancel = () => {
-    navigation.goBack(); // 👈 quay lại trang trước
-  };
-
+  // Update guest
   const handleSubmit = () => {
-    if (!fullName.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập họ và tên.");
+    if (!fullName.trim() || !phone.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin.");
       return;
     }
-    if (!phone.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại.");
-      return;
-    }
+
     if (endDate < startDate) {
       Alert.alert("Lỗi", "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.");
       return;
     }
 
-    const newGuest = {
-      id: guestRegistration.length
-        ? Math.max(...guestRegistration.map((g) => g.id)) + 1
-        : 1, // Tạo ID tự động
+    const updated = {
+      ...guest,
       name: fullName,
       phone,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
       reason,
       note,
-      status: "Chờ xử lý", // 👈 thêm trạng thái mặc định
     };
 
-    // 👇 Cập nhật vào context
-    setGuestRegistration([...guestRegistration, newGuest]);
+    updateGuestRegistration(updated);
 
-    Alert.alert("Thành công", "Đăng ký tạm trú đã được gửi.", [
+    Alert.alert("Thành công", "Cập nhật đăng ký thành công.", [
       {
         text: "OK",
         onPress: () =>
-          navigation.navigate("Main", { screen: "GuestRegistrationList" }), // 👈 quay lại danh sách
+          navigation.navigate("Main", { screen: "GuestRegistrationList" }),
       },
     ]);
+  };
+
+  // Delete guest
+  const handleDelete = () => {
+    Alert.alert(
+      "Xác nhận",
+      "Bạn có chắc chắn muốn xóa?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Chấp nhận",
+          style: "destructive",
+          onPress: () => {
+            deleteGuestRegistration(guest.id);
+            navigation.navigate("Main", { screen: "GuestRegistrationList" });
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -101,29 +109,24 @@ export default function CreateGuestRegistration() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={{ paddingTop: spacing.lg }}>
-        <Header />
-      </View>
-
+      <Header />
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ padding: 20 }}
       >
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Đăng kí tạm trú cho khách</Text>
+          <Text style={styles.cardTitle}>Cập nhật thông tin khách</Text>
 
           <Text style={styles.label}>Tên đầy đủ:</Text>
           <TextInput
             style={styles.input}
-            placeholder="VD: Nguyễn Văn A"
             value={fullName}
             onChangeText={setFullName}
           />
 
-          <Text style={styles.label}>Sđt của khách:</Text>
+          <Text style={styles.label}>SĐT của khách:</Text>
           <TextInput
             style={styles.input}
-            placeholder="VD: 0912123456"
             keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
@@ -141,7 +144,10 @@ export default function CreateGuestRegistration() {
             <DateTimePicker
               value={startDate}
               mode="date"
-              onChange={onChangeStart}
+              onChange={(e, d) => {
+                setShowStartPicker(false);
+                if (d) setStartDate(d);
+              }}
             />
           )}
 
@@ -157,7 +163,10 @@ export default function CreateGuestRegistration() {
             <DateTimePicker
               value={endDate}
               mode="date"
-              onChange={onChangeEnd}
+              onChange={(e, d) => {
+                setShowEndPicker(false);
+                if (d) setEndDate(d);
+              }}
             />
           )}
 
@@ -171,29 +180,35 @@ export default function CreateGuestRegistration() {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Thông tin thêm:</Text>
+          <Text style={styles.label}>Ghi chú:</Text>
           <TextInput
             style={[styles.input, styles.textarea]}
             multiline
             numberOfLines={4}
-            placeholder="Ghi chú thêm tại đây"
-            textAlignVertical="top"
             value={note}
             onChangeText={setNote}
           />
 
           <View style={styles.buttonsRow}>
             <Pressable
+              style={[styles.btn, styles.btnDelete]}
+              onPress={handleDelete}
+            >
+              <Text style={[styles.btnText, { color: "#fff" }]}>Xóa</Text>
+            </Pressable>
+
+            <Pressable
               style={[styles.btn, styles.btnCancel]}
-              onPress={handleCancel}
+              onPress={() => navigation.goBack()}
             >
               <Text style={styles.btnText}>Hủy</Text>
             </Pressable>
+
             <Pressable
               style={[styles.btn, styles.btnSubmit]}
               onPress={handleSubmit}
             >
-              <Text style={[styles.btnText, { color: "#fff" }]}>Gửi</Text>
+              <Text style={[styles.btnText, { color: "#fff" }]}>Cập nhật</Text>
             </Pressable>
           </View>
         </View>
@@ -203,10 +218,7 @@ export default function CreateGuestRegistration() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f4f6fa",
-  },
+  container: { flex: 1, backgroundColor: "#f4f6fa" },
   card: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -214,7 +226,6 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
   cardTitle: {
@@ -223,11 +234,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     marginBottom: 16,
   },
-  label: {
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 6,
-  },
+  label: { fontWeight: "600", marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -235,11 +242,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 12,
-    backgroundColor: "#fff",
   },
-  textarea: {
-    minHeight: 100,
-  },
+  textarea: { minHeight: 100 },
   dateRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -251,9 +255,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 12,
   },
-  dateText: {
-    color: "#111",
-  },
+  dateText: { color: "#111" },
   pickerWrap: {
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -261,26 +263,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     overflow: "hidden",
   },
-  buttonsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 10,
-  },
+  buttonsRow: { flexDirection: "row", justifyContent: "center", marginTop: 10 },
   btn: {
-    minWidth: 110,
+    minWidth: 70,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",
     marginHorizontal: 8,
   },
-  btnCancel: {
-    backgroundColor: "#6b7280",
-  },
-  btnSubmit: {
-    backgroundColor: "#2b6be6",
-  },
-  btnText: {
-    fontWeight: "700",
-    color: "#fff",
-  },
+  btnCancel: { backgroundColor: "#6b7280" },
+  btnSubmit: { backgroundColor: "#2b6be6" },
+  btnDelete: { backgroundColor: "#dc2626" },
+  btnText: { fontWeight: "700", color: "#fff" },
 });

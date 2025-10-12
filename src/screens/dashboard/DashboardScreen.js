@@ -136,7 +136,7 @@ export default function DashboardScreen() {
               <Pressable
                 onPress={() => {
                   if (item.key === "residence") {
-                    navigation.navigate("GuestRegistrationList");
+                    navigation.navigate("GuestRegistrationListScreen");
                   }
                 }}
                 style={{ width: "30%", alignItems: "center", gap: 8 }}
