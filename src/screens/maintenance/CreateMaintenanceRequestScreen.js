@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  StatusBar
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -32,6 +33,7 @@ const CreateMaintenanceRequestScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
       <Header />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Tạo đơn bảo trì</Text>
