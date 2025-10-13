@@ -1,4 +1,3 @@
-// src/screens/profile/ProfileScreen.js
 import React from "react";
 import { SafeAreaView, ScrollView, View, Text, Image } from "react-native";
 import Header from "../../components/Header";
@@ -20,7 +19,6 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header xanh bạn đã dùng ở các màn khác */}
       <Header />
 
       <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
@@ -36,7 +34,6 @@ export default function ProfileScreen({ navigation }) {
             elevation: 2,
           }}
         >
-          {/* Avatar */}
           <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
             <Image
               source={{ uri: user.avatar }}
@@ -44,7 +41,6 @@ export default function ProfileScreen({ navigation }) {
             />
           </View>
 
-          {/* Thông tin cơ bản */}
           <Section title="Thông tin cơ bản">
             <InfoRow label="Tên" value={user.name} />
             <InfoRow label="Ngày sinh" value={user.dob} />
@@ -54,13 +50,11 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={{ height: spacing.lg }} />
 
-          {/* Thông tin liên hệ */}
           <Section title="Thông tin liên hệ">
             <InfoRow label="Email" value={user.email} />
             <InfoRow label="SĐT" value={user.phone} />
           </Section>
 
-          {/* Nút hành động */}
           <View
             style={{
               flexDirection: "row",
@@ -106,7 +100,6 @@ export default function ProfileScreen({ navigation }) {
 function Section({ title, children }) {
   return (
     <View>
-      {/* Thanh tiêu đề xanh */}
       <View
         style={{
           alignSelf: "flex-start",
@@ -120,7 +113,6 @@ function Section({ title, children }) {
         <Text style={{ color: "#fff", fontWeight: "700" }}>{title}</Text>
       </View>
 
-      {/* Khung nội dung */}
       <View
         style={{
           borderWidth: 1,

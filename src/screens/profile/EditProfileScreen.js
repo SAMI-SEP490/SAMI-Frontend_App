@@ -1,4 +1,3 @@
-// src/screens/profile/EditProfileScreen.js
 import React, { useState } from "react";
 import { SafeAreaView, ScrollView, View, Text, Image, Alert, Pressable } from "react-native";
 import Header from "../../components/Header";
@@ -30,7 +29,6 @@ export default function EditProfileScreen({ route, navigation }) {
     if (!name.trim()) return Alert.alert("Thiếu thông tin", "Vui lòng nhập Họ tên.");
     if (!email.trim()) return Alert.alert("Thiếu thông tin", "Vui lòng nhập Email.");
 
-    // TODO: gọi API/Context để lưu. Demo: chỉ hiện kết quả và quay lại
     Alert.alert("Đã lưu", "Thông tin đã được cập nhật (demo).", [
       { text: "OK", onPress: () => navigation.goBack() },
     ]);
@@ -53,7 +51,6 @@ export default function EditProfileScreen({ route, navigation }) {
             elevation: 2,
           }}
         >
-          {/* Avatar + nút đổi ảnh (demo: chưa xử lý chọn ảnh) */}
           <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
             <View>
               <Image source={{ uri: avatar }} style={{ width: 120, height: 120, borderRadius: 60 }} />
@@ -76,7 +73,6 @@ export default function EditProfileScreen({ route, navigation }) {
             </View>
           </View>
 
-          {/* Thông tin cơ bản */}
           <Section title="Thông tin cơ bản">
             <TextField label="Tên" value={name} onChangeText={setName} placeholder="VD: Nguyễn Văn A" />
             <TextField label="Ngày sinh" value={dob} onChangeText={setDob} placeholder="VD: 1/1/2000" />
@@ -86,13 +82,11 @@ export default function EditProfileScreen({ route, navigation }) {
 
           <View style={{ height: spacing.lg }} />
 
-          {/* Thông tin liên hệ */}
           <Section title="Thông tin liên hệ">
             <TextField label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
             <TextField label="SĐT" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           </Section>
 
-          {/* Nút hành động */}
           <View style={{ flexDirection: "row", gap: spacing.md, marginTop: spacing.lg }}>
             <Button
               title="Quay lại"

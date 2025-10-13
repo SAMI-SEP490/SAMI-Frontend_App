@@ -17,7 +17,6 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Header from "../../components/Header";
 
-
 const FEATURES = [
   {
     key: "bill",
@@ -78,7 +77,6 @@ export default function DashboardScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle="light-content" />
 
-      {/* HEADER XANH */}
       <View
         style={{
           backgroundColor: colors.brand,
@@ -98,9 +96,7 @@ export default function DashboardScreen() {
         </Text>
       </View>
 
-      {/* BODY */}
       <View style={{ flex: 1, paddingHorizontal: spacing.xl, marginTop: -18 }}>
-        {/* CARD: Chức năng */}
         <View
           style={{
             backgroundColor: colors.card,
@@ -173,7 +169,6 @@ export default function DashboardScreen() {
 
         <View style={{ height: spacing.lg }} />
 
-        {/* CARD: Thông tin căn hộ */}
         <View
           style={{
             backgroundColor: colors.card,
