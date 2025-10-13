@@ -5,6 +5,7 @@ import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrat
 import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrationScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
+import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -19,6 +20,10 @@ export default function RootNavigation() {
       <Stack.Screen
         name="UpdateGuestRegistrationScreen"
         component={UpdateGuestRegistrationScreen}
+      />
+      <Stack.Screen
+        name="GuestRegistrationListScreen"
+        component={GuestRegistrationListScreen}
       />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />

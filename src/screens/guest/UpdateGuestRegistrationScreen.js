@@ -78,8 +78,7 @@ export default function UpdateGuestRegistrationScreen() {
     Alert.alert("Thành công", "Cập nhật đăng ký thành công.", [
       {
         text: "OK",
-        onPress: () =>
-          navigation.navigate("Main", { screen: "GuestRegistrationList" }),
+        onPress: () => navigation.navigate("GuestRegistrationListScreen"),
       },
     ]);
   };
@@ -96,7 +95,7 @@ export default function UpdateGuestRegistrationScreen() {
           style: "destructive",
           onPress: () => {
             deleteGuestRegistration(guest.id);
-            navigation.navigate("Main", { screen: "GuestRegistrationList" });
+            navigation.navigate("GuestRegistrationListScreen");
           },
         },
       ],
