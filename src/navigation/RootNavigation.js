@@ -31,6 +31,8 @@ export default function RootNavigation() {
       <Stack.Screen
         name="CreateMaintenanceRequestScreen"
         component={CreateMaintenanceRequestScreen}
+      />
+      <Stack.Screen
         name="Login"
         component={LoginScreen}
        />
