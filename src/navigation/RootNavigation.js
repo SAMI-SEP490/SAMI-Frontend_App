@@ -5,13 +5,14 @@ import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrat
 import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrationScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
+import LoginScreen from "../screens/auth/LoginScreen";
 import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={TabNavigation} />
       <Stack.Screen
         name="CreateGuestRegistrationScreen"
@@ -21,6 +22,10 @@ export default function RootNavigation() {
         name="UpdateGuestRegistrationScreen"
         component={UpdateGuestRegistrationScreen}
       />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+       />
       <Stack.Screen
         name="GuestRegistrationListScreen"
         component={GuestRegistrationListScreen}
