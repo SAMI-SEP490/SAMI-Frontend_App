@@ -7,12 +7,14 @@ import MaintenanceListScreen from "../screens/maintenance/MaintenanceListScreen"
 import CreateMaintenanceRequestScreen from "../screens/maintenance/CreateMaintenanceRequestScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
+import LoginScreen from "../screens/auth/LoginScreen";
+import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={TabNavigation} />
       <Stack.Screen
         name="CreateGuestRegistrationScreen"
@@ -29,6 +31,12 @@ export default function RootNavigation() {
       <Stack.Screen
         name="CreateMaintenanceRequestScreen"
         component={CreateMaintenanceRequestScreen}
+        name="Login"
+        component={LoginScreen}
+       />
+      <Stack.Screen
+        name="GuestRegistrationListScreen"
+        component={GuestRegistrationListScreen}
       />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
