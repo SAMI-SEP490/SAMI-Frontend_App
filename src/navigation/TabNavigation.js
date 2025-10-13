@@ -14,11 +14,6 @@ export default function TabNavigation() {
         component={DashboardScreen}
         options={{ title: "Trang chủ" }}
       />
-      <Tab.Screen
-        name="GuestRegistrationListScreen"
-        component={GuestRegistrationListScreen}
-        options={{ title: "Danh sách đăng ký khách" }}
-      />
     </Tab.Navigator>
   );
 }

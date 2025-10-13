@@ -90,8 +90,7 @@ export default function CreateGuestRegistrationScreen() {
     Alert.alert("Thành công", "Đăng ký tạm trú đã được gửi.", [
       {
         text: "OK",
-        onPress: () =>
-          navigation.navigate("Main", { screen: "GuestRegistrationList" }), // 👈 quay lại danh sách
+        onPress: () => navigation.navigate("GuestRegistrationListScreen"), // 👈 quay lại danh sách
       },
     ]);
   };

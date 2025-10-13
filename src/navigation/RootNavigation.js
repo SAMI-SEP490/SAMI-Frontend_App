@@ -6,6 +6,8 @@ import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrat
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
+import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
@@ -20,11 +22,14 @@ export default function RootNavigation() {
         name="UpdateGuestRegistrationScreen"
         component={UpdateGuestRegistrationScreen}
       />
-      
       <Stack.Screen
         name="Login"
         component={LoginScreen}
        />
+      <Stack.Screen
+        name="GuestRegistrationListScreen"
+        component={GuestRegistrationListScreen}
+      />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </Stack.Navigator>
