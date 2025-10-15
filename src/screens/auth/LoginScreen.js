@@ -19,7 +19,7 @@ import { spacing } from "../../theme/spacing";
 import { UserContext } from "../../contexts/UserContext";
 
 export default function LoginScreen({}) {
-  const {userData} = useContext(UserContext);
+  const {userData, setUserIdLogin} = useContext(UserContext);
   const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,6 +66,9 @@ const handleLogin = () => {
 
   // Nếu thành công → chuyển sang trang chính
   Alert.alert("Thành công", `Chào mừng ${foundUser.full_name}!`);
+  setUserIdLogin(foundUser.id); // Lưu userId của người vừa đăng nhập
+  console.log(foundUser.id);
+  
   navigation.replace("Main");
 };
 

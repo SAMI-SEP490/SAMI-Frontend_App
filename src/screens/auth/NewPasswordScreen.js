@@ -13,7 +13,7 @@ import { UserContext } from "../../contexts/UserContext";
 
 export default function NewPasswordScreen() {
   const navigation = useNavigation();
-  const { userData, setUserData } = useContext(UserContext);
+  const { userData, setUserData, userIdChangepassword } = useContext(UserContext);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -24,32 +24,35 @@ export default function NewPasswordScreen() {
     return passwordRegex.test(password);
   };
 
-  const handleConfirm = () => {
-    if (!password || !confirmPassword) {
-      Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin.");
-      return;
-    }
+const handleConfirm = () => {
+  if (!password || !confirmPassword) {
+    Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin.");
+    return;
+  }
 
-    if (!validatePassword(password)) {
-      Alert.alert(
-        "Mật khẩu yếu",
-        "Mật khẩu phải có ít nhất 1 chữ thường, 1 chữ hoa và 1 ký tự đặc biệt."
-      );
-      return;
-    }
+  if (!validatePassword(password)) {
+    Alert.alert(
+      "Mật khẩu yếu",
+      "Mật khẩu phải có ít nhất 1 chữ thường, 1 chữ hoa và 1 ký tự đặc biệt."
+    );
+    return;
+  }
 
-    if (password !== confirmPassword) {
-      Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
-      return;
-    }
+  if (password !== confirmPassword) {
+    Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
+    return;
+  }
 
-    // ✅ Cập nhật data user (cập nhật field password)
-    const updatedUser = { ...userData, password };
-    setUserData(updatedUser);
+  // ✅ Tìm user cần đổi mật khẩu
+  const updatedUsers = userData.map((user) =>
+    user.user_id ===  userIdChangepassword? { ...user, password } : user
+  );
 
-    Alert.alert("Thành công", "Mật khẩu đã được thay đổi!");
-    navigation.navigate("Login");
-  };
+  setUserData(updatedUsers);
+
+  Alert.alert("Thành công", "Mật khẩu đã được thay đổi!");
+  navigation.navigate("Login");
+};
 
   return (
     <View style={styles.container}>
