@@ -16,7 +16,7 @@ import { spacing } from "../../theme/spacing";
 import { UserContext } from "../../contexts/UserContext";
 
 export default function ResetPasswordScreen({ navigation }) {
-const {userData} = useContext(UserContext);
+const {userData, setUserIdChangepassword} = useContext(UserContext);
   
   const [identifier, setIdentifier] = useState("");
 
@@ -44,6 +44,7 @@ const handleNext = () => {
   }
 
   // Nếu hợp lệ, chuyển sang màn hình VerifyCodeScreen
+  setUserIdChangepassword(foundUser.id); // Lưu userId để đổi mật khẩu sau này
   navigation.navigate("VerifyCodeScreen");
 };
 

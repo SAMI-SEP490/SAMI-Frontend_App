@@ -1,21 +1,32 @@
 // src/screens/profile/ProfileScreen.js
-import React from "react";
+import React, { useState,useContext } from "react";
 import { SafeAreaView, ScrollView, View, Text, Image } from "react-native";
 import Header from "../../components/Header";
 import Button from "../../components/Button";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
+import { UserContext } from "../../contexts/UserContext";
 
 export default function ProfileScreen({ navigation }) {
+    const {userData, userIdLogin} = useContext(UserContext);
+  
   // dữ liệu DEMO – sau này lấy từ context/API
+  const findingUser = userData.find(user => user.id == userIdLogin);
+  console.log(findingUser);
+  
   const user = {
-    name: "Nguyễn Văn A",
-    dob: "1/1/2000",
-    gender: "Nam",
-    role: "Người thuê trọ",
-    email: "abc@gmail.com",
-    phone: "0123456789",
-    avatar: "https://i.pravatar.cc/200?img=5",
+    name: findingUser.full_name,
+    dob:  findingUser.birthday, 
+    gender:
+  findingUser.gender === "male"
+    ? "Nam"
+    : findingUser.gender === "female"
+    ? "Nữ"
+    : "Khác",
+    role: findingUser.role,
+    email: findingUser.email,
+    phone: findingUser.phone,
+    avatar: findingUser.avatar_url,
   };
 
   return (
