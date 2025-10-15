@@ -100,7 +100,7 @@ export default function CreateGuestRegistrationScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={{ paddingTop: spacing.lg }}>
+      <View style={{ }}>
         <Header />
       </View>
 

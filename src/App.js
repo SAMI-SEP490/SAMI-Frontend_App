@@ -5,10 +5,10 @@ import { RootProvider } from "./contexts/RootProvider";
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <RootProvider>
+    <RootProvider>
+      <NavigationContainer>
         <RootNavigation />
-      </RootProvider>
-    </NavigationContainer>
+      </NavigationContainer>
+    </RootProvider>
   );
 }

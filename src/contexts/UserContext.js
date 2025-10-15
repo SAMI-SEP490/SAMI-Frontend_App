@@ -20,15 +20,15 @@ export const UserProvider = ({ children }) => {
     },
     {
       user_id: 2,
-      phone: "+84919876543",
-      email: "le.thi.b@example.com",
-      password: "password",
+      phone: "0398452345",
+      email: "namprobs98@gmail.com",
+      password: "4Namdota@",
       password_hash: "",
-      full_name: "Lê Thị Bích",
-      gender: "female",
-      birthday: "1988-11-02",
-      avatar_url: "https://picsum.photos/seed/user2/200",
-      status: "pending",
+      full_name: "Lê Hữu Nam",
+      gender: "male",
+      birthday: "1998-03-06",
+      avatar_url: "https://scontent.fhan2-3.fna.fbcdn.net/v/t39.30808-6/468258601_2912070768939991_6497323352363818347_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=a5f93a&_nc_eui2=AeHBgIC-MGs-iMYJ2aHXQvy3Fqr5YVsfhEMWqvlhWx-EQw5Z7v3oPNe7kWXi1D_m53QAFNBM8qGcF9n_CzKtwWdp&_nc_ohc=LazqaYl6UbMQ7kNvwFs4HyS&_nc_oc=Admwr1CKMJaJtOEGQ6pKEIN5sFL4Z0lA8PfiMSoHvR04-Lst4SUtwL_GLobPeBAVGrg&_nc_zt=23&_nc_ht=scontent.fhan2-3.fna&_nc_gid=yS9rMZGBjGrqJFGadocHFw&oh=00_Aff_OvQdblv9ee9C8Lu90WoeA_hnT8Yk6Fciw7XLvbW0ow&oe=68F4F439",
+      status: "active",
       created_at: "2025-02-22T09:30:00Z",
       updated_at: "2025-07-01T14:05:10Z"
     },
@@ -145,12 +145,14 @@ export const UserProvider = ({ children }) => {
       updated_at: "2025-10-01T10:10:10Z"
     }
   ]);
+
+  const trueCode = "123456";
   
 
   return (
     <UserContext.Provider
       value={{
-        userData, setUserData,
+        userData, setUserData, trueCode
       }}
     >
       {children}
