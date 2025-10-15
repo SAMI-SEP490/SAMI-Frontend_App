@@ -45,7 +45,7 @@ const handleConfirm = () => {
 
   // ✅ Tìm user cần đổi mật khẩu
   const updatedUsers = userData.map((user) =>
-    user.user_id ===  userIdChangepassword? { ...user, password } : user
+    user.id ===  userIdChangepassword? { ...user, password } : user
   );
 
   setUserData(updatedUsers);

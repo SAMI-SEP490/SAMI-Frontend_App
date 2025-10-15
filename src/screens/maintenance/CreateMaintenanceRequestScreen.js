@@ -33,7 +33,7 @@ const CreateMaintenanceRequestScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" />
       <Header />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Tạo đơn bảo trì</Text>

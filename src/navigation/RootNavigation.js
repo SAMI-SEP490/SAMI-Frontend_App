@@ -12,6 +12,7 @@ import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListS
 import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
 import VerifyCodeScreen from "../screens/auth/VerifyCodeScreen";
 import NewPasswordScreen from "../screens/auth/NewPasswordScreen";
+import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -42,6 +43,7 @@ export default function RootNavigation() {
       <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
       <Stack.Screen name="VerifyCodeScreen" component={VerifyCodeScreen} />
        <Stack.Screen name="NewPasswordScreen" component={NewPasswordScreen} />
+        <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
 
       <Stack.Screen
         name="GuestRegistrationListScreen"

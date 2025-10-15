@@ -1,28 +1,37 @@
 // src/screens/profile/ProfileScreen.js
-import React, { useState,useContext } from "react";
-import { SafeAreaView, ScrollView, View, Text, Image } from "react-native";
+import React, { useState, useContext } from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  View,
+  Text,
+  Image,
+  StatusBar,
+} from "react-native";
 import Header from "../../components/Header";
 import Button from "../../components/Button";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { UserContext } from "../../contexts/UserContext";
+import { useNavigation } from "@react-navigation/native";
 
-export default function ProfileScreen({ navigation }) {
-    const {userData, userIdLogin} = useContext(UserContext);
-  
+export default function ProfileScreen() {
+  const { userData, userIdLogin, setUserIdChangepassword } =
+    useContext(UserContext);
+  const navigation = useNavigation();
   // dữ liệu DEMO – sau này lấy từ context/API
-  const findingUser = userData.find(user => user.id == userIdLogin);
+  const findingUser = userData.find((user) => user.id == userIdLogin);
   console.log(findingUser);
-  
+
   const user = {
     name: findingUser.full_name,
-    dob:  findingUser.birthday, 
+    dob: findingUser.birthday,
     gender:
-  findingUser.gender === "male"
-    ? "Nam"
-    : findingUser.gender === "female"
-    ? "Nữ"
-    : "Khác",
+      findingUser.gender === "male"
+        ? "Nam"
+        : findingUser.gender === "female"
+        ? "Nữ"
+        : "Khác",
     role: findingUser.role,
     email: findingUser.email,
     phone: findingUser.phone,
@@ -31,8 +40,11 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header xanh bạn đã dùng ở các màn khác */}
-      <Header />
+      <StatusBar barStyle="light-content" />
+      {/* Header */}
+      <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
+        <Header />
+      </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
         <View
@@ -82,7 +94,10 @@ export default function ProfileScreen({ navigation }) {
             <Button
               title="Thay đổi mật khẩu"
               variant="outline"
-              onPress={() => {}}
+              onPress={() => {
+                setUserIdChangepassword(userIdLogin);
+                navigation.navigate("ChangePasswordScreen");
+              }}
               style={{
                 flex: 1,
                 backgroundColor: "transparent",
