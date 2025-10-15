@@ -17,7 +17,6 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Header from "../../components/Header";
 
-
 const FEATURES = [
   {
     key: "bill",
@@ -76,8 +75,6 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle="light-content" />
-
       {/* HEADER XANH */}
       <View
         style={{
@@ -89,7 +86,11 @@ export default function DashboardScreen() {
           borderBottomRightRadius: 20,
         }}
       >
-        <Header />
+        <StatusBar barStyle="light-content" />
+        {/* Header */}
+        <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
+          <Header />
+        </View>
         <Text style={{ color: "#CFE1FF", fontSize: 14, marginBottom: 6 }}>
           Xin chào!
         </Text>

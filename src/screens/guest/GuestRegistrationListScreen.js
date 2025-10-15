@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  StatusBar,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import Header from "../../components/Header";
@@ -17,8 +18,9 @@ export default function GuestRegistrationListScreen() {
   const navigation = useNavigation();
   return (
     <View style={styles.container}>
+       <StatusBar barStyle="light-content" />
       {/* Header */}
-      <View style={{ paddingBottom: spacing.lg }}>
+      <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
         <Header />
       </View>
 
