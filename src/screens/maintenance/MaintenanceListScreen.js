@@ -155,7 +155,7 @@ const MaintenanceListScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" />
       <Header />
       <View style={styles.content}>
         <Text style={styles.title}>Danh sách bảo trì</Text>

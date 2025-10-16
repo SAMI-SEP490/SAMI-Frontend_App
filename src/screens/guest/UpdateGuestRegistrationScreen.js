@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  StatusBar,
 } from "react-native";
 import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
@@ -16,6 +17,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
 import { GuestRegistrationContext } from "../../contexts/GuestRegistrationContext";
+import { spacing } from "../../theme/spacing";
 
 export default function UpdateGuestRegistrationScreen() {
   const navigation = useNavigation();
@@ -108,7 +110,11 @@ export default function UpdateGuestRegistrationScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Header />
+      <StatusBar barStyle="light-content" />
+      <View style={{ paddingBottom: spacing.xl, paddingTop: spacing.xxl }}>
+        <Header />
+      </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ padding: 20 }}

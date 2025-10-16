@@ -9,12 +9,19 @@ import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
 import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
+import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
+import VerifyCodeScreen from "../screens/auth/VerifyCodeScreen";
+import NewPasswordScreen from "../screens/auth/NewPasswordScreen";
+import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
   return (
-      <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      initialRouteName="Login"
+      screenOptions={{ headerShown: false }}
+    >
       <Stack.Screen name="Main" component={TabNavigation} />
       <Stack.Screen
         name="CreateGuestRegistrationScreen"
@@ -32,10 +39,12 @@ export default function RootNavigation() {
         name="CreateMaintenanceRequestScreen"
         component={CreateMaintenanceRequestScreen}
       />
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-       />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
+      <Stack.Screen name="VerifyCodeScreen" component={VerifyCodeScreen} />
+       <Stack.Screen name="NewPasswordScreen" component={NewPasswordScreen} />
+        <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
+
       <Stack.Screen
         name="GuestRegistrationListScreen"
         component={GuestRegistrationListScreen}

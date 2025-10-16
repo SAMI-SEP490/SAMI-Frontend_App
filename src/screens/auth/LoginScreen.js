@@ -1,5 +1,7 @@
 // src/screens/auth/LoginScreen.js
-import React, { useState } from "react";
+import React, { useState,useContext } from "react";
+import { useNavigation } from "@react-navigation/native";
+
 import {
   View,
   Text,
@@ -14,8 +16,11 @@ import TextField from "../../components/TextField";
 import Button from "../../components/Button";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
+import { UserContext } from "../../contexts/UserContext";
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({}) {
+  const {userData, setUserIdLogin} = useContext(UserContext);
+  const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -29,29 +34,43 @@ export default function LoginScreen({ navigation }) {
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-={}[\]|\\:;"'<>,.?/~`]).+$/;
     return passwordRegex.test(password);
   };
+const handleLogin = () => {
+  if (!email.trim() || !password.trim()) {
+    Alert.alert("Lỗi", "Vui lòng nhập đầy đủ Email và Mật khẩu");
+    return;
+  }
 
-  const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ Email và Mật khẩu");
-      return;
-    }
+  // Kiểm tra định dạng email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) {
+    Alert.alert("Lỗi", "Email không đúng định dạng");
+    return;
+  }
 
-    if (!validateEmail(email)) {
-      Alert.alert("Lỗi", "Email không đúng định dạng");
-      return;
-    }
+  // Tìm user trong danh sách userData
+  const foundUser = userData.find(
+    (user) =>
+      user.email.toLowerCase() === email.trim().toLowerCase() &&
+      user.password === password
+  );
 
-    if (!validatePassword(password)) {
-      Alert.alert(
-        "Lỗi",
-        "Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường và 1 ký tự đặc biệt"
-      );
-      return;
-    }
+  if (!foundUser) {
+    Alert.alert("Sai thông tin", "Email hoặc mật khẩu không chính xác");
+    return;
+  }
 
-    // Giả lập login thành công
-    navigation.replace("Main");
-  };
+  if (foundUser.status !== "active") {
+    Alert.alert("Tài khoản bị hạn chế", "Tài khoản của bạn hiện không hoạt động");
+    return;
+  }
+
+  // Nếu thành công → chuyển sang trang chính
+  Alert.alert("Thành công", `Chào mừng ${foundUser.full_name}!`);
+  setUserIdLogin(foundUser.id); // Lưu userId của người vừa đăng nhập
+  console.log(foundUser.id);
+  
+  navigation.replace("Main");
+};
 
   return (
     <KeyboardAvoidingView
@@ -80,7 +99,8 @@ export default function LoginScreen({ navigation }) {
 
           <Button title="Đăng Nhập" onPress={handleLogin} style={{ marginTop: spacing.lg }} />
 
-          <Text style={styles.forgot}>Bạn quên mật khẩu?</Text>
+          <Text style={styles.forgot}
+          onPress={() => navigation.navigate("ResetPasswordScreen")}>Bạn quên mật khẩu?</Text>
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
