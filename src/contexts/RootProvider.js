@@ -1,5 +1,10 @@
 import { GuestRegistrationProvider } from "./GuestRegistrationContext";
 import { UserProvider } from "./UserContext";
+import { BillProvider } from "./BillContext";
 export const RootProvider = ({ children }) => (
-  <GuestRegistrationProvider><UserProvider>{children}</UserProvider></GuestRegistrationProvider>
+  <BillProvider>
+    <GuestRegistrationProvider>
+      <UserProvider>{children}</UserProvider>
+    </GuestRegistrationProvider>
+  </BillProvider>
 );

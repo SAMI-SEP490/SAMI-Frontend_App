@@ -142,6 +142,9 @@ export default function DashboardScreen() {
                   if (item.key === "maintenance") {
                     navigation.navigate("MaintenanceListScreen");
                   }
+                  if (item.key === "bill") {
+                    navigation.navigate("BillListScreen");
+                  }
                 }}
                 style={{ width: "30%", alignItems: "center", gap: 8 }}
               >

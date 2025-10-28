@@ -111,7 +111,7 @@ export default function UpdateGuestRegistrationScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <StatusBar barStyle="light-content" />
-      <View style={{ paddingBottom: spacing.xl, paddingTop: spacing.xxl }}>
+      <View style={{ paddingBottom: spacing.xl }}>
         <Header />
       </View>
 
