@@ -14,6 +14,8 @@ import VerifyCodeScreen from "../screens/auth/VerifyCodeScreen";
 import NewPasswordScreen from "../screens/auth/NewPasswordScreen";
 import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 import BillListScreen from "../screens/bill/BillListScreen";
+import OnlinePaymentScreen from "../screens/bill/OnlinePaymentScreen";
+import TransactionHistoryScreen from "../screens/bill/TransactionHistoryScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -59,6 +61,15 @@ export default function RootNavigation() {
       />
       {/* bill */}
       <Stack.Screen name="BillListScreen" component={BillListScreen} />
+      <Stack.Screen
+        name="OnlinePaymentScreen"
+        component={OnlinePaymentScreen}
+      />
+      <Stack.Screen
+        name="TransactionHistoryScreen"
+        component={TransactionHistoryScreen}
+      />
+
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </Stack.Navigator>

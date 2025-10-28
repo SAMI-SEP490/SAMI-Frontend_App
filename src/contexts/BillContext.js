@@ -10,6 +10,7 @@ export const BillProvider = ({ children }) => {
       category: "Chi phí sinh hoạt",
       period: "09/2025 - 10/2025",
       status: "Chưa trả",
+      expense: 150000,
     },
     {
       id: 2,
@@ -17,6 +18,7 @@ export const BillProvider = ({ children }) => {
       category: "Dịch vụ",
       period: "09/2025 - 10/2025",
       status: "Chưa trả",
+      expense: 80000,
     },
     {
       id: 3,
@@ -24,6 +26,7 @@ export const BillProvider = ({ children }) => {
       category: "Chi phí sinh hoạt",
       period: "08/2025 - 09/2025",
       status: "Đã trả",
+      expense: 200000,
     },
     {
       id: 4,
@@ -31,14 +34,48 @@ export const BillProvider = ({ children }) => {
       category: "Chi phí sinh hoạt",
       period: "09/2025 - 09/2025",
       status: "Đã trả",
+      expense: 140000,
     },
   ]);
+
+  const [transactionList, setTransactionList] = useState([
+    {
+      id: "123456ABC",
+      time: "8:30 AM 28/09/2025",
+      billCount: 1,
+      status: "Thất bại",
+    },
+    {
+      id: "456789XYZ",
+      time: "8:45 AM 28/09/2025",
+      billCount: 1,
+      status: "Thành công",
+    },
+    {
+      id: "246802QWE",
+      time: "10:00 AM 20/09/2025",
+      billCount: 2,
+      status: "Thành công",
+    },
+    {
+      id: "135791RTY",
+      time: "9:00 AM 18/08/2025",
+      billCount: 3,
+      status: "Thành công",
+    },
+  ]);
+
+  const [idBillListPayment, setIdBillListPayment] = useState([]);
 
   return (
     <BillContext.Provider
       value={{
         billData,
         setBillData,
+        idBillListPayment,
+        setIdBillListPayment,
+        transactionList,
+        setTransactionList,
       }}
     >
       {children}
