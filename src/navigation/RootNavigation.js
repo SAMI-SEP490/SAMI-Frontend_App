@@ -16,6 +16,8 @@ import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 import BillListScreen from "../screens/bill/BillListScreen";
 import OnlinePaymentScreen from "../screens/bill/OnlinePaymentScreen";
 import TransactionHistoryScreen from "../screens/bill/TransactionHistoryScreen";
+import NotificationListScreen from "../screens/notification/NotificationListScreen";
+import NotificationDetailScreen from "../screens/notification/NotificationDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -68,6 +70,15 @@ export default function RootNavigation() {
       <Stack.Screen
         name="TransactionHistoryScreen"
         component={TransactionHistoryScreen}
+      />
+      {/* notificaton */}
+      <Stack.Screen
+        name="NotificationListScreen"
+        component={NotificationListScreen}
+      />
+      <Stack.Screen
+        name="NotificationDetailScreen"
+        component={NotificationDetailScreen}
       />
 
       <Stack.Screen name="Profile" component={ProfileScreen} />
