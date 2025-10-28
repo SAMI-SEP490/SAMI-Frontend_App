@@ -18,9 +18,9 @@ export default function GuestRegistrationListScreen() {
   const navigation = useNavigation();
   return (
     <View style={styles.container}>
-       <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" />
       {/* Header */}
-      <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
+      <View style={{ paddingBottom: spacing.lg }}>
         <Header />
       </View>
 
