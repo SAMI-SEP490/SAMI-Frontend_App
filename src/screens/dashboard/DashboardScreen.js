@@ -73,128 +73,54 @@ const FEATURES = [
 export default function DashboardScreen() {
   const navigation = useNavigation();
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* HEADER XANH */}
-      <View
-        style={{
-          backgroundColor: colors.brand,
-          paddingHorizontal: spacing.xl,
-          paddingTop: spacing.lg,
-          paddingBottom: spacing.xl,
-          borderBottomLeftRadius: 20,
-          borderBottomRightRadius: 20,
-        }}
-      >
-        <StatusBar barStyle="light-content" />
-        {/* Header */}
-        <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
-          <Header />
-        </View>
-        <Text style={{ color: "#CFE1FF", fontSize: 14, marginBottom: 6 }}>
-          Xin chào!
-        </Text>
-        <Text style={{ color: "white", fontSize: 22, fontWeight: "800" }}>
-          Chào mừng bạn trở lại
-        </Text>
-      </View>
+  // Tạo mảng data cho toàn bộ màn hình (để FlatList cuộn được tất cả)
+  const DATA = [
+    { type: "header" },
+    { type: "features" },
+    { type: "info" },
+  ];
 
-      {/* BODY */}
-      <View style={{ flex: 1, paddingHorizontal: spacing.xl, marginTop: -18 }}>
-        {/* CARD: Chức năng */}
-        <View
-          style={{
-            backgroundColor: colors.card,
-            borderRadius: 14,
-            padding: spacing.lg,
-            shadowColor: "#000",
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: 2,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "700",
-              color: colors.text,
-              marginBottom: spacing.md,
-            }}
-          >
-            Chức năng
-          </Text>
-
-          <FlatList
-            data={FEATURES}
-            keyExtractor={(it) => it.key}
-            numColumns={3}
-            columnWrapperStyle={{
-              justifyContent: "space-between",
-              marginBottom: spacing.lg,
-            }}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  if (item.key === "residence") {
-                    navigation.navigate("GuestRegistrationListScreen");
-                  }
-                  if (item.key === "maintenance") {
-                    navigation.navigate("MaintenanceListScreen");
-                  }
-                  if (item.key === "bill") {
-                    navigation.navigate("BillListScreen");
-                  }
-                }}
-                style={{ width: "30%", alignItems: "center", gap: 8 }}
-              >
-                <View
-                  style={{
-                    width: 56,
-                    height: 56,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 16,
-                    backgroundColor: item.bg,
-                  }}
-                >
-                  {item.icon(colors.brand)}
-                </View>
-                <Text
-                  style={{
-                    textAlign: "center",
-                    fontSize: 12,
-                    color: colors.text,
-                  }}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            )}
-            ListFooterComponent={<View style={{ height: spacing.sm }} />}
-          />
-        </View>
-
-        <View style={{ height: spacing.lg }} />
-
-        {/* CARD: Thông tin căn hộ */}
-        <View
-          style={{
-            backgroundColor: colors.card,
-            borderRadius: 14,
-            padding: spacing.lg,
-            shadowColor: "#000",
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: 2,
-          }}
-        >
+  const renderItem = ({ item }) => {
+    switch (item.type) {
+      case "header":
+        return (
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: spacing.md,
+              backgroundColor: colors.brand,
+              paddingHorizontal: spacing.xl,
+              paddingTop: spacing.lg,
+              paddingBottom: spacing.xl,
+              borderBottomLeftRadius: 20,
+              borderBottomRightRadius: 20,
+            }}
+          >
+            <StatusBar barStyle="light-content" />
+            <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
+              <Header />
+            </View>
+            <Text style={{ color: "#CFE1FF", fontSize: 14, marginBottom: 6 }}>
+              Xin chào!
+            </Text>
+            <Text style={{ color: "white", fontSize: 22, fontWeight: "800" }}>
+              Chào mừng bạn trở lại
+            </Text>
+          </View>
+        );
+
+      case "features":
+        return (
+          <View
+            style={{
+              backgroundColor: colors.card,
+              borderRadius: 14,
+              padding: spacing.lg,
+              marginHorizontal: spacing.xl,
+              marginTop: -18,
+              shadowColor: "#000",
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 2,
             }}
           >
             <Text
@@ -202,45 +128,145 @@ export default function DashboardScreen() {
                 fontSize: 16,
                 fontWeight: "700",
                 color: colors.text,
-                flex: 1,
+                marginBottom: spacing.md,
               }}
             >
-              Thông tin căn hộ
+              Chức năng
             </Text>
-            <Pressable onPress={() => {}}>
-              <Text style={{ color: colors.brand, fontWeight: "700" }}>
-                Xem chi tiết
-              </Text>
-            </Pressable>
-          </View>
 
-          <InfoRow label="Căn hộ" value="A-1205" />
-          <InfoRow label="Tòa nhà" value="Tòa A" />
-          <InfoRow
-            label="Trạng thái"
-            value={
-              <View
+            <FlatList
+              data={FEATURES}
+              keyExtractor={(it) => it.key}
+              numColumns={3}
+              scrollEnabled={false}
+              columnWrapperStyle={{
+                justifyContent: "space-between",
+                marginBottom: spacing.lg,
+              }}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => {
+                    if (item.key === "residence") {
+                      navigation.navigate("GuestRegistrationListScreen");
+                    }
+                    if (item.key === "maintenance") {
+                      navigation.navigate("MaintenanceListScreen");
+                    }
+                    if (item.key === "bill") {
+                      navigation.navigate("BillListScreen");
+                    }
+                  }}
+                  style={{ width: "30%", alignItems: "center", gap: 8 }}
+                >
+                  <View
+                    style={{
+                      width: 56,
+                      height: 56,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 16,
+                      backgroundColor: item.bg,
+                    }}
+                  >
+                    {item.icon(colors.brand)}
+                  </View>
+                  <Text
+                    style={{
+                      textAlign: "center",
+                      fontSize: 12,
+                      color: colors.text,
+                    }}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              )}
+            />
+          </View>
+        );
+
+      case "info":
+        return (
+          <View
+            style={{
+              backgroundColor: colors.card,
+              borderRadius: 14,
+              padding: spacing.lg,
+              marginHorizontal: spacing.xl,
+              marginTop: spacing.lg,
+              shadowColor: "#000",
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 2,
+              marginBottom: 60,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: spacing.md,
+              }}
+            >
+              <Text
                 style={{
-                  backgroundColor: "#E6FFF1",
-                  borderRadius: 999,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
+                  fontSize: 16,
+                  fontWeight: "700",
+                  color: colors.text,
+                  flex: 1,
                 }}
               >
-                <Text
+                Thông tin căn hộ
+              </Text>
+              <Pressable onPress={() => {}}>
+                <Text style={{ color: colors.brand, fontWeight: "700" }}>
+                  Xem chi tiết
+                </Text>
+              </Pressable>
+            </View>
+
+            <InfoRow label="Căn hộ" value="A-1205" />
+            <InfoRow label="Tòa nhà" value="Tòa A" />
+            <InfoRow
+              label="Trạng thái"
+              value={
+                <View
                   style={{
-                    color: colors.success,
-                    fontWeight: "700",
-                    fontSize: 12,
+                    backgroundColor: "#E6FFF1",
+                    borderRadius: 999,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
                   }}
                 >
-                  Đã thanh toán
-                </Text>
-              </View>
-            }
-          />
-        </View>
-      </View>
+                  <Text
+                    style={{
+                      color: colors.success,
+                      fontWeight: "700",
+                      fontSize: 12,
+                    }}
+                  >
+                    Đã thanh toán
+                  </Text>
+                </View>
+              }
+            />
+          </View>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <FlatList
+        data={DATA}
+        keyExtractor={(item, index) => item.type + index}
+        renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   );
 }
