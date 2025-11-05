@@ -2,6 +2,9 @@
   "expo": {
     "name": "demo",
     "slug": "demo",
+    "extra": {
+      "apiUrl": "http://192.168.88.168:3000/api"
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,6 +27,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": ["expo-secure-store"]
   }
 }

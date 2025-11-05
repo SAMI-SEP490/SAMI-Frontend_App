@@ -1,6 +1,5 @@
-// src/screens/auth/LoginScreen.js
+// src/screens/auth/LoginOTPScreen.js
 import React, { useState } from "react";
-import { useNavigation } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -21,7 +20,7 @@ import { spacing } from "../../theme/spacing";
 
 const API_URL =
   (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "http://192.168.1.50:3000/api"; // TODO: đổi IP LAN cho đúng
+  "http://192.168.1.50:3000/api";
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 
@@ -39,42 +38,31 @@ function roleIsTenant(user) {
   return r === "tenant";
 }
 
-// để debug Network Error
 function showAxiosError(e) {
-  const code = e?.code || "";
-  const msg = e?.message || "";
-  const url = e?.config?.url || "";
-  console.log("AXIOS_ERR", { code, msg, url, baseURL: API_URL });
-  Alert.alert("Lỗi đăng nhập", msg || "Network Error");
+  const msg = e?.message || "Network Error";
+  console.log("AXIOS_OTP_ERR", { msg, url: e?.config?.url, baseURL: API_URL });
+  Alert.alert("Lỗi", msg);
 }
 
-export default function LoginScreen() {
-  const navigation = useNavigation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function LoginOTPScreen({ route, navigation }) {
+  const { userId, email } = route.params || {};
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const onLogin = async () => {
+  const onVerify = async () => {
     try {
+      if (!userId || !otp)
+        return Alert.alert("Thiếu thông tin", "Vui lòng nhập mã OTP.");
       setLoading(true);
 
       const res = await axios.post(
-        `${API_URL}/auth/login`,
-        { email, password },
+        `${API_URL}/auth/verify-otp`,
+        { userId, otp },
         { timeout: 15000 }
       );
       const data = unwrap(res);
 
-      if (data?.requiresOTP) {
-        // user chưa verify → sang màn OTP
-        return navigation.navigate("LoginOTP", {
-          userId: data.userId,
-          email: data.email || email,
-        });
-      }
-
       if (data?.accessToken && data?.user) {
-        // chỉ cho TENANT
         if (!roleIsTenant(data.user)) {
           return Alert.alert(
             "Không được phép",
@@ -82,11 +70,11 @@ export default function LoginScreen() {
           );
         }
         await saveTokens(data.accessToken, data.refreshToken);
-        Alert.alert("Thành công", "Đăng nhập thành công!");
+        Alert.alert("Thành công", "Xác thực thành công!");
         return navigation.reset({ index: 0, routes: [{ name: "Tabs" }] });
       }
 
-      throw new Error("Phản hồi không hợp lệ");
+      throw new Error("Mã OTP không hợp lệ");
     } catch (e) {
       showAxiosError(e);
     } finally {
@@ -101,35 +89,35 @@ export default function LoginScreen() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.inner}>
-          <Text style={styles.title}>Đăng Nhập</Text>
+          <Text style={styles.title}>Xác thực OTP</Text>
+          <Text style={styles.subtitle}>
+            Mã OTP đã được gửi đến email {email || ""}
+          </Text>
 
           <TextField
-            label="Email"
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <TextField
-            label="Mật khẩu"
-            placeholder="••••••••"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
+            label="Mã OTP"
+            placeholder="Nhập 6 số"
+            keyboardType="number-pad"
+            value={otp}
+            onChangeText={setOtp}
           />
 
           <Button
-            title={loading ? "Đang đăng nhập..." : "Đăng nhập"}
-            onPress={onLogin}
+            title={loading ? "Đang xác thực..." : "Xác nhận"}
+            onPress={onVerify}
             style={{ marginTop: spacing.md }}
           />
 
           <Text
             style={styles.forgot}
-            onPress={() => navigation.navigate("ResetPasswordScreen")}
+            onPress={() =>
+              Alert.alert(
+                "Gợi ý",
+                "Nếu chưa thấy email, hãy kiểm tra Spam/Promotions."
+              )
+            }
           >
-            Quên mật khẩu?
+            Chưa nhận được mã?
           </Text>
         </View>
       </TouchableWithoutFeedback>
@@ -144,8 +132,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     textAlign: "center",
+  },
+  subtitle: {
+    textAlign: "center",
+    color: colors.muted,
+    marginBottom: spacing.lg,
   },
   forgot: {
     marginTop: spacing.md,
