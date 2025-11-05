@@ -1,5 +1,5 @@
 // src/screens/profile/ProfileScreen.js
-import React, { useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -7,83 +7,115 @@ import {
   Text,
   Image,
   StatusBar,
+  Alert,
 } from "react-native";
 import Header from "../../components/Header";
 import Button from "../../components/Button";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { UserContext } from "../../contexts/UserContext";
+import axios from "axios";
+import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 import { useNavigation } from "@react-navigation/native";
 
-export default function ProfileScreen() {
-  const { userData, userIdLogin, setUserIdChangepassword } =
-    useContext(UserContext);
-  const navigation = useNavigation();
-  // dữ liệu DEMO – sau này lấy từ context/API
-  const findingUser = userData.find((user) => user.id == userIdLogin);
-  console.log(findingUser);
+const API_URL =
+  (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
+  "http://192.168.1.50:3000/api";
+const unwrap = (res) => res?.data?.data ?? res?.data;
 
-  const user = {
-    name: findingUser.full_name,
-    dob: findingUser.birthday,
-    gender:
-      findingUser.gender === "male"
-        ? "Nam"
-        : findingUser.gender === "female"
-        ? "Nữ"
-        : "Khác",
-    role: findingUser.role,
-    email: findingUser.email,
-    phone: findingUser.phone,
-    avatar: findingUser.avatar_url,
-  };
+function roleIsTenant(user) {
+  const r = String(
+    user?.role || user?.user_type || user?.type || ""
+  ).toLowerCase();
+  return r === "tenant";
+}
+
+async function authGet(path) {
+  const token = await SecureStore.getItemAsync("sami_access_token");
+  const res = await axios.get(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    timeout: 15000,
+  });
+  return unwrap(res);
+}
+
+export default function ProfileScreen() {
+  const navigation = useNavigation();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await authGet("/auth/profile");
+        const u = data?.user || data;
+        if (!roleIsTenant(u)) {
+          Alert.alert("Không được phép", "Ứng dụng này chỉ dành cho Tenant.", [
+            { text: "OK", onPress: () => navigation.navigate("Login") },
+          ]);
+          return;
+        }
+        setUser(u);
+      } catch (e) {
+        Alert.alert(
+          "Lỗi",
+          e?.response?.data?.message || e.message || "Không tải được hồ sơ"
+        );
+      }
+    })();
+  }, []);
+
+  if (!user) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <Header title="Hồ sơ" />
+        <View style={{ padding: spacing.xl }}>
+          <Text style={{ color: colors.muted }}>Đang tải...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle="light-content" />
-      {/* Header */}
-      <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
-        <Header />
-      </View>
+      <StatusBar barStyle="dark-content" />
+      <Header title="Hồ sơ" />
 
       <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
         <View
           style={{
             backgroundColor: colors.card,
-            borderRadius: 16,
+            borderRadius: 12,
             padding: spacing.lg,
-            shadowColor: "#000",
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: 2,
+            borderWidth: 1,
+            borderColor: colors.border,
           }}
         >
-          {/* Avatar */}
           <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
             <Image
-              source={{ uri: user.avatar }}
+              source={{
+                uri: user?.avatar_url || "https://placehold.co/120x120",
+              }}
               style={{ width: 120, height: 120, borderRadius: 60 }}
             />
           </View>
 
-          {/* Thông tin cơ bản */}
           <Section title="Thông tin cơ bản">
-            <InfoRow label="Tên" value={user.name} />
-            <InfoRow label="Ngày sinh" value={user.dob} />
-            <InfoRow label="Giới tính" value={user.gender} />
-            <InfoRow label="Vai trò" value={user.role} />
+            <InfoRow label="Tên" value={user?.full_name || user?.name} />
+            <InfoRow label="Ngày sinh" value={user?.birthday || user?.dob} />
+            <InfoRow label="Giới tính" value={user?.gender} />
+            <InfoRow
+              label="Vai trò"
+              value={user?.role || user?.user_type || "Tenant"}
+            />
           </Section>
 
           <View style={{ height: spacing.lg }} />
 
-          {/* Thông tin liên hệ */}
           <Section title="Thông tin liên hệ">
-            <InfoRow label="Email" value={user.email} />
-            <InfoRow label="SĐT" value={user.phone} />
+            <InfoRow label="Email" value={user?.email} />
+            <InfoRow label="SĐT" value={user?.phone} />
           </Section>
 
-          {/* Nút hành động */}
           <View
             style={{
               flexDirection: "row",
@@ -94,24 +126,22 @@ export default function ProfileScreen() {
             <Button
               title="Thay đổi mật khẩu"
               variant="outline"
-              onPress={() => {
-                setUserIdChangepassword(userIdLogin);
-                navigation.navigate("ChangePasswordScreen");
-              }}
+              onPress={() => navigation.navigate("ChangePasswordScreen")}
               style={{
                 flex: 1,
                 backgroundColor: "transparent",
                 borderWidth: 1,
                 borderColor: colors.brand,
               }}
+              textStyle={{ color: colors.brand }}
             />
             <Button
-              title="Sửa"
-              variant="filled"
+              title="Chỉnh sửa"
               onPress={() => navigation.navigate("EditProfile", { user })}
               style={{ flex: 1, backgroundColor: colors.brand }}
             />
           </View>
+
           <Button
             title="Quay lại"
             variant="outline"
@@ -122,6 +152,7 @@ export default function ProfileScreen() {
               borderWidth: 1,
               borderColor: colors.brand,
             }}
+            textStyle={{ color: colors.brand }}
           />
         </View>
       </ScrollView>
@@ -132,28 +163,23 @@ export default function ProfileScreen() {
 function Section({ title, children }) {
   return (
     <View>
-      {/* Thanh tiêu đề xanh */}
-      <View
+      <Text
         style={{
-          alignSelf: "flex-start",
-          backgroundColor: colors.brand,
-          borderTopLeftRadius: 10,
-          borderTopRightRadius: 10,
-          paddingVertical: 8,
-          paddingHorizontal: 12,
+          fontSize: 16,
+          fontWeight: "700",
+          color: colors.text,
+          marginBottom: spacing.sm,
         }}
       >
-        <Text style={{ color: "#fff", fontWeight: "700" }}>{title}</Text>
-      </View>
-
-      {/* Khung nội dung */}
+        {title}
+      </Text>
       <View
         style={{
+          backgroundColor: colors.card,
+          borderRadius: 10,
+          padding: spacing.md,
           borderWidth: 1,
           borderColor: colors.border,
-          borderBottomLeftRadius: 10,
-          borderBottomRightRadius: 10,
-          padding: spacing.md,
         }}
       >
         {children}
@@ -167,7 +193,7 @@ function InfoRow({ label, value }) {
     <View style={{ flexDirection: "row", paddingVertical: 8 }}>
       <Text style={{ flex: 1, color: colors.muted }}>{label}:</Text>
       <Text style={{ flex: 1, color: colors.text, fontWeight: "600" }}>
-        {value}
+        {value ?? ""}
       </Text>
     </View>
   );

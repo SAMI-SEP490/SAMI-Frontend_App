@@ -79,7 +79,6 @@ export default function DashboardScreen() {
     { type: "features" },
     { type: "info" },
   ];
-
   const renderItem = ({ item }) => {
     switch (item.type) {
       case "header":
@@ -106,7 +105,6 @@ export default function DashboardScreen() {
             </Text>
           </View>
         );
-
       case "features":
         return (
           <View

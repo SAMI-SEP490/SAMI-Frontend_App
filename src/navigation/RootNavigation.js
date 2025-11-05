@@ -1,88 +1,137 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
 import TabNavigation from "./TabNavigation";
+
+// Guest/maintenance
 import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrationScreen";
 import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrationScreen";
+import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 import MaintenanceListScreen from "../screens/maintenance/MaintenanceListScreen";
 import CreateMaintenanceRequestScreen from "../screens/maintenance/CreateMaintenanceRequestScreen";
-import ProfileScreen from "../screens/profile/ProfileScreen";
-import EditProfileScreen from "../screens/profile/EditProfileScreen";
+
+// Auth
 import LoginScreen from "../screens/auth/LoginScreen";
-import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
 import VerifyCodeScreen from "../screens/auth/VerifyCodeScreen";
 import NewPasswordScreen from "../screens/auth/NewPasswordScreen";
+import LoginOTPScreen from "../screens/auth/LoginOTPScreen";
+
+// Profile
+import ProfileScreen from "../screens/profile/ProfileScreen";
+import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
+
+// Bills
 import BillListScreen from "../screens/bill/BillListScreen";
 import OnlinePaymentScreen from "../screens/bill/OnlinePaymentScreen";
 import TransactionHistoryScreen from "../screens/bill/TransactionHistoryScreen";
+
+// Notifications
 import NotificationListScreen from "../screens/notification/NotificationListScreen";
 import NotificationDetailScreen from "../screens/notification/NotificationDetailScreen";
+
+// Auth store (1-file module)
+import { useAuthStore } from "../auth";
 
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
+  const { token, hydrated, hydrate } = useAuthStore();
+
+  useEffect(() => {
+    hydrate();
+  }, []);
+
+  // Có thể render Splash ở đây; tạm thời return null cho gọn
+  if (!hydrated) return null;
+
   return (
-    <Stack.Navigator
-      initialRouteName="Login"
-      screenOptions={{ headerShown: false }}
-    >
-      <Stack.Screen name="Main" component={TabNavigation} />
-      <Stack.Screen
-        name="CreateGuestRegistrationScreen"
-        component={CreateGuestRegistrationScreen}
-      />
-      <Stack.Screen
-        name="UpdateGuestRegistrationScreen"
-        component={UpdateGuestRegistrationScreen}
-      />
-      <Stack.Screen
-        name="MaintenanceListScreen"
-        component={MaintenanceListScreen}
-      />
-      <Stack.Screen
-        name="CreateMaintenanceRequestScreen"
-        component={CreateMaintenanceRequestScreen}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: true }}>
+      {token ? (
+        // ĐÃ đăng nhập
+        <>
+          <Stack.Screen
+            name="Tabs"
+            component={TabNavigation}
+            options={{ headerShown: false }}
+          />
 
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen
-        name="ResetPasswordScreen"
-        component={ResetPasswordScreen}
-      />
-      <Stack.Screen name="VerifyCodeScreen" component={VerifyCodeScreen} />
-      <Stack.Screen name="NewPasswordScreen" component={NewPasswordScreen} />
-      <Stack.Screen
-        name="ChangePasswordScreen"
-        component={ChangePasswordScreen}
-      />
+          {/* Guest & Maintenance */}
+          <Stack.Screen
+            name="GuestRegistrationListScreen"
+            component={GuestRegistrationListScreen}
+          />
+          <Stack.Screen
+            name="CreateGuestRegistrationScreen"
+            component={CreateGuestRegistrationScreen}
+          />
+          <Stack.Screen
+            name="UpdateGuestRegistrationScreen"
+            component={UpdateGuestRegistrationScreen}
+          />
+          <Stack.Screen
+            name="MaintenanceListScreen"
+            component={MaintenanceListScreen}
+          />
+          <Stack.Screen
+            name="CreateMaintenanceRequestScreen"
+            component={CreateMaintenanceRequestScreen}
+          />
 
-      <Stack.Screen
-        name="GuestRegistrationListScreen"
-        component={GuestRegistrationListScreen}
-      />
-      {/* bill */}
-      <Stack.Screen name="BillListScreen" component={BillListScreen} />
-      <Stack.Screen
-        name="OnlinePaymentScreen"
-        component={OnlinePaymentScreen}
-      />
-      <Stack.Screen
-        name="TransactionHistoryScreen"
-        component={TransactionHistoryScreen}
-      />
-      {/* notificaton */}
-      <Stack.Screen
-        name="NotificationListScreen"
-        component={NotificationListScreen}
-      />
-      <Stack.Screen
-        name="NotificationDetailScreen"
-        component={NotificationDetailScreen}
-      />
+          {/* Bills */}
+          <Stack.Screen name="BillListScreen" component={BillListScreen} />
+          <Stack.Screen
+            name="OnlinePaymentScreen"
+            component={OnlinePaymentScreen}
+          />
+          <Stack.Screen
+            name="TransactionHistoryScreen"
+            component={TransactionHistoryScreen}
+          />
 
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          {/* Notifications */}
+          <Stack.Screen
+            name="NotificationListScreen"
+            component={NotificationListScreen}
+          />
+          <Stack.Screen
+            name="NotificationDetailScreen"
+            component={NotificationDetailScreen}
+          />
+
+          {/* Profile */}
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          <Stack.Screen
+            name="ChangePasswordScreen"
+            component={ChangePasswordScreen}
+          />
+        </>
+      ) : (
+        // CHƯA đăng nhập
+        <>
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="LoginOTP"
+            component={LoginOTPScreen}
+            options={{ title: "Xác thực OTP" }}
+          />
+          <Stack.Screen
+            name="ResetPasswordScreen"
+            component={ResetPasswordScreen}
+          />
+          <Stack.Screen name="VerifyCodeScreen" component={VerifyCodeScreen} />
+          <Stack.Screen
+            name="NewPasswordScreen"
+            component={NewPasswordScreen}
+          />
+        </>
+      )}
     </Stack.Navigator>
   );
 }
