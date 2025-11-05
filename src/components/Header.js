@@ -1,4 +1,3 @@
-// src/components/Header.js
 import React from "react";
 import { View, Text, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -9,12 +8,16 @@ import { spacing } from "../theme/spacing";
 export default function Header() {
   const navigation = useNavigation();
 
-  // Vì 'Profile' khai báo ở RootNavigation, còn Header dùng trong màn thuộc Tab,
-  // nên cần "leo" lên navigator cha (Root) rồi mới navigate.
   const goProfile = () => {
     const rootNav =
       navigation.getParent()?.getParent?.() || navigation.getParent();
     rootNav?.navigate("Profile");
+  };
+
+  const goNotification = () => {
+    const rootNav =
+      navigation.getParent()?.getParent?.() || navigation.getParent();
+    rootNav?.navigate("NotificationListScreen");
   };
 
   return (
@@ -42,7 +45,7 @@ export default function Header() {
         </Text>
 
         {/* Chuông + badge */}
-        <View style={{ marginRight: spacing.md }}>
+        <Pressable onPress={goNotification} style={{ marginRight: spacing.md }}>
           <Ionicons name="notifications-outline" size={24} color="#fff" />
           <View
             style={{
@@ -61,7 +64,7 @@ export default function Header() {
               3
             </Text>
           </View>
-        </View>
+        </Pressable>
 
         {/* Icon người → bấm để mở Profile */}
         <Pressable onPress={goProfile} style={{ marginRight: spacing.md }}>

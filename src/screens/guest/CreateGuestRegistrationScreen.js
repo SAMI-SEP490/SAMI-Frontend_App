@@ -106,7 +106,7 @@ export default function CreateGuestRegistrationScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={{ flex: 1 }}>
             <StatusBar barStyle="dark-content" />
-            <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
+            <View style={{ paddingBottom: spacing.lg }}>
               <Header />
             </View>
 
@@ -173,7 +173,10 @@ export default function CreateGuestRegistrationScreen() {
                 <Text style={styles.label}>Lí do tạm trú:</Text>
                 <View style={styles.pickerWrap}>
                   <Picker selectedValue={reason} onValueChange={setReason}>
-                    <Picker.Item label="Thăm người thân" value="Thăm người thân" />
+                    <Picker.Item
+                      label="Thăm người thân"
+                      value="Thăm người thân"
+                    />
                     <Picker.Item label="Công tác" value="Công tác" />
                     <Picker.Item label="Du lịch" value="Du lịch" />
                     <Picker.Item label="Khác" value="Khác" />
