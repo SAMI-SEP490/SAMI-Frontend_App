@@ -25,7 +25,7 @@ const FEATURES = [
     bg: "#E9F1FF",
   },
   {
-    key: "parking",
+    key: "vehicle",
     label: "Đăng ký gửi xe",
     icon: (p) => <Ionicons name="car-outline" size={26} color={p} />,
     bg: "#E9FBE7",
@@ -152,6 +152,9 @@ export default function DashboardScreen() {
                     }
                     if (item.key === "bill") {
                       navigation.navigate("BillListScreen");
+                    }
+                    if (item.key === "vehicle") {
+                      navigation.navigate("VehicleListScreen");
                     }
                   }}
                   style={{ width: "30%", alignItems: "center", gap: 8 }}
