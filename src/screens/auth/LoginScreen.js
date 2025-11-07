@@ -83,7 +83,7 @@ export default function LoginScreen() {
         }
         await saveTokens(data.accessToken, data.refreshToken);
         Alert.alert("Thành công", "Đăng nhập thành công!");
-        return navigation.reset({ index: 0, routes: [{ name: "Tabs" }] });
+        return navigation.reset({ index: 0, routes: [{ name: "TabNavigation" }] });
       }
 
       throw new Error("Phản hồi không hợp lệ");
