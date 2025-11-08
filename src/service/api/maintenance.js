@@ -9,7 +9,7 @@ import { http, unwrap } from "../http";
  */
 export function getMaintenanceStatistics() {
   return unwrap(http.get("/maintenance/statistics"));
-}
+} 
 
 /**
  * Lấy lịch sử bảo trì của một phòng
