@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as SecureStore from "expo-secure-store";
 import { useNavigation } from "@react-navigation/native";
@@ -158,7 +158,7 @@ const CreateVehicleScreen = () => {
           <DateTimePicker
             value={form.end_date ? new Date(form.end_date) : new Date()}
             mode="date"
-            display="calendar"
+            display={Platform.OS === "ios" ? "spinner" : "default"} // ✅ fix all
             minimumDate={new Date(today)}
             onChange={handleDateChange}
           />
