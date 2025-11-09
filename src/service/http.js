@@ -1,9 +1,12 @@
 // src/service/http.js
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 
-export const baseURL =
-  "https://lonely-alberta-jackets-academics.trycloudflare.com/api";
+export const baseURL = (
+  Constants?.expoConfig?.extra?.apiUrl ||
+  "https://lonely-alberta-jackets-academics.trycloudflare.com/api"
+).replace(/\/+$/, "");
 
 export const http = axios.create({
   baseURL,
@@ -16,30 +19,11 @@ http.interceptors.request.use(
   async (config) => {
     try {
       const token = await SecureStore.getItemAsync("sami_access_token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      } else {
-        console.warn("⚠️ Không tìm thấy token trong SecureStore.");
-      }
-    } catch (e) {
-      console.error("❌ Lỗi khi lấy token từ SecureStore:", e);
-    }
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+    } catch {}
     return config;
   },
   (error) => Promise.reject(error)
-);
-
-// ====== XỬ LÝ LỖI CHUNG ======
-http.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn("⚠️ Token hết hạn hoặc không hợp lệ.");
-      SecureStore.deleteItemAsync("sami_access_token");
-    }
-    console.error("API Error:", error);
-    return Promise.reject(error.response?.data || error);
-  }
 );
 
 // ====== GỌN DỮ LIỆU ======
@@ -49,8 +33,8 @@ export async function unwrap(promise) {
     return res.data;
   } catch (error) {
     const message =
+      error?.response?.data?.message ||
       error?.message ||
-      error?.data?.message ||
       "Đã xảy ra lỗi trong quá trình gọi API.";
     throw new Error(message);
   }
