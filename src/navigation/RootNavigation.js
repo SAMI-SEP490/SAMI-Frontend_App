@@ -45,11 +45,11 @@ export default function RootNavigation() {
 
   useEffect(() => {
     hydrate();
-  //   const resetToken = async () => {
-  //   await SecureStore.deleteItemAsync("sami_access_token");
-  //   await SecureStore.deleteItemAsync("sami_refresh_token");
-  // };
-  // resetToken();
+    // const resetToken = async () => {
+    //   await SecureStore.deleteItemAsync("sami_access_token");
+    //   await SecureStore.deleteItemAsync("sami_refresh_token");
+    // };
+    // resetToken();
   }, []);
 
   // Có thể render Splash ở đây; tạm thời return null cho gọn
@@ -118,9 +118,18 @@ export default function RootNavigation() {
           />
 
           {/* vehicle */}
-          <Stack.Screen name="VehicleListScreen" component={VehicleListScreen} />
-          <Stack.Screen name="CreateVehicleScreen" component={CreateVehicleScreen} />
-          <Stack.Screen name="EditVehicleScreen" component={EditVehicleScreen} />
+          <Stack.Screen
+            name="VehicleListScreen"
+            component={VehicleListScreen}
+          />
+          <Stack.Screen
+            name="CreateVehicleScreen"
+            component={CreateVehicleScreen}
+          />
+          <Stack.Screen
+            name="EditVehicleScreen"
+            component={EditVehicleScreen}
+          />
         </>
       ) : (
         // CHƯA đăng nhập
