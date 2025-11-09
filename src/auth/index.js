@@ -12,7 +12,6 @@ export const API_URL =
   (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
   "https://cigarless-rathely-harriett.ngrok-free.dev/api"; // TODO: đổi IP LAN của bạn
 
-
 // ===== Store Auth (token, refresh, user) =====
 export const useAuthStore = create((set) => ({
   token: null,
@@ -139,7 +138,33 @@ export async function changePassword({ currentPassword, newPassword }) {
 
 export async function logout() {
   try {
-    await api.post("/auth/logout");
-  } catch {}
-  await useAuthStore.getState().logout();
+    // gọi API nếu backend có route /auth/logout (không bắt buộc)
+    if (typeof api?.post === "function") {
+      try {
+        await api.post("/auth/logout");
+      } catch (e) {
+        /* optional ignore */
+      }
+    }
+  } finally {
+    // xóa token ở SecureStore
+    try {
+      await Promise.all([
+        SecureStore.deleteItemAsync(TOKEN_KEY),
+        SecureStore.deleteItemAsync(REFRESH_KEY),
+      ]);
+    } catch {}
+
+    // đưa store về trạng thái chưa đăng nhập
+    try {
+      // nếu file đã khai báo useAuthStore rồi:
+      useAuthStore.getState().logout
+        ? await useAuthStore.getState().logout()
+        : useAuthStore.setState({
+            token: null,
+            refreshToken: null,
+            user: null,
+          });
+    } catch {}
+  }
 }

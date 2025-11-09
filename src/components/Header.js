@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
+import { logout } from "../auth";
 
 export default function Header() {
   const navigation = useNavigation();
@@ -20,6 +21,11 @@ export default function Header() {
     rootNav?.navigate("NotificationListScreen");
   };
 
+  const onLogout = async () => {
+    try {
+      await logout(); // xóa token → RootNavigation tự về Login
+    } catch {}
+  };
   return (
     <View
       style={{
@@ -70,7 +76,10 @@ export default function Header() {
         <Pressable onPress={goProfile} style={{ marginRight: spacing.md }}>
           <Ionicons name="person-circle-outline" size={26} color="#fff" />
         </Pressable>
-
+        
+        <Pressable onPress={onLogout} style={{ marginRight: 12 }}>
+          <Ionicons name="log-out-outline" size={22} color="#fff" />
+        </Pressable>
         <Ionicons name="share-social-outline" size={22} color="#fff" />
       </View>
     </View>

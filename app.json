@@ -3,7 +3,7 @@
     "name": "demo",
     "slug": "demo",
     "extra": {
-      "apiUrl": "https://cigarless-rathely-harriett.ngrok-free.dev/api"
+      "apiUrl": "https://lonely-alberta-jackets-academics.trycloudflare.com/api"
     },
     "version": "1.0.0",
     "orientation": "portrait",
@@ -29,8 +29,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-secure-store"
-    ]
+    "plugins": ["expo-secure-store"]
   }
 }
