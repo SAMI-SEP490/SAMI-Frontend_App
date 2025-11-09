@@ -1,6 +1,5 @@
-// src/screens/auth/LoginScreen.js
 import React, { useState } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -14,39 +13,32 @@ import {
 import TextField from "../../components/TextField";
 import Button from "../../components/Button";
 import axios from "axios";
-import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
+import { useAuthStore } from "../../auth";
 
 const API_URL =
   (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "http://192.168.1.50:3000/api"; // TODO: đổi IP LAN cho đúng
+  "https://lonely-alberta-jackets-academics.trycloudflare.com/api";
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
+const roleIsTenant = (u) =>
+  String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
 
-async function saveTokens(accessToken, refreshToken) {
-  if (accessToken)
-    await SecureStore.setItemAsync("sami_access_token", String(accessToken));
-  if (refreshToken)
-    await SecureStore.setItemAsync("sami_refresh_token", String(refreshToken));
+// --- DEBUG GUARD: log mọi lần reset (để tìm thủ phạm) ---
+if (__DEV__ && !CommonActions.__samiPatched) {
+  const _reset = CommonActions.reset;
+  CommonActions.reset = (...args) => {
+    console.warn(
+      "⚠️ CommonActions.reset was called with:",
+      JSON.stringify(args)
+    );
+    return _reset(...args);
+  };
+  CommonActions.__samiPatched = true;
 }
-
-function roleIsTenant(user) {
-  const r = String(
-    user?.role || user?.user_type || user?.type || ""
-  ).toLowerCase();
-  return r === "tenant";
-}
-
-// để debug Network Error
-function showAxiosError(e) {
-  const code = e?.code || "";
-  const msg = e?.message || "";
-  const url = e?.config?.url || "";
-  console.log("AXIOS_ERR", { code, msg, url, baseURL: API_URL });
-  Alert.alert("Lỗi đăng nhập", msg || "Network Error");
-}
+// --------------------------------------------------------
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -57,7 +49,6 @@ export default function LoginScreen() {
   const onLogin = async () => {
     try {
       setLoading(true);
-
       const res = await axios.post(
         `${API_URL}/auth/login`,
         { email, password },
@@ -66,7 +57,6 @@ export default function LoginScreen() {
       const data = unwrap(res);
 
       if (data?.requiresOTP) {
-        // user chưa verify → sang màn OTP
         return navigation.navigate("LoginOTP", {
           userId: data.userId,
           email: data.email || email,
@@ -74,21 +64,27 @@ export default function LoginScreen() {
       }
 
       if (data?.accessToken && data?.user) {
-        // chỉ cho TENANT
         if (!roleIsTenant(data.user)) {
           return Alert.alert(
             "Không được phép",
             "Ứng dụng này chỉ dành cho Tenant."
           );
         }
-        await saveTokens(data.accessToken, data.refreshToken);
-        Alert.alert("Thành công", "Đăng nhập thành công!");
-        return navigation.reset({ index: 0, routes: [{ name: "TabNavigation" }] });
+        await useAuthStore.getState().setAuth({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          user: data.user,
+        });
+        // KHÔNG reset/replace/navigate nữa. RootNavigation sẽ tự chuyển stack.
+        return;
       }
 
       throw new Error("Phản hồi không hợp lệ");
     } catch (e) {
-      showAxiosError(e);
+      const msg =
+        e?.response?.data?.message || e.message || "Đăng nhập thất bại";
+      console.log("LOGIN_ERR:", msg);
+      Alert.alert("Lỗi đăng nhập", msg);
     } finally {
       setLoading(false);
     }
