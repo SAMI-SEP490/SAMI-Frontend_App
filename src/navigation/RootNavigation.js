@@ -115,6 +115,21 @@ export default function RootNavigation() {
             name="ChangePasswordScreen"
             component={ChangePasswordScreen}
           />
+
+
+          {/* vehicle */}
+          <Stack.Screen
+            name="VehicleListScreen"
+            component={VehicleListScreen}
+          />
+          <Stack.Screen
+            name="CreateVehicleScreen"
+            component={CreateVehicleScreen}
+          />
+          <Stack.Screen
+            name="EditVehicleScreen"
+            component={EditVehicleScreen}
+          />
         </>
       ) : (
         // ====== CHƯA ĐĂNG NHẬP: Auth stack ======
