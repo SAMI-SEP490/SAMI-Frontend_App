@@ -1,16 +1,18 @@
+// src/navigation/RootNavigation.js
 import React, { useEffect } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
+// Tabs (trang chính sau đăng nhập)
 import TabNavigation from "./TabNavigation";
 
-// Guest/maintenance
+// Guest & Maintenance
 import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrationScreen";
 import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrationScreen";
 import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 import MaintenanceListScreen from "../screens/maintenance/MaintenanceListScreen";
 import CreateMaintenanceRequestScreen from "../screens/maintenance/CreateMaintenanceRequestScreen";
 
-// Auth
+// Auth flow
 import LoginScreen from "../screens/auth/LoginScreen";
 import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
 import VerifyCodeScreen from "../screens/auth/VerifyCodeScreen";
@@ -22,27 +24,24 @@ import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 
-// Bills
+// Bill
 import BillListScreen from "../screens/bill/BillListScreen";
 import OnlinePaymentScreen from "../screens/bill/OnlinePaymentScreen";
 import TransactionHistoryScreen from "../screens/bill/TransactionHistoryScreen";
 
-// Notifications
+// Notification
 import NotificationListScreen from "../screens/notification/NotificationListScreen";
 import NotificationDetailScreen from "../screens/notification/NotificationDetailScreen";
 
-// Auth store (1-file module)
+// Auth store (đã tạo ở src/auth/index.js)
 import { useAuthStore } from "../auth";
 
-import * as SecureStore from "expo-secure-store";
-import VehicleListScreen from "../screens/vehicle/VehicleListScreen";
-import CreateVehicleScreen from "../screens/vehicle/CreateVehicleScreen";
-import EditVehicleScreen from "../screens/vehicle/EditVehicleScreen";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
   const { token, hydrated, hydrate } = useAuthStore();
 
+  // Lấy token từ SecureStore 1 lần khi app mở
   useEffect(() => {
     hydrate();
     // const resetToken = async () => {
@@ -52,13 +51,13 @@ export default function RootNavigation() {
     // resetToken();
   }, []);
 
-  // Có thể render Splash ở đây; tạm thời return null cho gọn
+  // Chưa hydrate xong thì tạm thời không render navigator để tránh nhấp nháy
   if (!hydrated) return null;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: true }}>
       {token ? (
-        // ĐÃ đăng nhập
+        // ====== ĐÃ ĐĂNG NHẬP: App stack ======
         <>
           <Stack.Screen
             name="TabNavigation"
@@ -88,7 +87,7 @@ export default function RootNavigation() {
             component={CreateMaintenanceRequestScreen}
           />
 
-          {/* Bills */}
+          {/* Bill */}
           <Stack.Screen name="BillListScreen" component={BillListScreen} />
           <Stack.Screen
             name="OnlinePaymentScreen"
@@ -99,7 +98,7 @@ export default function RootNavigation() {
             component={TransactionHistoryScreen}
           />
 
-          {/* Notifications */}
+          {/* Notification */}
           <Stack.Screen
             name="NotificationListScreen"
             component={NotificationListScreen}
@@ -117,6 +116,7 @@ export default function RootNavigation() {
             component={ChangePasswordScreen}
           />
 
+
           {/* vehicle */}
           <Stack.Screen
             name="VehicleListScreen"
@@ -132,7 +132,7 @@ export default function RootNavigation() {
           />
         </>
       ) : (
-        // CHƯA đăng nhập
+        // ====== CHƯA ĐĂNG NHẬP: Auth stack ======
         <>
           <Stack.Screen
             name="Login"
