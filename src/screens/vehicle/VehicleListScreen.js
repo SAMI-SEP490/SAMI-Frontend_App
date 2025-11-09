@@ -1,5 +1,5 @@
-// Updated: 2025-11-07
-// by: MinhBH (added edit button for pending vehicles)
+// Updated: 2025-11-09
+// by: DatNB
 
 import React, { useState, useEffect } from "react";
 import {
@@ -20,6 +20,9 @@ import Header from "../../components/Header";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 
+// 🔹 Import API service
+import { getVehicleRegistrations } from "../../service/api/vehicle";
+
 const VehicleListScreen = () => {
   const navigation = useNavigation();
 
@@ -30,27 +33,31 @@ const VehicleListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
-  // 🔹 Giả lập tải dữ liệu xe
-  useEffect(() => {
-    const fetchVehicles = async () => {
+  // 🔹 Gọi API lấy danh sách đăng ký xe của người dùng hiện tại
+  const fetchVehicles = async () => {
+    try {
       setLoading(true);
-      const mockData = [
-        { id: 1, type: "Xe máy", status: "approved", registered_at: "2025-11-01", note: "Xe chính chủ, màu xanh" },
-        { id: 2, type: "Ô tô", status: "pending", registered_at: "2025-10-28", note: "Đang chờ xác nhận giấy tờ" },
-        { id: 3, type: "Xe đạp", status: "rejected", registered_at: "2025-10-15", note: "Không đủ điều kiện đăng ký" },
-        { id: 4, type: "Xe máy", status: "approved", registered_at: "2025-09-20", note: "Xe khách thuê phòng 205" },
-      ];
-      setVehicleData(mockData);
-      setFilteredData(mockData);
+      const res = await getVehicleRegistrations(); // gọi API backend
+      setVehicleData(res || []);
+      setFilteredData(res || []);
+    } catch (err) {
+      console.error("❌ Lỗi khi tải danh sách đăng ký xe:", err);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
     fetchVehicles();
   }, []);
 
-  // ✅ Cập nhật lại danh sách khi filter hoặc dữ liệu thay đổi
+  // ✅ Cập nhật lại danh sách khi filter thay đổi
   useEffect(() => {
     let data = vehicleData;
-    if (filterType) data = data.filter((i) => i.type === filterType);
+    if (filterType)
+      data = data.filter(
+        (i) => i.vehicle_type === filterType || i.type === filterType
+      );
     if (filterStatus) data = data.filter((i) => i.status === filterStatus);
     setFilteredData(data);
   }, [vehicleData, filterType, filterStatus]);
@@ -79,25 +86,36 @@ const VehicleListScreen = () => {
         {item.status === "pending" && (
           <TouchableOpacity
             style={styles.editIcon}
-            onPress={() => navigation.navigate("EditVehicleScreen", { vehicleId: item.id })}
+            onPress={() =>
+              navigation.navigate("EditVehicleScreen", { vehicleId: item.id })
+            }
           >
             <Ionicons name="create-outline" size={20} color={colors.brand} />
           </TouchableOpacity>
         )}
       </View>
 
-      <Text style={styles.itemText}>Loại xe: {item.type}</Text>
+      <Text style={styles.itemText}>
+        Loại xe: {item.vehicle_type || item.type}
+      </Text>
       <Text style={[styles.itemText, getStatusStyle(item.status)]}>
         Trạng thái: {item.status}
       </Text>
-      <Text style={styles.itemText}>Ngày tạo: {item.registered_at}</Text>
-      <Text style={styles.itemText}>Ghi chú: {item.note}</Text>
+      <Text style={styles.itemText}>
+        Ngày đăng ký:{" "}
+        {item.created_at
+          ? new Date(item.created_at).toLocaleDateString("vi-VN")
+          : "N/A"}
+      </Text>
+      <Text style={styles.itemText}>Ghi chú: {item.note || "Không có"}</Text>
     </View>
   );
 
   // =============== Modal Filter ===============
   const FilterModal = () => {
-    const types = [...new Set(vehicleData.map((i) => i.type))];
+    const types = [
+      ...new Set(vehicleData.map((i) => i.vehicle_type || i.type)),
+    ];
     const statuses = [...new Set(vehicleData.map((i) => i.status))];
 
     return (
@@ -194,7 +212,7 @@ const VehicleListScreen = () => {
       <Header />
       <FilterModal />
       <View style={styles.content}>
-        <Text style={styles.title}>Danh sách xe</Text>
+        <Text style={styles.title}>Đăng ký xe của tôi</Text>
 
         <View style={styles.buttonContainer}>
           {/* 🔹 Nút đăng ký xe mới */}
@@ -223,6 +241,11 @@ const VehicleListScreen = () => {
           renderItem={renderVehicleItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <Text style={{ textAlign: "center", marginTop: 20 }}>
+              Không có đăng ký xe nào.
+            </Text>
+          }
         />
       </View>
     </SafeAreaView>
@@ -233,8 +256,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 16 },
-  buttonContainer: { flexDirection: "row", marginBottom: 16, alignItems: "center" },
-  newRequestButton: { padding: 12, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  buttonContainer: {
+    flexDirection: "row",
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  newRequestButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   filterButton: {
     flexDirection: "row",
     backgroundColor: "#e0e0e0",
@@ -243,7 +275,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-  filterButtonText: { color: "#333", fontSize: 16, fontWeight: "bold", marginLeft: 8 },
+  filterButtonText: {
+    color: "#333",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
   newRequestButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   listContainer: { paddingBottom: 16 },
   vehicleItem: {
@@ -262,15 +299,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 4,
   },
-  editIcon: {
-    padding: 4,
-  },
+  editIcon: { padding: 4 },
   itemText: { fontSize: 14, marginBottom: 4 },
   statusApproved: { color: "green", fontWeight: "bold" },
   statusPending: { color: "orange", fontWeight: "bold" },
   statusRejected: { color: "red", fontWeight: "bold" },
-
-  // ===== Modal Styles =====
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -297,8 +330,18 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: colors.brand, borderColor: colors.brand },
   chipText: { fontSize: 14, color: "#333" },
   chipTextSelected: { color: "#fff", fontWeight: "bold" },
-  modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 20 },
-  modalButton: { flex: 1, padding: 10, borderRadius: 8, alignItems: "center", marginHorizontal: 4 },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 4,
+  },
   modalButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
 
