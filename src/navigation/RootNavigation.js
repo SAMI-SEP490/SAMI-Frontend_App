@@ -36,6 +36,12 @@ import NotificationDetailScreen from "../screens/notification/NotificationDetail
 // Auth store (đã tạo ở src/auth/index.js)
 import { useAuthStore } from "../auth";
 
+import * as SecureStore from "expo-secure-store";
+// vehicle
+import VehicleListScreen from "../screens/vehicle/VehicleListScreen";
+import CreateVehicleScreen from "../screens/vehicle/CreateVehicleScreen";
+import EditVehicleScreen from "../screens/vehicle/EditVehicleScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {

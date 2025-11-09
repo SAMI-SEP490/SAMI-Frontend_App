@@ -26,7 +26,7 @@ export function getVehicleById(id) {
  * @param {Object} data - { vehicleType, licensePlate, description, ... }
  */
 export function createVehicleRegistration(data) {
-  return unwrap(http.post("/vehicles/registrations", data));
+  return unwrap(http.post("/vehicle/registrations", data));
 }
 
 /**
@@ -35,7 +35,7 @@ export function createVehicleRegistration(data) {
  * @param {Object} data
  */
 export function updateVehicleRegistration(id, data) {
-  return unwrap(http.put(`/vehicles/registrations/${id}`, data));
+  return unwrap(http.put(`/vehicle/registrations/${id}`, data));
 }
 
 /**
@@ -43,7 +43,7 @@ export function updateVehicleRegistration(id, data) {
  * @param {string|number} id
  */
 export function deleteVehicleRegistration(id) {
-  return unwrap(http.delete(`/vehicles/registrations/${id}`));
+  return unwrap(http.delete(`/vehicle/registrations/${id}`));
 }
 
 /**
@@ -52,7 +52,7 @@ export function deleteVehicleRegistration(id) {
  * @param {Object} data - { reason: "..." }
  */
 export function cancelVehicleRegistration(id, data) {
-  return unwrap(http.post(`/vehicles/registrations/${id}/cancel`, data));
+  return unwrap(http.post(`/vehicle/registrations/${id}/cancel`, data));
 }
 
 /**
@@ -61,14 +61,14 @@ export function cancelVehicleRegistration(id, data) {
  * @param {Object} params - { status, page, limit, ... }
  */
 export function getVehicleRegistrations(params = {}) {
-  return unwrap(http.get("/vehicles/registrations", { params }));
+  return unwrap(http.get("/vehicle/registrations", { params }));
 }
 
 /**
  * Lấy thống kê đăng ký xe
  */
 export function getVehicleRegistrationStats() {
-  return unwrap(http.get("/vehicles/registrations/stats"));
+  return unwrap(http.get("/vehicle/registrations/stats"));
 }
 
 /**
@@ -76,7 +76,7 @@ export function getVehicleRegistrationStats() {
  * @param {string|number} id
  */
 export function getVehicleRegistrationById(id) {
-  return unwrap(http.get(`/vehicles/registrations/${id}`));
+  return unwrap(http.get(`/vehicle/registrations/${id}`));
 }
 
 /**
@@ -84,7 +84,7 @@ export function getVehicleRegistrationById(id) {
  * @param {string|number} id
  */
 export function approveVehicleRegistration(id) {
-  return unwrap(http.post(`/vehicles/registrations/${id}/approve`));
+  return unwrap(http.post(`/vehicle/registrations/${id}/approve`));
 }
 
 /**
@@ -93,5 +93,5 @@ export function approveVehicleRegistration(id) {
  * @param {Object} data - { reason: "..." }
  */
 export function rejectVehicleRegistration(id, data) {
-  return unwrap(http.post(`/vehicles/registrations/${id}/reject`, data));
+  return unwrap(http.post(`/vehicle/registrations/${id}/reject`, data));
 }
