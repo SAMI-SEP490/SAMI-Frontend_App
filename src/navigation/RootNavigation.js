@@ -116,7 +116,6 @@ export default function RootNavigation() {
             component={ChangePasswordScreen}
           />
 
-
           {/* vehicle */}
           <Stack.Screen
             name="VehicleListScreen"
