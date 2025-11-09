@@ -71,7 +71,7 @@ export default function LoginOTPScreen({ route, navigation }) {
         }
         await saveTokens(data.accessToken, data.refreshToken);
         Alert.alert("Thành công", "Xác thực thành công!");
-        return navigation.reset({ index: 0, routes: [{ name: "Tabs" }] });
+        return navigation.reset({ index: 0, routes: [{ name: "TabNavigation" }] });
       }
 
       throw new Error("Mã OTP không hợp lệ");

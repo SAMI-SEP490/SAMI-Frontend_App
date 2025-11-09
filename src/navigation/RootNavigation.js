@@ -34,6 +34,10 @@ import NotificationDetailScreen from "../screens/notification/NotificationDetail
 // Auth store (1-file module)
 import { useAuthStore } from "../auth";
 
+import * as SecureStore from "expo-secure-store";
+import VehicleListScreen from "../screens/vehicle/VehicleListScreen";
+import CreateVehicleScreen from "../screens/vehicle/CreateVehicleScreen";
+import EditVehicleScreen from "../screens/vehicle/EditVehicleScreen";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
@@ -41,6 +45,11 @@ export default function RootNavigation() {
 
   useEffect(() => {
     hydrate();
+  //   const resetToken = async () => {
+  //   await SecureStore.deleteItemAsync("sami_access_token");
+  //   await SecureStore.deleteItemAsync("sami_refresh_token");
+  // };
+  // resetToken();
   }, []);
 
   // Có thể render Splash ở đây; tạm thời return null cho gọn
@@ -107,6 +116,11 @@ export default function RootNavigation() {
             name="ChangePasswordScreen"
             component={ChangePasswordScreen}
           />
+
+          {/* vehicle */}
+          <Stack.Screen name="VehicleListScreen" component={VehicleListScreen} />
+          <Stack.Screen name="CreateVehicleScreen" component={CreateVehicleScreen} />
+          <Stack.Screen name="EditVehicleScreen" component={EditVehicleScreen} />
         </>
       ) : (
         // CHƯA đăng nhập
