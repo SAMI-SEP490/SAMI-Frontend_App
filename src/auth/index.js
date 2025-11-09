@@ -10,7 +10,7 @@ const REFRESH_KEY = "sami_refresh_token";
 // Lấy API_URL từ app.json -> expo.extra.apiUrl
 export const API_URL =
   (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "http://192.168.1.100:3000/api"; // TODO: đổi IP LAN của bạn
+  "http://192.168.88.168:3000/api"; // TODO: đổi IP LAN của bạn
 
 // ===== Store Auth (token, refresh, user) =====
 export const useAuthStore = create((set) => ({

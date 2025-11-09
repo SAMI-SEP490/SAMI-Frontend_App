@@ -52,7 +52,7 @@ export default function RootNavigation() {
         // ĐÃ đăng nhập
         <>
           <Stack.Screen
-            name="Tabs"
+            name="TabNavigation"
             component={TabNavigation}
             options={{ headerShown: false }}
           />
