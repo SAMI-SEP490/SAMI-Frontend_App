@@ -1,6 +1,3 @@
-// Updated: 2025-11-10
-// by: GPT-5 mini (VehicleListScreen full với tiếng Việt)
-
 import React, { useState, useEffect } from "react";
 import {
   View,

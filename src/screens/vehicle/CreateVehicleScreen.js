@@ -1,6 +1,3 @@
-// Updated: 2025-11-10
-// By: GPT-5 mini (CreateVehicleScreen refactor)
-
 import React, { useState } from "react";
 import {
   View,
