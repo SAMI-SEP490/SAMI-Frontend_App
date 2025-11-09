@@ -1,5 +1,5 @@
-// Updated: 2025-11-09
-// by: DatNB
+// Updated: 2025-11-10
+// by: GPT-5 mini (VehicleListScreen full với tiếng Việt)
 
 import React, { useState, useEffect } from "react";
 import {
@@ -20,8 +20,21 @@ import Header from "../../components/Header";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 
-// 🔹 Import API service
 import { getVehicleRegistrations } from "../../service/api/vehicle";
+
+const VEHICLE_TYPE_VN = {
+  car: "Ô tô",
+  motorcycle: "Xe máy",
+  truck: "Xe tải",
+  van: "Xe van",
+  other: "Khác",
+};
+
+const STATUS_VN = {
+  requested: "Đang chờ",
+  approved: "Đã duyệt",
+  rejected: "Bị từ chối",
+};
 
 const VehicleListScreen = () => {
   const navigation = useNavigation();
@@ -33,15 +46,37 @@ const VehicleListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
-  // 🔹 Gọi API lấy danh sách đăng ký xe của người dùng hiện tại
+  // 🔹 Fetch vehicle registrations & parse reason JSON
   const fetchVehicles = async () => {
     try {
       setLoading(true);
-      const res = await getVehicleRegistrations(); // gọi API backend
-      setVehicleData(res || []);
-      setFilteredData(res || []);
+      const res = await getVehicleRegistrations();
+      const registrations = res?.data?.registrations ?? [];
+
+      const parsed = registrations.map((item) => {
+        let reason = {};
+        try {
+          reason = item.reason ? JSON.parse(item.reason) : {};
+        } catch (e) {
+          console.warn("Cannot parse reason JSON:", item.reason);
+        }
+        return {
+          ...item,
+          vehicle_type: reason.type || null,
+          license_plate: reason.license_plate || null,
+          brand: reason.brand || null,
+          color: reason.color || null,
+        };
+      });
+
+      console.log("🚀 Đăng ký xe đã tải (parsed):", parsed);
+
+      setVehicleData(parsed);
+      setFilteredData(parsed);
     } catch (err) {
       console.error("❌ Lỗi khi tải danh sách đăng ký xe:", err);
+      setVehicleData([]);
+      setFilteredData([]);
     } finally {
       setLoading(false);
     }
@@ -51,23 +86,24 @@ const VehicleListScreen = () => {
     fetchVehicles();
   }, []);
 
-  // ✅ Cập nhật lại danh sách khi filter thay đổi
+  // 🔹 Filter logic
   useEffect(() => {
     let data = vehicleData;
-    if (filterType)
-      data = data.filter(
-        (i) => i.vehicle_type === filterType || i.type === filterType
-      );
-    if (filterStatus) data = data.filter((i) => i.status === filterStatus);
+    if (filterType) {
+      data = data.filter((i) => i.vehicle_type === filterType);
+    }
+    if (filterStatus) {
+      data = data.filter((i) => i.status === filterStatus);
+    }
     setFilteredData(data);
   }, [vehicleData, filterType, filterStatus]);
 
-  // =============== UI Helpers ===============
+  // 🔹 Status style helper
   const getStatusStyle = (status) => {
     switch (status) {
       case "approved":
         return styles.statusApproved;
-      case "pending":
+      case "requested":
         return styles.statusPending;
       case "rejected":
         return styles.statusRejected;
@@ -76,18 +112,18 @@ const VehicleListScreen = () => {
     }
   };
 
-  // 🆕 Render từng item xe
+  // 🔹 Render item
   const renderVehicleItem = ({ item, index }) => (
     <View style={styles.vehicleItem}>
       <View style={styles.vehicleHeader}>
         <Text style={styles.itemText}>#{index + 1}</Text>
-
-        {/* 🔹 Chỉ hiển thị icon Edit nếu trạng thái là pending */}
-        {item.status === "pending" && (
+        {item.status === "requested" && (
           <TouchableOpacity
             style={styles.editIcon}
             onPress={() =>
-              navigation.navigate("EditVehicleScreen", { vehicleId: item.id })
+              navigation.navigate("EditVehicleScreen", {
+                vehicleId: item.assignment_id,
+              })
             }
           >
             <Ionicons name="create-outline" size={20} color={colors.brand} />
@@ -96,27 +132,35 @@ const VehicleListScreen = () => {
       </View>
 
       <Text style={styles.itemText}>
-        Loại xe: {item.vehicle_type || item.type}
+        Loại xe:{" "}
+        {VEHICLE_TYPE_VN[item.vehicle_type] || item.vehicle_type || "N/A"}
       </Text>
+      <Text style={styles.itemText}>
+        Biển số: {item.license_plate || "N/A"}
+      </Text>
+      <Text style={styles.itemText}>Thương hiệu: {item.brand || "N/A"}</Text>
+      <Text style={styles.itemText}>Màu: {item.color || "N/A"}</Text>
       <Text style={[styles.itemText, getStatusStyle(item.status)]}>
-        Trạng thái: {item.status}
+        Trạng thái: {STATUS_VN[item.status] || item.status}
       </Text>
       <Text style={styles.itemText}>
         Ngày đăng ký:{" "}
-        {item.created_at
-          ? new Date(item.created_at).toLocaleDateString("vi-VN")
+        {item.requested_at
+          ? new Date(item.requested_at).toLocaleDateString("vi-VN")
           : "N/A"}
       </Text>
       <Text style={styles.itemText}>Ghi chú: {item.note || "Không có"}</Text>
     </View>
   );
 
-  // =============== Modal Filter ===============
+  // 🔹 Filter Modal
   const FilterModal = () => {
     const types = [
-      ...new Set(vehicleData.map((i) => i.vehicle_type || i.type)),
+      ...new Set(vehicleData.map((i) => i.vehicle_type).filter(Boolean)),
     ];
-    const statuses = [...new Set(vehicleData.map((i) => i.status))];
+    const statuses = [
+      ...new Set(vehicleData.map((i) => i.status).filter(Boolean)),
+    ];
 
     return (
       <Modal
@@ -146,7 +190,7 @@ const VehicleListScreen = () => {
                       filterType === t && styles.chipTextSelected,
                     ]}
                   >
-                    {t}
+                    {VEHICLE_TYPE_VN[t] || t}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -169,7 +213,7 @@ const VehicleListScreen = () => {
                       filterStatus === s && styles.chipTextSelected,
                     ]}
                   >
-                    {s}
+                    {STATUS_VN[s] || s}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -211,11 +255,11 @@ const VehicleListScreen = () => {
       <StatusBar barStyle="light-content" />
       <Header />
       <FilterModal />
+
       <View style={styles.content}>
         <Text style={styles.title}>Đăng ký xe của tôi</Text>
 
         <View style={styles.buttonContainer}>
-          {/* 🔹 Nút đăng ký xe mới */}
           <TouchableOpacity
             style={[
               styles.newRequestButton,
@@ -226,7 +270,6 @@ const VehicleListScreen = () => {
             <Text style={styles.newRequestButtonText}>+ Đăng ký xe mới</Text>
           </TouchableOpacity>
 
-          {/* 🔹 Nút lọc */}
           <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setFilterModalVisible(true)}
@@ -239,7 +282,7 @@ const VehicleListScreen = () => {
         <FlatList
           data={filteredData}
           renderItem={renderVehicleItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.assignment_id.toString()}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
             <Text style={{ textAlign: "center", marginTop: 20 }}>
