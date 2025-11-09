@@ -1,4 +1,3 @@
-// src/screens/auth/LoginOTPScreen.js
 import React, { useState } from "react";
 import {
   View,
@@ -13,36 +12,18 @@ import {
 import TextField from "../../components/TextField";
 import Button from "../../components/Button";
 import axios from "axios";
-import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
+import { useAuthStore } from "../../auth"; // <-- quan trọng
 
 const API_URL =
   (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "http://192.168.1.50:3000/api";
+  "https://lonely-alberta-jackets-academics.trycloudflare.com/api";
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
-
-async function saveTokens(accessToken, refreshToken) {
-  if (accessToken)
-    await SecureStore.setItemAsync("sami_access_token", String(accessToken));
-  if (refreshToken)
-    await SecureStore.setItemAsync("sami_refresh_token", String(refreshToken));
-}
-
-function roleIsTenant(user) {
-  const r = String(
-    user?.role || user?.user_type || user?.type || ""
-  ).toLowerCase();
-  return r === "tenant";
-}
-
-function showAxiosError(e) {
-  const msg = e?.message || "Network Error";
-  console.log("AXIOS_OTP_ERR", { msg, url: e?.config?.url, baseURL: API_URL });
-  Alert.alert("Lỗi", msg);
-}
+const roleIsTenant = (u) =>
+  String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
 
 export default function LoginOTPScreen({ route, navigation }) {
   const { userId, email } = route.params || {};
@@ -69,14 +50,21 @@ export default function LoginOTPScreen({ route, navigation }) {
             "Ứng dụng này chỉ dành cho Tenant."
           );
         }
-        await saveTokens(data.accessToken, data.refreshToken);
-        Alert.alert("Thành công", "Xác thực thành công!");
-        return navigation.reset({ index: 0, routes: [{ name: "TabNavigation" }] });
+        // cập nhật store -> RootNavigation tự chuyển sang app stack
+        await useAuthStore.getState().setAuth({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          user: data.user,
+        });
+        return;
       }
 
       throw new Error("Mã OTP không hợp lệ");
     } catch (e) {
-      showAxiosError(e);
+      const msg =
+        e?.response?.data?.message || e.message || "Xác thực thất bại";
+      console.log("OTP_ERR:", msg);
+      Alert.alert("Lỗi", msg);
     } finally {
       setLoading(false);
     }
@@ -107,18 +95,6 @@ export default function LoginOTPScreen({ route, navigation }) {
             onPress={onVerify}
             style={{ marginTop: spacing.md }}
           />
-
-          <Text
-            style={styles.forgot}
-            onPress={() =>
-              Alert.alert(
-                "Gợi ý",
-                "Nếu chưa thấy email, hãy kiểm tra Spam/Promotions."
-              )
-            }
-          >
-            Chưa nhận được mã?
-          </Text>
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -139,11 +115,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: colors.muted,
     marginBottom: spacing.lg,
-  },
-  forgot: {
-    marginTop: spacing.md,
-    textAlign: "center",
-    color: colors.brand,
-    fontWeight: "500",
   },
 });
