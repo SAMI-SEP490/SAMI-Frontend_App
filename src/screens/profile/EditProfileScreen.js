@@ -7,7 +7,8 @@ import {
   Text,
   Image,
   Alert,
-  Pressable, StatusBar,
+  Pressable,
+  StatusBar,
 } from "react-native";
 import Header from "../../components/Header";
 import TextField from "../../components/TextField";

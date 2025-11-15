@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigation, CommonActions } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -16,7 +15,7 @@ import axios from "axios";
 import Constants from "expo-constants";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { useAuthStore } from "../../auth";
+import { useAuthStore } from "../../auth"; // <-- quan trọng
 
 const API_URL =
   (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
@@ -26,42 +25,23 @@ const unwrap = (res) => res?.data?.data ?? res?.data;
 const roleIsTenant = (u) =>
   String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
 
-// --- DEBUG GUARD: log mọi lần reset (để tìm thủ phạm) ---
-if (__DEV__ && !CommonActions.__samiPatched) {
-  const _reset = CommonActions.reset;
-  CommonActions.reset = (...args) => {
-    console.warn(
-      "⚠️ CommonActions.reset was called with:",
-      JSON.stringify(args)
-    );
-    return _reset(...args);
-  };
-  CommonActions.__samiPatched = true;
-}
-// --------------------------------------------------------
-
-export default function LoginScreen() {
-  const navigation = useNavigation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function LoginOTPScreen({ route, navigation }) {
+  const { userId, email } = route.params || {};
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const onLogin = async () => {
+  const onVerify = async () => {
     try {
+      if (!userId || !otp)
+        return Alert.alert("Thiếu thông tin", "Vui lòng nhập mã OTP.");
       setLoading(true);
+
       const res = await axios.post(
-        `${API_URL}/auth/login`,
-        { email, password },
+        `${API_URL}/auth/verify-otp`,
+        { userId, otp },
         { timeout: 15000 }
       );
       const data = unwrap(res);
-
-      if (data?.requiresOTP) {
-        return navigation.navigate("LoginOTP", {
-          userId: data.userId,
-          email: data.email || email,
-        });
-      }
 
       if (data?.accessToken && data?.user) {
         if (!roleIsTenant(data.user)) {
@@ -70,21 +50,21 @@ export default function LoginScreen() {
             "Ứng dụng này chỉ dành cho Tenant."
           );
         }
+        // cập nhật store -> RootNavigation tự chuyển sang app stack
         await useAuthStore.getState().setAuth({
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
           user: data.user,
         });
-        // KHÔNG reset/replace/navigate nữa. RootNavigation sẽ tự chuyển stack.
         return;
       }
 
-      throw new Error("Phản hồi không hợp lệ");
+      throw new Error("Mã OTP không hợp lệ");
     } catch (e) {
       const msg =
-        e?.response?.data?.message || e.message || "Đăng nhập thất bại";
-      console.log("LOGIN_ERR:", msg);
-      Alert.alert("Lỗi đăng nhập", msg);
+        e?.response?.data?.message || e.message || "Xác thực thất bại";
+      console.log("OTP_ERR:", msg);
+      Alert.alert("Lỗi", msg);
     } finally {
       setLoading(false);
     }
@@ -97,36 +77,24 @@ export default function LoginScreen() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.inner}>
-          <Text style={styles.title}>Đăng Nhập</Text>
+          <Text style={styles.title}>Xác thực OTP</Text>
+          <Text style={styles.subtitle}>
+            Mã OTP đã được gửi đến email {email || ""}
+          </Text>
 
           <TextField
-            label="Email"
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <TextField
-            label="Mật khẩu"
-            placeholder="••••••••"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
+            label="Mã OTP"
+            placeholder="Nhập 6 số"
+            keyboardType="number-pad"
+            value={otp}
+            onChangeText={setOtp}
           />
 
           <Button
-            title={loading ? "Đang đăng nhập..." : "Đăng nhập"}
-            onPress={onLogin}
+            title={loading ? "Đang xác thực..." : "Xác nhận"}
+            onPress={onVerify}
             style={{ marginTop: spacing.md }}
           />
-
-          <Text
-            style={styles.forgot}
-            onPress={() => navigation.navigate("ResetPasswordScreen")}
-          >
-            Quên mật khẩu?
-          </Text>
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -140,13 +108,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     textAlign: "center",
   },
-  forgot: {
-    marginTop: spacing.md,
+  subtitle: {
     textAlign: "center",
-    color: colors.brand,
-    fontWeight: "500",
+    color: colors.muted,
+    marginBottom: spacing.lg,
   },
 });

@@ -1,7 +1,10 @@
 {
   "expo": {
-    "name": "demo",
-    "slug": "demo",
+    "name": "SAMI",
+    "slug": "SAMI",
+    "extra": {
+      "apiUrl": "https://lonely-alberta-jackets-academics.trycloudflare.com/api"
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,10 +23,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.sami"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": ["expo-secure-store"]
   }
 }
