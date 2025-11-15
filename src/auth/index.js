@@ -10,7 +10,7 @@ const REFRESH_KEY = "sami_refresh_token";
 // Lấy API_URL từ app.json -> expo.extra.apiUrl
 export const API_URL =
   (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "https://lonely-alberta-jackets-academics.trycloudflare.com/api"; // TODO: đổi IP LAN của bạn
+  "https://competing-oakland-eds-without.trycloudflare.com/api"; // TODO: đổi IP LAN của bạn
 
 // ===== Store Auth (token, refresh, user) =====
 export const useAuthStore = create((set) => ({
