@@ -3,7 +3,7 @@
     "name": "SAMI",
     "slug": "SAMI",
     "extra": {
-      "apiUrl": "https://competing-oakland-eds-without.trycloudflare.com"
+      "apiUrl": "https://competing-oakland-eds-without.trycloudflare.com/api"
     },
     "version": "1.0.0",
     "orientation": "portrait",
