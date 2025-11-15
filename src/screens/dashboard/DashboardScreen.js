@@ -68,6 +68,13 @@ const FEATURES = [
     ),
     bg: "#EFFFF7",
   },
+  {
+    key: "chatbot",
+    label: "Trợ lý ảo",
+    icon: (p) => <Ionicons name="chatbubbles-outline" size={26} color={p} />,
+    bg: "#E9F7FF",
+  },
+
 ];
 
 export default function DashboardScreen() {
@@ -153,6 +160,8 @@ export default function DashboardScreen() {
                     if (item.key === "bill") {
                       navigation.navigate("BillListScreen");
                     }
+                if (item.key === "chatbot") {
+                      navigation.navigate("ChatbotScreen"); 
                     if (item.key === "vehicle") {
                       navigation.navigate("VehicleListScreen");
                     }
@@ -220,7 +229,7 @@ export default function DashboardScreen() {
               >
                 Thông tin căn hộ
               </Text>
-              <Pressable onPress={() => {}}>
+              <Pressable onPress={() => { }}>
                 <Text style={{ color: colors.brand, fontWeight: "700" }}>
                   Xem chi tiết
                 </Text>
