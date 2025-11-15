@@ -19,7 +19,7 @@ import TransactionHistoryScreen from "../screens/bill/TransactionHistoryScreen";
 import NotificationListScreen from "../screens/notification/NotificationListScreen";
 import NotificationDetailScreen from "../screens/notification/NotificationDetailScreen";
 import CreateVehicleRegistrationScreen from "../screens/vehicle/CreateVehicleRegistrationScreen.js";
-
+import ChatbotScreen from "../screens/chatbot/ChatbotScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -85,8 +85,11 @@ export default function RootNavigation() {
 
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-      <Stack.Screen name="CreateVehicleRegistrationScreen" component={CreateVehicleRegistrationScreen}
-/>
+      <Stack.Screen name="CreateVehicleRegistrationScreen" component={CreateVehicleRegistrationScreen} />
+      <Stack.Screen
+        name="ChatbotScreen"
+        component={ChatbotScreen}
+      />
     </Stack.Navigator>
   );
 }

@@ -21,7 +21,7 @@ export default function ChatbotScreen() {
     const newMsg = { sender: "user", text: input };
     setMessages((prev) => [...prev, newMsg]);
 
-    // Giả lập phản hồi tạm thời
+    
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
