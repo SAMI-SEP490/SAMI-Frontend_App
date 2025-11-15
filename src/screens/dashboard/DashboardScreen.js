@@ -74,18 +74,13 @@ const FEATURES = [
     icon: (p) => <Ionicons name="chatbubbles-outline" size={26} color={p} />,
     bg: "#E9F7FF",
   },
-
 ];
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
 
   // Tạo mảng data cho toàn bộ màn hình (để FlatList cuộn được tất cả)
-  const DATA = [
-    { type: "header" },
-    { type: "features" },
-    { type: "info" },
-  ];
+  const DATA = [{ type: "header" }, { type: "features" }, { type: "info" }];
   const renderItem = ({ item }) => {
     switch (item.type) {
       case "header":
@@ -101,7 +96,9 @@ export default function DashboardScreen() {
             }}
           >
             <StatusBar barStyle="light-content" />
-            <View style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}>
+            <View
+              style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}
+            >
               <Header />
             </View>
             <Text style={{ color: "#CFE1FF", fontSize: 14, marginBottom: 6 }}>
@@ -160,8 +157,9 @@ export default function DashboardScreen() {
                     if (item.key === "bill") {
                       navigation.navigate("BillListScreen");
                     }
-                if (item.key === "chatbot") {
-                      navigation.navigate("ChatbotScreen"); 
+                    if (item.key === "chatbot") {
+                      navigation.navigate("ChatbotScreen");
+                    }
                     if (item.key === "vehicle") {
                       navigation.navigate("VehicleListScreen");
                     }
@@ -229,7 +227,7 @@ export default function DashboardScreen() {
               >
                 Thông tin căn hộ
               </Text>
-              <Pressable onPress={() => { }}>
+              <Pressable onPress={() => {}}>
                 <Text style={{ color: colors.brand, fontWeight: "700" }}>
                   Xem chi tiết
                 </Text>
