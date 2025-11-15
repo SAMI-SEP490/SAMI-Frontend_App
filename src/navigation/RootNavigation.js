@@ -32,7 +32,6 @@ import TransactionHistoryScreen from "../screens/bill/TransactionHistoryScreen";
 // Notification
 import NotificationListScreen from "../screens/notification/NotificationListScreen";
 import NotificationDetailScreen from "../screens/notification/NotificationDetailScreen";
-import CreateVehicleRegistrationScreen from "../screens/vehicle/CreateVehicleRegistrationScreen.js";
 import ChatbotScreen from "../screens/chatbot/ChatbotScreen";
 
 // Auth store (đã tạo ở src/auth/index.js)
@@ -137,11 +136,7 @@ export default function RootNavigation() {
             name="EditVehicleScreen"
             component={EditVehicleScreen}
           />
-          <Stack.Screen name="CreateVehicleRegistrationScreen" component={CreateVehicleRegistrationScreen} />
-      <Stack.Screen
-        name="ChatbotScreen"
-        component={ChatbotScreen}
-      />
+          <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
         </>
       ) : (
         // ====== CHƯA ĐĂNG NHẬP: Auth stack ======
