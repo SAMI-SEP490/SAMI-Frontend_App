@@ -28,6 +28,7 @@ import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 import BillListScreen from "../screens/bill/BillListScreen";
 import OnlinePaymentScreen from "../screens/bill/OnlinePaymentScreen";
 import TransactionHistoryScreen from "../screens/bill/TransactionHistoryScreen";
+import VnpayWebViewScreen from "../screens/bill/VnpayWebViewScreen";
 
 // Notification
 import NotificationListScreen from "../screens/notification/NotificationListScreen";
@@ -99,6 +100,13 @@ export default function RootNavigation() {
           <Stack.Screen
             name="OnlinePaymentScreen"
             component={OnlinePaymentScreen}
+            options={{ headerShown: false }}
+          />
+
+          <Stack.Screen
+            name="VnpayWebViewScreen"
+            component={VnpayWebViewScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="TransactionHistoryScreen"

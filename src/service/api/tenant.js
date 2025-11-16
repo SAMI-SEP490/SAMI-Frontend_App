@@ -1,12 +1,10 @@
-// src/services/api/tenant.js
-// Updated: 2025-11-07
-// by: MinhBH
+// src/service/api/tenant.js
+// API cho tenant (mobile) & một số API thống kê cho owner/manager
 
 import { http, unwrap } from "../http";
 
 /**
  * 🔍 Tìm kiếm Tenant theo tên (Owner, Manager)
- * @param {string} name
  */
 export function searchTenantsByName(name) {
   return unwrap(http.get("/tenants/search", { params: { name } }));
@@ -41,15 +39,21 @@ export function getExpiringContracts() {
 }
 
 /**
- * 💰 Lấy tất cả hóa đơn của Tenant (Tenant)
+ * 💰 Lấy DANH SÁCH HÓA ĐƠN CHƯA THANH TOÁN của tenant (mobile)
+ *
+ * ⚠️ BE route /tenant/bills đang lỗi Prisma (do status notIn: ['master', ...]),
+ * nên ở mobile ta dùng tạm route /tenant/bills-unpaid để tránh lỗi.
+ *
+ * Backend: GET /api/tenant/bills-unpaid  (tenant.routes -> '/bills-unpaid')
  */
 export function getAllTenantBills() {
-  return unwrap(http.get("/tenants/bills"));
+  // http đã có baseURL = '.../api' nên chỉ cần '/tenant/bills-unpaid'
+  return unwrap(http.get("/tenant/bills-unpaid"));
 }
 
 /**
- * ❌ Lấy tất cả hóa đơn chưa thanh toán của Tenant (Tenant)
+ * Nếu sau này cần tách riêng, vẫn có hàm này.
  */
 export function getAllUnpaidTenantBills() {
-  return unwrap(http.get("/tenants/bills-unpaid"));
+  return unwrap(http.get("/tenant/bills-unpaid"));
 }

@@ -16,7 +16,6 @@ import Button from "../../components/Button";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { Ionicons } from "@expo/vector-icons";
-import { UserContext } from "../../contexts/UserContext";
 import { KeyboardAvoidingView, Platform } from "react-native";
 
 export default function EditProfileScreen({ route, navigation }) {

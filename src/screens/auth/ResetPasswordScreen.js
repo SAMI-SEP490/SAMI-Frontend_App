@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { UserContext } from "../../contexts/UserContext";
 
 export default function ResetPasswordScreen({ navigation }) {
 const {userData, setUserIdChangepassword} = useContext(UserContext);

@@ -9,7 +9,6 @@ import {
   Alert,
 } from "react-native";
 import { colors } from "../../theme/colors";
-import { UserContext } from "../../contexts/UserContext";
 
 export default function NewPasswordScreen() {
   const navigation = useNavigation();

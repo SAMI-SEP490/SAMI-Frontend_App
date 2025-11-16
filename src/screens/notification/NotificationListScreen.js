@@ -10,7 +10,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
-import { NotificationContext } from "../../contexts/NotificationContext";
 import { useNavigation } from "@react-navigation/native";
 
 export default function NotificationListScreen() {
