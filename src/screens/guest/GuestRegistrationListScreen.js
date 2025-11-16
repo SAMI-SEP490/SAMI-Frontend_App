@@ -1,4 +1,5 @@
-import React, { useContext } from "react";
+// src/screens/guest/GuestRegistrationListScreen.jsx
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,94 +7,147 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
-import { GuestRegistrationContext } from "../../contexts/GuestRegistrationContext";
-import { useNavigation } from "@react-navigation/native";
+import { getGuestRegistrations } from "../../service/api/guest";
 
 export default function GuestRegistrationListScreen() {
-  const { guestRegistration } = useContext(GuestRegistrationContext); // 👈 lấy data từ context
   const navigation = useNavigation();
+
+  const [guestRegistrations, setGuestRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // ===============================
+  // Lấy danh sách guest registrations từ API
+  // ===============================
+  const fetchGuestRegistrations = async () => {
+    try {
+      setLoading(true);
+      const res = await getGuestRegistrations({ page: 1, limit: 50 });
+      const registrations = res?.data?.registrations || [];
+      setGuestRegistrations(registrations);
+    } catch (error) {
+      console.error("Lỗi lấy danh sách đăng ký khách:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGuestRegistrations();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchGuestRegistrations();
+    setRefreshing(false);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      {/* Header */}
       <View style={{ paddingBottom: spacing.lg }}>
         <Header />
       </View>
 
-      {/* Nút tạo đơn */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.addButton}>
-          <Text
-            style={styles.addButtonText}
-            onPress={() => navigation.navigate("CreateGuestRegistrationScreen")}
-          >
-            Tạo đơn
-          </Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate("CreateGuestRegistrationScreen")}
+        >
+          <Text style={styles.addButtonText}>Tạo đơn đăng ký khách</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Header bảng */}
-      <View style={styles.tableHeader}>
-        <Text style={[styles.cell, styles.headerCell, { flex: 1 }]}>STT</Text>
-        <Text style={[styles.cell, styles.headerCell, { flex: 3 }]}>
-          Họ và tên
-        </Text>
-        <Text style={[styles.cell, styles.headerCell, { flex: 2 }]}>
-          Trạng thái
-        </Text>
-        <Text style={[styles.cell, styles.headerCell, { flex: 2 }]}>
-          Hành động
-        </Text>
-      </View>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {guestRegistrations.length === 0 ? (
+          <Text style={styles.noData}>Chưa có đăng ký khách nào</Text>
+        ) : (
+          guestRegistrations.map((guest, index) => (
+            <View style={styles.card} key={guest.registration_id}>
+              <Text style={styles.cardTitle}>Đơn #{index + 1}</Text>
 
-      <ScrollView>
-        {guestRegistration.map((guest, index) => (
-          <View style={styles.tableRow} key={index}>
-            <Text style={[styles.cell, { flex: 1 }]}>{index + 1}</Text>
-            <Text style={[styles.cell, { flex: 3 }]}>{guest.name}</Text>
-            <Text
-              style={[
-                styles.cell,
-                {
-                  flex: 2,
-                  color: getStatusColor(guest.status),
+              <Text>Số lượng khách: {guest.guest_count || 0}</Text>
+
+              <Text>
+                Tên khách:{" "}
+                {guest.guest_details.map((g) => g.full_name).join(", ") || "-"}
+              </Text>
+
+              <Text>
+                Ngày tạo đơn: {guest.created_at?.split("T")[0] || "-"}
+              </Text>
+
+              <Text>Ngày vào: {guest.arrival_date?.split("T")[0] || "-"}</Text>
+              <Text>Ngày ra: {guest.departure_date?.split("T")[0] || "-"}</Text>
+
+              <Text
+                style={{
+                  color: getStatusColor(mapStatus(guest.status)),
                   fontWeight: "600",
-                },
-              ]}
-            >
-              {guest.status}
-            </Text>
-            <View
-              style={[
-                styles.cell,
-                { flex: 2, flexDirection: "row", justifyContent: "center" },
-              ]}
-            >
-              {guest.status === "Chờ xử lý" && (
+                }}
+              >
+                Trạng thái: {mapStatus(guest.status)}
+              </Text>
+
+              {guest.status === "pending" && (
                 <TouchableOpacity
-                  style={styles.iconButton}
+                  style={styles.editButton}
                   onPress={() =>
                     navigation.navigate("UpdateGuestRegistrationScreen", {
-                      guest,
+                      registrationId: guest.registration_id,
                     })
                   }
                 >
-                  <MaterialIcons name="edit" size={20} color="#007bff" />
+                  <Text style={styles.editButtonText}>Chỉnh sửa</Text>
                 </TouchableOpacity>
               )}
             </View>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
     </View>
   );
 }
 
-/** Màu trạng thái */
+// ===============================
+// Map trạng thái backend -> hiển thị tiếng Việt
+// ===============================
+const mapStatus = (status) => {
+  switch (status) {
+    case "approved":
+      return "Chấp nhận";
+    case "rejected":
+      return "Từ chối";
+    case "pending":
+      return "Chờ xử lý";
+    case "cancelled":
+      return "Đã hủy";
+    default:
+      return status;
+  }
+};
+
+// ===============================
+// Màu trạng thái
+// ===============================
 const getStatusColor = (status) => {
   switch (status) {
     case "Chấp nhận":
@@ -102,17 +156,24 @@ const getStatusColor = (status) => {
       return "red";
     case "Chờ xử lý":
       return "orange";
+    case "Đã hủy":
+      return "gray";
     default:
       return "black";
   }
 };
 
+// ===============================
+// Styles
+// ===============================
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 0, backgroundColor: "#fff" },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     justifyContent: "flex-end",
     marginBottom: 10,
+    paddingHorizontal: 16,
   },
   addButton: {
     backgroundColor: "#007bff",
@@ -121,20 +182,32 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   addButtonText: { color: "#fff", fontWeight: "600" },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#e9ecef",
-    paddingVertical: 10,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
+  card: {
+    backgroundColor: "#f9f9f9",
+    padding: 16,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
-  tableRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    paddingVertical: 10,
+  cardTitle: { fontWeight: "700", marginBottom: 8 },
+  editButton: {
+    marginTop: 10,
+    backgroundColor: "#007bff",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignSelf: "flex-start",
   },
-  cell: { textAlign: "center" },
-  headerCell: { fontWeight: "700" },
-  iconButton: { marginHorizontal: 6 },
+  editButtonText: { color: "#fff", fontWeight: "600" },
+  noData: {
+    textAlign: "center",
+    marginTop: 20,
+    color: "#777",
+    fontStyle: "italic",
+  },
 });
