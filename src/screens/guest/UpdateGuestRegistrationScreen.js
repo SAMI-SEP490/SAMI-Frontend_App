@@ -1,283 +1,315 @@
-import React, { useState, useContext } from "react";
+// src/screens/guest/UpdateGuestRegistrationScreen.jsx
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
-  ScrollView,
+  TouchableOpacity,
   StyleSheet,
-  Pressable,
-  Alert,
-  Platform,
-  KeyboardAvoidingView,
+  ScrollView,
   StatusBar,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
-import { Picker } from "@react-native-picker/picker";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
+import { jwtDecode } from "jwt-decode";
+
 import Header from "../../components/Header";
-import { GuestRegistrationContext } from "../../contexts/GuestRegistrationContext";
 import { spacing } from "../../theme/spacing";
+import {
+  getGuestRegistrationById,
+  updateGuestRegistration,
+} from "../../service/api/guest";
+import { getRoomsByUserId } from "../../service/api/room";
 
 export default function UpdateGuestRegistrationScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { guest } = route.params;
+  const { registrationId } = route.params;
 
-  const { updateGuestRegistration, deleteGuestRegistration } = useContext(
-    GuestRegistrationContext
-  );
+  const [arrivalDate, setArrivalDate] = useState(null);
+  const [departureDate, setDepartureDate] = useState(null);
+  const [note, setNote] = useState("");
+  const [guestDetails, setGuestDetails] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [roomId, setRoomId] = useState(null);
 
-  // Hàm parse DD/MM/YYYY sang Date
-  const parseDate = (str) => {
-    if (!str) return new Date();
-    const [dd, mm, yyyy] = str.split("/");
-    return new Date(yyyy, mm - 1, dd);
-  };
+  const [showArrivalPicker, setShowArrivalPicker] = useState(false);
+  const [showDeparturePicker, setShowDeparturePicker] = useState(false);
 
-  const [fullName, setFullName] = useState(guest.name || "");
-  const [phone, setPhone] = useState(guest.phone || "");
-  const [startDate, setStartDate] = useState(parseDate(guest.startDate));
-  const [endDate, setEndDate] = useState(parseDate(guest.endDate));
-  const [reason, setReason] = useState(guest.reason || "Thăm người thân");
-  const [note, setNote] = useState(guest.note || "");
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = await SecureStore.getItemAsync("sami_access_token");
+        if (!token) throw new Error("Phiên đăng nhập đã hết hạn.");
+        const decoded = jwtDecode(token);
+        const userId = decoded?.id || decoded?.userId;
+        if (!userId) throw new Error("Token không hợp lệ");
 
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
+        const roomRes = await getRoomsByUserId(userId);
+        const currentRoom = roomRes?.data?.current_room;
+        if (!currentRoom) throw new Error("Người dùng chưa có phòng.");
+        setRoomId(currentRoom.room_id);
 
-  const formatDate = (d) => {
-    if (!d) return "";
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  };
+        const res = await getGuestRegistrationById(registrationId);
+        const registration = res?.data?.registration;
+        if (!registration) throw new Error("Không tìm thấy đăng ký khách.");
 
-  // Update guest
-  const handleSubmit = () => {
-    if (!fullName.trim() || !phone.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin.");
-      return;
-    }
-
-    if (endDate < startDate) {
-      Alert.alert("Lỗi", "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.");
-      return;
-    }
-
-    const updated = {
-      ...guest,
-      name: fullName,
-      phone,
-      startDate: formatDate(startDate),
-      endDate: formatDate(endDate),
-      reason,
-      note,
+        setArrivalDate(new Date(registration.arrival_date));
+        setDepartureDate(new Date(registration.departure_date));
+        setNote(registration.note || "");
+        setGuestDetails(
+          registration.guest_details.map((g) => ({
+            ...g,
+            errors: {},
+          }))
+        );
+      } catch (error) {
+        console.error(error);
+      }
     };
+    fetchData();
+  }, [registrationId]);
 
-    updateGuestRegistration(updated);
-
-    Alert.alert("Thành công", "Cập nhật đăng ký thành công.", [
-      {
-        text: "OK",
-        onPress: () => navigation.navigate("GuestRegistrationListScreen"),
-      },
+  const addGuest = () =>
+    setGuestDetails([
+      ...guestDetails,
+      { full_name: "", id_type: "national_id", id_number: "", errors: {} },
     ]);
+
+  const removeGuest = (index) => {
+    const newDetails = [...guestDetails];
+    newDetails.splice(index, 1);
+    setGuestDetails(newDetails);
   };
 
-  // Delete guest
-  const handleDelete = () => {
-    Alert.alert(
-      "Xác nhận",
-      "Bạn có chắc chắn muốn xóa?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Chấp nhận",
-          style: "destructive",
-          onPress: () => {
-            deleteGuestRegistration(guest.id);
-            navigation.navigate("GuestRegistrationListScreen");
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+  const updateGuestField = (index, field, value) => {
+    const newDetails = [...guestDetails];
+    newDetails[index][field] = value;
+    if (newDetails[index].errors[field]) newDetails[index].errors[field] = "";
+    setGuestDetails(newDetails);
+  };
+
+  const validateGuests = () => {
+    let isValid = true;
+    const newDetails = guestDetails.map((guest) => ({ ...guest, errors: {} }));
+
+    newDetails.forEach((guest) => {
+      if (!guest.full_name.trim()) {
+        guest.errors.full_name = "Vui lòng nhập tên khách";
+        isValid = false;
+      }
+      if (!guest.id_number.trim()) {
+        guest.errors.id_number = "Vui lòng nhập số CCCD/CMND";
+        isValid = false;
+      } else if (!/^\d{9}$|^\d{12}$/.test(guest.id_number)) {
+        guest.errors.id_number = "CCCD phải gồm 9 hoặc 12 chữ số";
+        isValid = false;
+      }
+    });
+
+    setGuestDetails(newDetails);
+    return isValid;
+  };
+
+  const handleSubmit = async () => {
+    if (!arrivalDate || !departureDate) return;
+    if (departureDate <= arrivalDate) return;
+    if (!roomId || guestDetails.length === 0) return;
+    if (!validateGuests()) return;
+
+    setLoading(true);
+    try {
+      const payload = {
+        room_id: roomId,
+        arrival_date: arrivalDate.toISOString().split("T")[0],
+        departure_date: departureDate.toISOString().split("T")[0],
+        note,
+        guest_details: guestDetails.map(
+          ({ full_name, id_type, id_number }) => ({
+            full_name,
+            id_type,
+            id_number,
+          })
+        ),
+      };
+
+      await updateGuestRegistration(registrationId, payload);
+      navigation.navigate("GuestRegistrationListScreen");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <StatusBar barStyle="light-content" />
-      <View style={{ paddingBottom: spacing.xl }}>
-        <Header />
-      </View>
+      <Header />
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ padding: 20 }}
-      >
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Cập nhật thông tin khách</Text>
-
-          <Text style={styles.label}>Tên đầy đủ:</Text>
-          <TextInput
-            style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-          />
-
-          <Text style={styles.label}>SĐT của khách:</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-          />
-
-          <Text style={styles.label}>Ngày bắt đầu:</Text>
-          <Pressable
-            style={styles.dateRow}
-            onPress={() => setShowStartPicker(true)}
-          >
-            <Text style={styles.dateText}>{formatDate(startDate)}</Text>
-            <Ionicons name="calendar-outline" size={20} color="#555" />
-          </Pressable>
-          {showStartPicker && (
-            <DateTimePicker
-              value={startDate}
-              mode="date"
-              onChange={(e, d) => {
-                setShowStartPicker(false);
-                if (d) setStartDate(d);
-              }}
-            />
-          )}
-
-          <Text style={styles.label}>Ngày kết thúc:</Text>
-          <Pressable
-            style={styles.dateRow}
-            onPress={() => setShowEndPicker(true)}
-          >
-            <Text style={styles.dateText}>{formatDate(endDate)}</Text>
-            <Ionicons name="calendar-outline" size={20} color="#555" />
-          </Pressable>
-          {showEndPicker && (
-            <DateTimePicker
-              value={endDate}
-              mode="date"
-              onChange={(e, d) => {
-                setShowEndPicker(false);
-                if (d) setEndDate(d);
-              }}
-            />
-          )}
-
-          <Text style={styles.label}>Lí do tạm trú:</Text>
-          <View style={styles.pickerWrap}>
-            <Picker selectedValue={reason} onValueChange={setReason}>
-              <Picker.Item label="Thăm người thân" value="Thăm người thân" />
-              <Picker.Item label="Công tác" value="Công tác" />
-              <Picker.Item label="Du lịch" value="Du lịch" />
-              <Picker.Item label="Khác" value="Khác" />
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Ghi chú:</Text>
-          <TextInput
-            style={[styles.input, styles.textarea]}
-            multiline
-            numberOfLines={4}
-            value={note}
-            onChangeText={setNote}
-          />
-
-          <View style={styles.buttonsRow}>
-            <Pressable
-              style={[styles.btn, styles.btnDelete]}
-              onPress={handleDelete}
-            >
-              <Text style={[styles.btnText, { color: "#fff" }]}>Xóa</Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.btn, styles.btnCancel]}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.btnText}>Hủy</Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.btn, styles.btnSubmit]}
-              onPress={handleSubmit}
-            >
-              <Text style={[styles.btnText, { color: "#fff" }]}>Cập nhật</Text>
-            </Pressable>
-          </View>
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007bff" />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      )}
+
+      <View style={styles.form}>
+        <Text style={styles.label}>Ngày đến</Text>
+        <TouchableOpacity
+          style={styles.input}
+          onPress={() => setShowArrivalPicker(true)}
+        >
+          <Text>
+            {arrivalDate ? arrivalDate.toLocaleDateString() : "Chọn ngày"}
+          </Text>
+        </TouchableOpacity>
+        {showArrivalPicker && (
+          <DateTimePicker
+            value={arrivalDate || new Date()}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={(event, selectedDate) => {
+              setShowArrivalPicker(Platform.OS === "ios");
+              if (selectedDate) setArrivalDate(selectedDate);
+            }}
+          />
+        )}
+
+        <Text style={styles.label}>Ngày đi</Text>
+        <TouchableOpacity
+          style={styles.input}
+          onPress={() => setShowDeparturePicker(true)}
+        >
+          <Text>
+            {departureDate ? departureDate.toLocaleDateString() : "Chọn ngày"}
+          </Text>
+        </TouchableOpacity>
+        {showDeparturePicker && (
+          <DateTimePicker
+            value={departureDate || new Date()}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={(event, selectedDate) => {
+              setShowDeparturePicker(Platform.OS === "ios");
+              if (selectedDate) setDepartureDate(selectedDate);
+            }}
+          />
+        )}
+
+        <Text style={styles.label}>Ghi chú</Text>
+        <TextInput
+          style={[styles.input, { height: 60 }]}
+          value={note}
+          onChangeText={setNote}
+          multiline
+        />
+
+        <Text style={[styles.label, { marginTop: 16 }]}>Thông tin khách</Text>
+        {guestDetails.map((guest, index) => (
+          <View key={index} style={styles.guestRow}>
+            <Text style={styles.fieldLabel}>Tên</Text>
+            <TextInput
+              style={styles.input}
+              value={guest.full_name}
+              onChangeText={(text) =>
+                updateGuestField(index, "full_name", text)
+              }
+            />
+            {guest.errors.full_name && (
+              <Text style={styles.errorText}>{guest.errors.full_name}</Text>
+            )}
+
+            <Text style={styles.fieldLabel}>Số CCCD</Text>
+            <TextInput
+              style={styles.input}
+              value={guest.id_number}
+              keyboardType="numeric"
+              onChangeText={(text) =>
+                updateGuestField(index, "id_number", text)
+              }
+            />
+            {guest.errors.id_number && (
+              <Text style={styles.errorText}>{guest.errors.id_number}</Text>
+            )}
+
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={() => removeGuest(index)}
+            >
+              <Text style={{ color: "white" }}>Xóa</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <TouchableOpacity style={styles.addButton} onPress={addGuest}>
+          <Text style={styles.addButtonText}>Thêm khách</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitButtonText}>Cập nhật đăng ký</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f4f6fa" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+  container: { flex: 1, backgroundColor: "#fff" },
+  loadingContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+    backgroundColor: "rgba(255,255,255,0.6)",
   },
-  cardTitle: {
-    textAlign: "center",
-    fontWeight: "700",
-    fontSize: 17,
-    marginBottom: 16,
-  },
+  form: { padding: spacing.lg },
   label: { fontWeight: "600", marginBottom: 6 },
+  fieldLabel: { fontWeight: "500", marginBottom: 4, marginTop: 6 },
   input: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
+    borderColor: "#ddd",
+    borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 12,
+    marginBottom: 6,
+    justifyContent: "center",
   },
-  textarea: { minHeight: 100 },
-  dateRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  guestRow: {
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 12,
+    borderColor: "#ccc",
+    padding: 8,
+    borderRadius: 6,
   },
-  dateText: { color: "#111" },
-  pickerWrap: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    marginBottom: 12,
-    overflow: "hidden",
-  },
-  buttonsRow: { flexDirection: "row", justifyContent: "center", marginTop: 10 },
-  btn: {
-    minWidth: 70,
-    paddingVertical: 10,
-    borderRadius: 8,
+  removeButton: {
+    backgroundColor: "#dc3545",
+    padding: 6,
     alignItems: "center",
-    marginHorizontal: 8,
+    borderRadius: 4,
+    marginTop: 6,
   },
-  btnCancel: { backgroundColor: "#6b7280" },
-  btnSubmit: { backgroundColor: "#2b6be6" },
-  btnDelete: { backgroundColor: "#dc2626" },
-  btnText: { fontWeight: "700", color: "#fff" },
+  addButton: {
+    backgroundColor: "#007bff",
+    padding: 12,
+    borderRadius: 6,
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  addButtonText: { color: "#fff", fontWeight: "600" },
+  submitButton: {
+    backgroundColor: "#28a745",
+    padding: 14,
+    borderRadius: 6,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  submitButtonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  errorText: { color: "#dc3545", fontSize: 12, marginBottom: 4 },
 });
