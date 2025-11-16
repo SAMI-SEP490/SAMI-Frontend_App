@@ -43,6 +43,9 @@ import VehicleListScreen from "../screens/vehicle/VehicleListScreen";
 import CreateVehicleScreen from "../screens/vehicle/CreateVehicleScreen";
 import EditVehicleScreen from "../screens/vehicle/EditVehicleScreen";
 
+//Regulation
+import RegulationListScreen from "../screens/regulation/RegulationListScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
@@ -136,6 +139,13 @@ export default function RootNavigation() {
             name="EditVehicleScreen"
             component={EditVehicleScreen}
           />
+          {/* Regulation */}
+          <Stack.Screen
+            name="RegulationListScreen"
+            component={RegulationListScreen}
+          />
+
+          {/* Chatbot */}
           <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
         </>
       ) : (

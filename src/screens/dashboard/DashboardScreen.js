@@ -163,6 +163,9 @@ export default function DashboardScreen() {
                     if (item.key === "vehicle") {
                       navigation.navigate("VehicleListScreen");
                     }
+                    if (item.key === "rules") {
+                      navigation.navigate("RegulationListScreen");
+                    }
                   }}
                   style={{ width: "30%", alignItems: "center", gap: 8 }}
                 >
