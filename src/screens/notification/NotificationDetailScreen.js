@@ -4,7 +4,6 @@ import { View, Text, StyleSheet, ScrollView, StatusBar } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
-import { NotificationContext } from "../../contexts/NotificationContext";
 
 export default function NotificationDetailScreen() {
   const route = useRoute();

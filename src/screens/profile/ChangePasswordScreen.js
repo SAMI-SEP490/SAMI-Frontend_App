@@ -12,7 +12,6 @@ import Header from "../../components/Header";
 import Button from "../../components/Button";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { UserContext } from "../../contexts/UserContext";
 import { useNavigation } from "@react-navigation/native";
 
 export default function ChangePasswordScreen() {
