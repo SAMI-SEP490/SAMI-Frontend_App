@@ -47,6 +47,8 @@ import EditVehicleScreen from "../screens/vehicle/EditVehicleScreen";
 //Regulation
 import RegulationListScreen from "../screens/regulation/RegulationListScreen";
 
+import FloorPlanViewScreen from "../screens/floorplan/FloorPlanViewScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigation() {
@@ -96,6 +98,12 @@ export default function RootNavigation() {
           <Stack.Screen
             name="CreateMaintenanceRequestScreen"
             component={CreateMaintenanceRequestScreen}
+          />
+          {/* Floor plan */}
+          <Stack.Screen
+            name="FloorPlanViewScreen"
+            component={FloorPlanViewScreen}
+            options={{ title: "Sơ đồ tòa nhà" }}
           />
 
           {/* Bill */}
