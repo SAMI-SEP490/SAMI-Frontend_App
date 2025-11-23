@@ -166,6 +166,9 @@ export default function DashboardScreen() {
                     if (item.key === "rules") {
                       navigation.navigate("RegulationListScreen");
                     }
+                    if (item.key === "map") {
+                      navigation.navigate("FloorPlanViewScreen");
+                    }
                   }}
                   style={{ width: "30%", alignItems: "center", gap: 8 }}
                 >
