@@ -70,7 +70,7 @@ const FEATURES = [
   },
   {
     key: "chatbot",
-    label: "Trợ lý ảo",
+    label: "SAMI bot",
     icon: (p) => <Ionicons name="chatbubbles-outline" size={26} color={p} />,
     bg: "#E9F7FF",
   },
