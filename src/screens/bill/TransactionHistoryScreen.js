@@ -1,70 +1,107 @@
 // src/screens/bill/TransactionHistoryScreen.js
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  StatusBar,
+  FlatList,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 import Header from "../../components/Header";
+import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { getTenantPaymentHistory } from "../../service/api/payment";
 
 function TransactionHistoryScreen() {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadHistory() {
-      setLoading(true);
-      setError("");
-      try {
-        const data = await getTenantPaymentHistory();
-
-        let list = [];
-        if (Array.isArray(data)) {
-          list = data;
-        } else if (Array.isArray(data?.items)) {
-          list = data.items;
-        } else if (Array.isArray(data?.data)) {
-          list = data.data;
-        }
-
-        if (!cancelled) {
-          setTransactions(list);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          const msg =
-            e?.response?.data?.message ||
-            e?.message ||
-            "Không tải được lịch sử giao dịch";
-          setError(msg);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const fetchHistory = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await getTenantPaymentHistory();
+      const list = res?.data || [];
+      setHistory(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.log("Error getTenantPaymentHistory:", err.message);
+      setError(err.message || "Không thể tải lịch sử giao dịch.");
+      setHistory([]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    loadHistory();
-    return () => {
-      cancelled = true;
-    };
+  useEffect(() => {
+    fetchHistory();
   }, []);
 
-  const totalPaid = useMemo(
-    () =>
-      transactions.reduce((sum, t) => {
-        const v = getTransactionAmount(t);
-        return sum + (Number.isFinite(v) ? v : 0);
-      }, 0),
-    [transactions]
-  );
+  const renderItem = ({ item }) => {
+    const dateStr = item.payment_date
+      ? new Date(item.payment_date).toLocaleString("vi-VN")
+      : "Đang xử lý";
+
+    const statusLabel =
+      item.status === "completed"
+        ? "Thành công"
+        : item.status === "failed"
+        ? "Thất bại"
+        : item.status === "refunded"
+        ? "Đã hoàn tiền"
+        : item.status;
+
+    const statusColor =
+      item.status === "completed"
+        ? colors.success
+        : item.status === "failed"
+        ? "#EF4444"
+        : "#F97316";
+
+    return (
+      <View style={styles.itemContainer}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <Text style={styles.itemTitle}>Thanh toán #{item.payment_id}</Text>
+          <Text style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+            {statusLabel}
+          </Text>
+        </View>
+
+        <Text style={styles.itemText}>Ngày: {dateStr}</Text>
+        <Text style={styles.itemText}>Số tiền: {item.amount} đ</Text>
+        <Text style={styles.itemText}>Phương thức: {item.method}</Text>
+        <Text style={styles.itemText}>
+          Cổng online: {item.online_type || "N/A"}
+        </Text>
+
+        {item.bills && item.bills.length > 0 && (
+          <View style={{ marginTop: 6 }}>
+            <Text style={styles.itemSubTitle}>Hóa đơn liên quan:</Text>
+            {item.bills.map((b) => (
+              <Text key={b.bill_id} style={styles.billLine}>
+                - #{b.bill_number || b.bill_id} (
+                {b.description || "Không mô tả"})
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <Header />
+        <View style={[styles.content, styles.centerBox]}>
+          <ActivityIndicator size="large" color={colors.brand} />
+          <Text style={{ marginTop: 8 }}>Đang tải lịch sử giao dịch...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -73,181 +110,34 @@ function TransactionHistoryScreen() {
 
       <View style={styles.content}>
         <Text style={styles.title}>Lịch sử giao dịch</Text>
-        <Text style={styles.subtitle}>
-          Danh sách các lần thanh toán hoá đơn của bạn.
-        </Text>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        {loading && (
+        {error ? (
           <View style={styles.centerBox}>
-            <ActivityIndicator size="small" />
-            <Text style={{ marginTop: 8 }}>Đang tải dữ liệu...</Text>
+            <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
           </View>
-        )}
-
-        {!loading && !transactions.length && !error && (
-          <View style={styles.centerBox}>
-            <Text>Hiện chưa có giao dịch nào được ghi nhận.</Text>
-          </View>
-        )}
-
-        {!loading && !!transactions.length && (
-          <View style={styles.card}>
-            <ScrollView
-              style={{ maxHeight: 420 }}
-              contentContainerStyle={{ paddingBottom: spacing.lg }}
-            >
-              {transactions.map((t, index) => (
-                <View key={getTransactionKey(t, index)} style={styles.item}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemTitle}>
-                      {getTransactionTitle(t, index)}
-                    </Text>
-                    <Text style={styles.itemTime}>{getTransactionTime(t)}</Text>
-                    <Text style={styles.itemNote}>{getTransactionNote(t)}</Text>
-                  </View>
-
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={styles.itemAmount}>
-                      {formatCurrency(getTransactionAmount(t))}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.itemStatus,
-                        getStatusStyle(getTransactionStatus(t)),
-                      ]}
-                    >
-                      {getTransactionStatus(t)}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Tổng tiền đã thanh toán</Text>
-              <Text style={styles.totalValue}>{formatCurrency(totalPaid)}</Text>
-            </View>
-          </View>
+        ) : (
+          <FlatList
+            data={history}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.payment_id.toString()}
+            contentContainerStyle={{ paddingBottom: spacing.lg }}
+            ListEmptyComponent={
+              <View style={styles.centerBox}>
+                <Text>Chưa có giao dịch nào.</Text>
+              </View>
+            }
+          />
         )}
       </View>
     </View>
   );
 }
 
-/* =============== Helpers =============== */
-
-function getTransactionKey(t, index) {
-  return String(t.id ?? t.payment_id ?? t.paymentId ?? `txn-${index}`);
-}
-
-function getTransactionTitle(t, index) {
-  // tuỳ backend, đoán một số field thường gặp
-  return (
-    t.title ??
-    t.description ??
-    t.bill_title ??
-    t.billDescription ??
-    `Giao dịch #${index + 1}`
-  );
-}
-
-function getTransactionTime(t) {
-  const raw =
-    t.created_at ??
-    t.createdAt ??
-    t.payment_time ??
-    t.time ??
-    t.timestamp ??
-    null;
-  if (!raw) return "—";
-
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return String(raw);
-  return (
-    d.toLocaleDateString("vi-VN") +
-    " " +
-    d.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  );
-}
-
-function getTransactionNote(t) {
-  // nếu backend có list bill code / method thì hiển thị thêm
-  const method = t.method ?? t.payment_method ?? t.channel ?? "";
-  const bills = t.bill_codes ?? t.billNumbers ?? t.bills ?? null;
-
-  let note = "";
-  if (method) note += `Phương thức: ${method}`;
-  if (bills) {
-    const txt = Array.isArray(bills) ? bills.join(", ") : String(bills);
-    note += (note ? " · " : "") + `Hoá đơn: ${txt}`;
-  }
-  return note || "";
-}
-
-function getTransactionStatus(t) {
-  const raw = t.status ?? t.payment_status ?? t.state ?? "";
-  const s = String(raw || "").toLowerCase();
-  if (!s) return "Không rõ";
-
-  if (["success", "completed", "paid"].includes(s)) return "Thành công";
-  if (["pending", "processing"].includes(s)) return "Đang xử lý";
-  if (["failed", "cancelled", "error"].includes(s)) return "Thất bại";
-  return raw;
-}
-
-function getTransactionAmount(t) {
-  const candidates = [
-    t.amount,
-    t.total_amount,
-    t.paid_amount,
-    t.transaction_amount,
-  ];
-  for (const v of candidates) {
-    const n = Number(v);
-    if (Number.isFinite(n)) return n;
-  }
-  return 0;
-}
-
-function getStatusStyle(label) {
-  const s = String(label || "").toLowerCase();
-  if (s.includes("thành công")) {
-    return { color: "#059669" };
-  }
-  if (s.includes("đang")) {
-    return { color: "#D97706" };
-  }
-  if (s.includes("thất bại") || s.includes("hủy")) {
-    return { color: "#DC2626" };
-  }
-  return { color: "#64748B" };
-}
-
-function formatCurrency(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return "0 đ";
-  try {
-    return n.toLocaleString("vi-VN") + " đ";
-  } catch {
-    return `${n} đ`;
-  }
-}
-
-/* =============== Styles =============== */
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0F172A",
-  },
+  container: { flex: 1, backgroundColor: "#0F172A" },
   content: {
     flex: 1,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: spacing.md,
@@ -256,74 +146,40 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: "#64748B",
+    color: colors.text,
     marginBottom: spacing.md,
   },
-  error: {
-    color: "#DC2626",
-    marginBottom: spacing.sm,
-  },
   centerBox: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing.lg,
   },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+  itemContainer: {
+    backgroundColor: colors.card,
     padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  item: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  itemTitle: {
-    fontSize: 14,
+  itemTitle: { fontSize: 15, fontWeight: "700", color: colors.text },
+  itemText: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  itemSubTitle: {
+    fontSize: 13,
     fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 2,
+    color: colors.text,
   },
-  itemTime: {
+  billLine: {
     fontSize: 12,
-    color: "#64748B",
-    marginBottom: 2,
+    color: colors.muted,
   },
-  itemNote: {
-    fontSize: 12,
-    color: "#94A3B8",
-  },
-  itemAmount: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  itemStatus: {
-    marginTop: 4,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: spacing.md,
-  },
-  totalLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#0F172A",
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
+  statusBadge: {
+    fontSize: 11,
+    color: "#FFFFFF",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    textTransform: "uppercase",
   },
 });
 
