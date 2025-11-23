@@ -47,13 +47,14 @@ export function getExpiringContracts() {
  * Backend: GET /api/tenant/bills-unpaid  (tenant.routes -> '/bills-unpaid')
  */
 export function getAllTenantBills() {
-  // http đã có baseURL = '.../api' nên chỉ cần '/tenant/bills-unpaid'
-  return unwrap(http.get("/tenant/bills-unpaid"));
+  // http đã có baseURL = '.../api' nên chỉ cần '/bill/list/unpaid'
+  return unwrap(http.get("/bill/list/unpaid"));
 }
 
 /**
- * Nếu sau này cần tách riêng, vẫn có hàm này.
+ * 🧾 (Tuỳ chọn) Lấy tất cả hóa đơn của tenant (kể cả đã thanh toán)
+ * Backend: GET /api/bill/list
  */
 export function getAllUnpaidTenantBills() {
-  return unwrap(http.get("/tenant/bills-unpaid"));
+  return unwrap(http.get("/bill/list"));
 }

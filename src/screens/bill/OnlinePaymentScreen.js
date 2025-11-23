@@ -1,5 +1,5 @@
 // src/screens/bill/OnlinePaymentScreen.js
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,38 +7,55 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
+import { colors } from "../../theme/colors";
+import { createPayOSPayment } from "../../service/api/payment";
+import QRCode from "react-native-qrcode-svg";
 
 function OnlinePaymentScreen({ navigation, route }) {
   const params = route?.params || {};
-  const bills = Array.isArray(params.bills) ? params.bills : [];
-  const totalAmountFromRoute = Number(params.totalAmount ?? 0);
+  const bills = params.bills || [];
 
-  // Tự tính lại cho chắc
+  const [loading, setLoading] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState(null);
+  const [error, setError] = useState("");
+
   const totalAmount = useMemo(
     () =>
       bills.reduce((sum, b) => {
-        const amt = getBillAmount(b);
-        return sum + (Number.isFinite(amt) ? amt : 0);
+        return sum + (b.total_amount || 0);
       }, 0),
     [bills]
   );
 
-  const finalTotal =
-    Number.isFinite(totalAmount) && totalAmount > 0
-      ? totalAmount
-      : totalAmountFromRoute;
-
-  const handleBack = () => {
-    navigation.goBack();
+  const handleCreatePayment = async () => {
+    if (!bills.length) return;
+    setLoading(true);
+    setError("");
+    try {
+      const billIds = bills.map((b) => b.bill_id);
+      const res = await createPayOSPayment(billIds);
+      const data = res?.data;
+      if (data?.checkoutUrl) {
+        setCheckoutUrl(data.checkoutUrl);
+      } else {
+        setError("Không nhận được link thanh toán từ hệ thống.");
+      }
+    } catch (err) {
+      console.log("Error create PayOS payment:", err.message);
+      setError(err.message || "Không thể tạo thanh toán.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOnlinePayment = () => {
+  const handleOpenWebView = () => {
+    if (!checkoutUrl) return;
     navigation.navigate("VnpayWebViewScreen", {
-      bills,
-      totalAmount: finalTotal,
+      paymentUrl: checkoutUrl,
     });
   };
 
@@ -48,161 +65,89 @@ function OnlinePaymentScreen({ navigation, route }) {
       <Header />
 
       <View style={styles.content}>
-        <Text style={styles.title}>Thanh toán online</Text>
+        <Text style={styles.title}>Xác nhận thanh toán</Text>
         <Text style={styles.subtitle}>
-          Kiểm tra lại thông tin các hóa đơn trước khi thanh toán.
+          Bạn đang thanh toán cho {bills.length} hóa đơn
         </Text>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Danh sách hóa đơn</Text>
-          {bills.length === 0 ? (
-            <Text style={styles.emptyText}>
-              Không có hóa đơn nào được chọn.
-            </Text>
-          ) : (
-            <ScrollView
-              style={styles.billList}
-              contentContainerStyle={{ paddingBottom: spacing.lg }}
-            >
-              {bills.map((bill, index) => (
-                <View key={index} style={styles.billItem}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.billName}>
-                      {getBillName(bill, index)}
-                    </Text>
-                    <Text style={styles.billPeriod}>{getBillPeriod(bill)}</Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={styles.billAmount}>
-                      {formatCurrency(getBillAmount(bill))}
-                    </Text>
-                    <Text style={styles.billStatus}>{getBillStatus(bill)}</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingTop: spacing.md }}
+        >
+          {bills.map((b) => (
+            <View key={b.bill_id} style={styles.billCard}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 4,
+                }}
+              >
+                <Text style={styles.billTitle}>
+                  Hóa đơn #{b.bill_number || b.bill_id}
+                </Text>
+                <Text style={styles.billStatus}>{b.status}</Text>
+              </View>
+              <Text style={styles.billText}>
+                Kỳ: {b.billing_period_start} - {b.billing_period_end}
+              </Text>
+              <Text style={styles.billText}>
+                Số tiền: {b.total_amount || 0} đ
+              </Text>
+            </View>
+          ))}
 
-        <View style={styles.section}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Tổng tiền cần thanh toán</Text>
-            <Text style={styles.totalValue}>
-              {formatCurrency(finalTotal || 0)}
-            </Text>
+          <View style={styles.summaryBox}>
+            <Text style={styles.summaryLabel}>Tổng cần thanh toán</Text>
+            <Text style={styles.summaryValue}>{totalAmount} đ</Text>
           </View>
-          <Text style={styles.note}>
-            Đây là màn hình xác nhận tạm thời. Khi tích hợp VNPay thật, tổng
-            tiền sẽ được gửi sang hệ thống thanh toán.
-          </Text>
-        </View>
 
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={handleBack}
-          >
-            <Text style={styles.secondaryButtonText}>Quay lại</Text>
-          </TouchableOpacity>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.primaryButton,
-              bills.length === 0 && styles.disabledButton,
-            ]}
-            disabled={bills.length === 0}
-            onPress={handleOnlinePayment}
-          >
-            <Text style={styles.primaryButtonText}>Thanh toán online</Text>
-          </TouchableOpacity>
-        </View>
+          {!checkoutUrl && (
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleCreatePayment}
+              disabled={loading || !bills.length}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.createButtonText}>
+                  Tạo thanh toán PayOS
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {checkoutUrl && (
+            <>
+              <Text style={styles.sectionTitle}>Thanh toán bằng QR</Text>
+              <View style={styles.qrWrapper}>
+                <View style={styles.qrBox}>
+                  <QRCode value={checkoutUrl} size={220} />
+                </View>
+              </View>
+
+              <Text style={styles.qrHint}>
+                Mở ứng dụng ngân hàng và quét mã QR để thanh toán.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.webButton}
+                onPress={handleOpenWebView}
+              >
+                <Text style={styles.webButtonText}>
+                  Thanh toán bằng WebView
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </ScrollView>
       </View>
     </View>
   );
 }
-
-/* ========== Helpers giống BillListScreen (rút gọn) ========== */
-
-function getBillName(bill, index) {
-  return (
-    bill.name ??
-    bill.bill_name ??
-    bill.billName ??
-    bill.title ??
-    `Hóa đơn #${index + 1}`
-  );
-}
-
-function getBillPeriod(bill) {
-  const start =
-    bill.billing_period_start ??
-    bill.period_start ??
-    bill.start_date ??
-    bill.startDate;
-  const end =
-    bill.billing_period_end ?? bill.period_end ?? bill.end_date ?? bill.endDate;
-
-  if (!start && !end) return "";
-  const s = start ? formatDateShort(start) : "?";
-  const e = end ? formatDateShort(end) : "?";
-  return `${s} - ${e}`;
-}
-
-function getBillStatus(bill) {
-  const raw =
-    bill.status ??
-    bill.bill_status ??
-    bill.payment_status ??
-    bill.state ??
-    bill.billState;
-  const status = String(raw || "").toLowerCase();
-
-  if (!status) return "Không rõ";
-  if (["paid", "completed", "settled", "success"].includes(status))
-    return "Đã thanh toán";
-  if (["unpaid", "pending"].includes(status)) return "Chưa thanh toán";
-  if (["canceled", "cancelled"].includes(status)) return "Đã hủy";
-  return raw;
-}
-
-function getBillAmount(bill) {
-  const candidates = [
-    bill.total_amount,
-    bill.amount,
-    bill.total,
-    bill.total_money,
-    bill.totalMoney,
-    bill.grand_total,
-  ];
-  for (const v of candidates) {
-    const n = Number(v);
-    if (Number.isFinite(n)) return n;
-  }
-  return 0;
-}
-
-function formatDateShort(value) {
-  if (!value) return "";
-  const s = String(value).slice(0, 10);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const [y, m, d] = s.split("-");
-    return `${d}/${m}/${y}`;
-  }
-  return s;
-}
-
-function formatCurrency(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return "0 đ";
-  try {
-    return n.toLocaleString("vi-VN") + " đ";
-  } catch {
-    return `${n} đ`;
-  }
-}
-
-/* ========== Styles ========== */
 
 const styles = StyleSheet.create({
   container: {
@@ -211,7 +156,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: spacing.md,
@@ -220,105 +165,110 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 4,
+    color: colors.text,
   },
   subtitle: {
     fontSize: 13,
-    color: "#64748B",
-    marginBottom: spacing.md,
+    color: colors.muted,
+    marginTop: 4,
   },
-  section: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+  billCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
     padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  emptyText: {
-    fontSize: 13,
-    color: "#64748B",
-  },
-  billList: {
-    maxHeight: 260,
-  },
-  billItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  billName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 2,
-  },
-  billPeriod: {
-    fontSize: 12,
-    color: "#64748B",
-  },
-  billAmount: {
-    fontSize: 14,
+  billTitle: {
+    fontSize: 15,
     fontWeight: "700",
-    color: "#0F172A",
+    color: colors.text,
   },
   billStatus: {
-    marginTop: 2,
-    fontSize: 12,
-    color: "#16A34A",
+    fontSize: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#E5E7EB",
+    textTransform: "uppercase",
+    color: "#111827",
   },
-  totalRow: {
+  billText: {
+    fontSize: 13,
+    color: colors.muted,
+    marginTop: 2,
+  },
+  summaryBox: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: spacing.sm,
+    alignItems: "center",
   },
-  totalLabel: {
+  summaryLabel: {
     fontSize: 14,
-    fontWeight: "500",
-    color: "#0F172A",
+    color: colors.muted,
   },
-  totalValue: {
-    fontSize: 16,
+  summaryValue: {
+    fontSize: 18,
     fontWeight: "700",
-    color: "#0F172A",
+    color: colors.text,
   },
-  note: {
-    fontSize: 12,
-    color: "#64748B",
+  errorText: {
+    marginTop: spacing.sm,
+    color: "red",
+    textAlign: "center",
   },
-  footer: {
-    marginTop: "auto",
-    paddingBottom: spacing.lg,
-    gap: 10,
-  },
-  button: {
-    paddingVertical: 10,
+  createButton: {
+    marginTop: spacing.md,
+    backgroundColor: colors.brand,
+    paddingVertical: 12,
     borderRadius: 999,
     alignItems: "center",
   },
-  secondaryButton: {
-    backgroundColor: "#E2E8F0",
-  },
-  secondaryButtonText: {
-    color: "#0F172A",
-    fontWeight: "600",
-  },
-  primaryButton: {
-    backgroundColor: "#2563EB",
-  },
-  primaryButtonText: {
+  createButtonText: {
     color: "#FFFFFF",
     fontWeight: "700",
+    fontSize: 14,
   },
-  disabledButton: {
-    opacity: 0.5,
+  sectionTitle: {
+    marginTop: spacing.lg,
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  qrWrapper: {
+    marginTop: spacing.md,
+    alignItems: "center",
+  },
+  qrBox: {
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 16,
+    elevation: 4,
+  },
+  qrHint: {
+    marginTop: spacing.sm,
+    fontSize: 12,
+    textAlign: "center",
+    color: colors.muted,
+  },
+  webButton: {
+    marginTop: spacing.lg,
+    backgroundColor: "#22C55E",
+    paddingVertical: 12,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+  webButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 14,
   },
 });
 
