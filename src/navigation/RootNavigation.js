@@ -34,6 +34,7 @@ import VnpayWebViewScreen from "../screens/bill/VnpayWebViewScreen";
 import NotificationListScreen from "../screens/notification/NotificationListScreen";
 import NotificationDetailScreen from "../screens/notification/NotificationDetailScreen";
 import ChatbotScreen from "../screens/chatbot/ChatbotScreen";
+import { setupPushNotifications } from "../service/pushNotifications";
 
 // Auth store (đã tạo ở src/auth/index.js)
 import { useAuthStore } from "../auth";
@@ -63,6 +64,11 @@ export default function RootNavigation() {
     // };
     // resetToken();
   }, []);
+  useEffect(() => {
+    if (hydrated && token) {
+      setupPushNotifications();
+    }
+  }, [hydrated, token]);
 
   // Chưa hydrate xong thì tạm thời không render navigator để tránh nhấp nháy
   if (!hydrated) return null;
