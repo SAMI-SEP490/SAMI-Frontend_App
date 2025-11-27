@@ -1,147 +1,266 @@
-import React, { useContext } from "react";
+// src/screens/notification/NotificationListScreen.js
+
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
-import Header from "../../components/Header";
-import { spacing } from "../../theme/spacing";
-import { useNavigation } from "@react-navigation/native";
+
+import {
+  getMyNotifications,
+  markNotificationRead,
+} from "../../service/api/notification";
 
 export default function NotificationListScreen() {
-  const { notificationData, setNotificationData } =
-    useContext(NotificationContext);
   const navigation = useNavigation();
 
-  /** Lấy icon phù hợp theo loại thông báo */
-  const getIcon = (type) => {
-    switch (type) {
-      case "electricity":
-        return { name: "bolt", color: "#FFB300" };
-      case "water":
-        return { name: "water-drop", color: "#2196F3" };
-      case "maintenance":
-        return { name: "build", color: "#FF5722" };
-      case "meeting":
-        return { name: "groups", color: "#4CAF50" };
-      default:
-        return { name: "info", color: "#9E9E9E" };
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const list = await getMyNotifications();
+
+      // Backend trả dạng:
+      // [
+      //   {
+      //     user_notification_id,
+      //     is_read,
+      //     read_at,
+      //     notification: {
+      //       notification_id,
+      //       title,
+      //       body,
+      //       payload,
+      //       created_at
+      //     }
+      //   }, ...
+      // ]
+
+      const now = new Date();
+
+      const mapped = (list || [])
+        .map((item) => ({
+          id: item.user_notification_id,
+          isRead: item.is_read,
+          readAt: item.read_at,
+          createdAt: item.notification?.created_at,
+          title: item.notification?.title || "",
+          body: item.notification?.body || "",
+          payload: item.notification?.payload || {},
+        }))
+        // chỉ hiện thông báo đã tới giờ publish
+        .filter((item) => {
+          const publishAt = item.payload?.publishAt;
+          if (!publishAt) return true; // không chọn → hiện luôn
+          const t = new Date(publishAt);
+          if (Number.isNaN(t.getTime())) return true;
+          return t <= now;
+        })
+        // sort mới nhất lên trên
+        .sort((a, b) => {
+          const t1 = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const t2 = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return t2 - t1;
+        });
+
+      setNotifications(mapped);
+    } catch (error) {
+      console.log("fetchNotifications error:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  /** Khi người dùng bấm vào 1 thông báo */
-  const handlePress = (id) => {
-    // Đánh dấu đã đọc
-    const updated = notificationData.map((n) =>
-      n.id === id ? { ...n, isRead: true } : n
-    );
-    setNotificationData(updated);
+  useFocusEffect(
+    useCallback(() => {
+      fetchNotifications();
+    }, [])
+  );
 
-    // Điều hướng sang màn chi tiết
-    navigation.navigate("NotificationDetailScreen", { id });
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchNotifications();
   };
 
+  const getIcon = (payload) => {
+    const category = payload?.category || payload?.type || "";
+
+    switch (category) {
+      case "Bảo trì":
+      case "maintenance":
+        return { name: "build", color: "#FF5722" };
+      case "Quy định":
+      case "regulation":
+        return { name: "rule", color: "#3B82F6" };
+      case "Thông báo chung":
+      case "info":
+      default:
+        return { name: "notifications", color: "#9E9E9E" };
+    }
+  };
+
+  const formatDateTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  };
+
+  const handlePressItem = async (item) => {
+    try {
+      if (!item.isRead) {
+        await markNotificationRead(item.id);
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === item.id
+              ? { ...n, isRead: true, readAt: new Date().toISOString() }
+              : n
+          )
+        );
+      }
+
+      navigation.navigate("NotificationDetailScreen", {
+        notification: item,
+      });
+    } catch (error) {
+      console.log("markNotificationRead error:", error);
+      // lỗi vẫn cho vào màn chi tiết
+      navigation.navigate("NotificationDetailScreen", {
+        notification: item,
+      });
+    }
+  };
+
+  const renderItem = ({ item }) => {
+    const icon = getIcon(item.payload);
+    return (
+      <Pressable
+        onPress={() => handlePressItem(item)}
+        style={{
+          flexDirection: "row",
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          borderBottomWidth: 1,
+          borderBottomColor: "#E5E7EB",
+          backgroundColor: item.isRead ? "#F9FAFB" : "#EEF2FF",
+        }}
+      >
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: 12,
+            backgroundColor: "#E5E7EB",
+          }}
+        >
+          <MaterialIcons name={icon.name} size={22} color={icon.color} />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text
+            numberOfLines={1}
+            style={{
+              fontSize: 15,
+              fontWeight: item.isRead ? "500" : "700",
+              color: "#111827",
+            }}
+          >
+            {item.title}
+          </Text>
+          <Text
+            numberOfLines={2}
+            style={{
+              fontSize: 13,
+              color: "#4B5563",
+              marginTop: 2,
+            }}
+          >
+            {item.body}
+          </Text>
+          <Text
+            style={{
+              fontSize: 11,
+              color: "#9CA3AF",
+              marginTop: 4,
+            }}
+          >
+            {formatDateTime(item.createdAt)}
+          </Text>
+        </View>
+
+        {!item.isRead && (
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: "#2563EB",
+              marginLeft: 8,
+              marginTop: 4,
+            }}
+          />
+        )}
+      </Pressable>
+    );
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "white",
+        }}
+      >
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 8, color: "#6B7280" }}>
+          Đang tải thông báo...
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-
-      {/* Header */}
-      <View style={{ paddingBottom: spacing.lg }}>
-        <Header />
-      </View>
-
-      {/* Tiêu đề */}
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>Thông báo tòa nhà</Text>
-      </View>
-
-      {/* Danh sách thông báo */}
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {notificationData.map((item) => {
-          const { name, color } = getIcon(item.type);
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.notificationItem,
-                !item.isRead && styles.unreadItem,
-              ]}
-              onPress={() => handlePress(item.id)}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons
-                name={name}
-                size={26}
-                color={color}
-                style={styles.icon}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.titleText}>{item.title}</Text>
-                <Text
-                  style={styles.messageText}
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                >
-                  {item.message}
-                </Text>
-                <Text style={styles.dateText}>{item.date}</Text>
-              </View>
-              {!item.isRead && <View style={styles.unreadDot} />}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+    <View style={{ flex: 1, backgroundColor: "white" }}>
+      <FlatList
+        data={notifications}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderItem}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={
+          <View
+            style={{
+              padding: 16,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#6B7280" }}>
+              Hiện chưa có thông báo nào.
+            </Text>
+          </View>
+        }
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  titleContainer: { alignItems: "center", marginBottom: 10 },
-  title: { fontSize: 18, fontWeight: "bold", color: "#000" },
-  scrollContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  notificationItem: {
-    flexDirection: "row",
-    backgroundColor: "#F8F8F8",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  unreadItem: {
-    backgroundColor: "#E3F2FD",
-  },
-  icon: {
-    marginRight: 10,
-  },
-  titleText: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  messageText: {
-    fontSize: 13,
-    color: "#555",
-    marginVertical: 2,
-  },
-  dateText: {
-    fontSize: 12,
-    color: "#888",
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    backgroundColor: "#FF5252",
-    borderRadius: 5,
-    marginLeft: 6,
-  },
-});

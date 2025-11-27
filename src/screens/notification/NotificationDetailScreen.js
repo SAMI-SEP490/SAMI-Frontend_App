@@ -1,103 +1,126 @@
-// src/screens/NotificationDetailScreen.js
-import React, { useContext, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, StatusBar } from "react-native";
+// src/screens/notification/NotificationDetailScreen.js
+
+import React from "react";
+import { View, Text, ScrollView } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import Header from "../../components/Header";
-import { spacing } from "../../theme/spacing";
 
 export default function NotificationDetailScreen() {
   const route = useRoute();
-  const { id } = route.params || {};
-  const { notificationData, setNotificationData } =
-    useContext(NotificationContext);
-
-  // Tìm thông báo theo ID
-  const notification = notificationData.find((item) => item.id === id);
-
-  // Khi mở màn hình, nếu thông báo tồn tại và chưa đọc thì đánh dấu đã đọc
-  useEffect(() => {
-    if (!notification || notification.isRead) return;
-    const updated = notificationData.map((n) =>
-      n.id === id ? { ...n, isRead: true } : n
-    );
-    setNotificationData(updated);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  const { notification } = route.params || {};
 
   if (!notification) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.errorText}>Không tìm thấy thông báo.</Text>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "white",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+        }}
+      >
+        <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 8 }}>
+          Không tìm thấy thông báo
+        </Text>
+        <Text style={{ color: "#6B7280", textAlign: "center" }}>
+          Vui lòng quay lại danh sách thông báo và chọn lại.
+        </Text>
       </View>
     );
   }
 
+  const { title, body, createdAt, payload } = notification || {};
+  const category = payload?.category || payload?.type || "Thông báo";
+  const building = payload?.building || "Tất cả tòa nhà";
+  const publishAt = payload?.publishAt || null;
+  const contentDetail = payload?.content || body;
+
+  const formatDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const formatDateTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <ScrollView
+      style={{ flex: 1, backgroundColor: "#F9FAFB" }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+    >
+      <View
+        style={{
+          backgroundColor: "white",
+          borderRadius: 12,
+          padding: 16,
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "700",
+            marginBottom: 8,
+            color: "#111827",
+          }}
+        >
+          {title}
+        </Text>
 
-      {/* Header giống App */}
-      <View style={{ paddingBottom: spacing.lg }}>
-        <Header />
-      </View>
+        <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+          Loại: <Text style={{ fontWeight: "600" }}>{category}</Text>
+        </Text>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>{notification.title}</Text>
+        <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+          Tòa nhà: <Text style={{ fontWeight: "600" }}>{building}</Text>
+        </Text>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Mã:</Text>
-          <Text style={styles.metaValue}>{notification.id}</Text>
-        </View>
+        {publishAt ? (
+          <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+            Thời gian hiển thị:{" "}
+            <Text style={{ fontWeight: "600" }}>
+              {formatDateTime(publishAt)}
+            </Text>
+          </Text>
+        ) : null}
 
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Người gửi:</Text>
-          <Text style={styles.metaValue}>{notification.sender}</Text>
-        </View>
+        <Text style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 12 }}>
+          Thời gian gửi: {formatDateTime(createdAt)}
+        </Text>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Ngày:</Text>
-          <Text style={styles.metaValue}>{notification.date}</Text>
-        </View>
+        <View
+          style={{
+            height: 1,
+            backgroundColor: "#E5E7EB",
+            marginVertical: 8,
+          }}
+        />
 
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Loại:</Text>
-          <Text style={styles.metaValue}>{notification.type}</Text>
-        </View>
-
-        <View style={styles.separator} />
-
-        <Text style={styles.message}>{notification.message}</Text>
-
-        <View style={styles.separator} />
-
-        <Text style={styles.note}>
-          Nếu cần hỗ trợ thêm, vui lòng liên hệ Ban Quản Lý Tòa Nhà.
+        <Text
+          style={{
+            fontSize: 15,
+            color: "#111827",
+            lineHeight: 22,
+          }}
+        >
+          {contentDetail}
         </Text>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  errorText: { color: "red", fontSize: 16 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#004AAD",
-    marginBottom: 12,
-  },
-  metaRow: { flexDirection: "row", marginBottom: 6 },
-  metaLabel: { width: 90, color: "#555", fontWeight: "600" },
-  metaValue: { color: "#333", flex: 1 },
-  separator: { height: 1, backgroundColor: "#e0e0e0", marginVertical: 12 },
-  message: {
-    fontSize: 15,
-    color: "#222",
-    lineHeight: 22,
-    textAlign: "justify",
-  },
-  note: { fontSize: 13, color: "#666", marginTop: 12, fontStyle: "italic" },
-});
