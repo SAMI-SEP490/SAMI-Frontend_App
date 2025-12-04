@@ -1,27 +1,31 @@
 // src/screens/chatbot/ChatbotScreen.js
+import { useFocusEffect } from "@react-navigation/native";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   ScrollView,
-  SafeAreaView,
+  TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../theme/colors";
 import { Ionicons } from "@expo/vector-icons";
+import Markdown from "react-native-markdown-display";
 import { useAuthStore } from "../../auth";
 import {
   getOpening,
-  // getSuggested, // sẽ dùng sau nếu anh muốn gợi ý câu hỏi
+  getSuggested,
   openChatStream,
 } from "../../service/chatbot";
 
 export default function ChatbotScreen() {
   const { user, token } = useAuthStore();
+  const [suggestedQuestions, setSuggestedQuestions] = useState([]);
 
   const [messages, setMessages] = useState([]); // { sender: "user" | "bot", text: string }
   const [input, setInput] = useState("");
@@ -41,24 +45,16 @@ export default function ChatbotScreen() {
     const loadOpening = async () => {
       try {
         const data = await getOpening();
-        const opening =
-          data?.opening_statement ||
-          "Xin chào! Tôi là SAMI Assistant. Bạn cần hỗ trợ gì hôm nay?";
-
+        const opening = data?.opening_statement;
+        const suggested = data?.suggested_questions || [];
         setMessages([{ sender: "bot", text: opening }]);
-      } catch (error) {
-        console.log("[Chatbot] Lỗi load opening:", error);
-        setMessages([
-          {
-            sender: "bot",
-            text: "Xin chào! Tôi là SAMI Assistant. Hiện tại tôi không lấy được câu chào từ server, nhưng bạn vẫn có thể hỏi tôi bất cứ điều gì về căn hộ, hóa đơn, hợp đồng, v.v.",
-          },
-        ]);
+        setSuggestedQuestions(suggested);
+      } catch (err) {
+        console.log(err);
       } finally {
         setInitializing(false);
       }
     };
-
     loadOpening();
 
     // cleanup: đóng stream nếu màn hình bị unmount
@@ -76,7 +72,23 @@ export default function ChatbotScreen() {
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
   }, [messages, streamingText]);
+  useFocusEffect(
+    React.useCallback(() => {
+      setTimeout(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollToEnd({ animated: false });
+        }
+      }, 50);
 
+      // Cleanup khi rời màn hình
+      return () => {
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+      };
+    }, [])
+  );
   // ====== Gửi tin nhắn ======
   const handleSend = async () => {
     const text = input.trim();
@@ -87,7 +99,7 @@ export default function ChatbotScreen() {
       return;
     }
 
-    // DEBUG (nếu anh cần xem ở console Metro)
+    // DEBUG
     console.log("===== CHATBOT DEBUG - token from useAuthStore =====");
     console.log("token:", token);
 
@@ -95,14 +107,16 @@ export default function ChatbotScreen() {
     const userMsg = { sender: "user", text };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setLoading(true);
     setStreamingText("");
-
+    setLoading(true);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 80);
     // 2. Nếu đang có stream cũ, đóng lại
     if (eventSourceRef.current) {
       try {
         eventSourceRef.current.close();
-      } catch {}
+      } catch { }
       eventSourceRef.current = null;
     }
 
@@ -172,7 +186,9 @@ export default function ChatbotScreen() {
             // if (lastMessageId) {
             //   fetchSuggestedQuestions(lastMessageId);
             // }
-
+            if (lastMessageId) {
+              fetchSuggestedQuestions(lastMessageId);
+            }
             es.close();
             eventSourceRef.current = null;
           }
@@ -191,7 +207,7 @@ export default function ChatbotScreen() {
         setStreamingText("");
         try {
           es.close();
-        } catch {}
+        } catch { }
         eventSourceRef.current = null;
       });
     } catch (error) {
@@ -208,22 +224,23 @@ export default function ChatbotScreen() {
       ]);
     }
   };
-
-  // ====== (Optional) Lấy suggested questions sau 1 message ======
-  // const fetchSuggestedQuestions = async (messageId) => {
-  //   try {
-  //     const questions = await getSuggested(messageId);
-  //     setSuggestedQuestions(questions || []);
-  //   } catch (error) {
-  //     console.log("[Chatbot] Lỗi lấy suggested questions:", error);
-  //   }
-  // };
-
-  // ====== Render UI ======
+  const handleSendFromSuggestion = (q) => {
+    setInput(q);
+    handleSend(q);
+  };
+  const fetchSuggestedQuestions = async (messageId) => {
+    try {
+      const questions = await getSuggested(messageId);
+      setSuggestedQuestions(questions || []);
+    } catch (error) {
+      console.log("[Chatbot] Lỗi lấy suggested:", error);
+    }
+  };
 
   if (initializing) {
     return (
       <SafeAreaView
+        edges={["top", "left", "right"]}
         style={{
           flex: 1,
           backgroundColor: "#fff",
@@ -240,10 +257,13 @@ export default function ChatbotScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F5F5F5" }}>
+    <SafeAreaView
+  style={{ flex: 1, backgroundColor: "#F5F5F5" }}
+  edges={[ 'left', 'right']}
+>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={80}
       >
         {/* Header */}
@@ -278,42 +298,46 @@ export default function ChatbotScreen() {
               color: colors.text,
             }}
           >
-            SAMI bot 
+            SAMI bot
           </Text>
         </View>
 
-        {/* Nội dung chat */}
-        <ScrollView
+        {/* Scroll messages */}
+        <KeyboardAwareScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
           ref={scrollViewRef}
-          style={{ flex: 1, padding: 16 }}
-          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          extraScrollHeight={60}
+          enableOnAndroid={true}
         >
           {messages.map((msg, idx) => (
             <View
               key={idx}
               style={{
                 alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
-                backgroundColor:
-                  msg.sender === "user" ? colors.brand : "#F0F0F0",
+                backgroundColor: msg.sender === "user" ? colors.brand : "#F0F0F0",
                 padding: 12,
                 borderRadius: 18,
                 marginBottom: 8,
                 maxWidth: "80%",
               }}
             >
-              <Text
+              <Markdown
                 style={{
-                  color: msg.sender === "user" ? "white" : colors.text,
-                  fontSize: 14,
+                  body: {
+                    color: msg.sender === "user" ? "#fff" : colors.text,
+                    fontSize: 14,
+                  },
                 }}
               >
                 {msg.text}
-              </Text>
+              </Markdown>
             </View>
           ))}
 
-          {/* Tin nhắn bot đang stream dở */}
-          {streamingText ? (
+          {/* 🔹 Hiện tin nhắn bot đang stream dở */}
+          {streamingText !== "" && (
             <View
               style={{
                 alignSelf: "flex-start",
@@ -324,61 +348,70 @@ export default function ChatbotScreen() {
                 maxWidth: "80%",
               }}
             >
-              <Text style={{ color: colors.text, fontSize: 14 }}>
+              <Markdown
+                style={{
+                  body: {
+                    color: colors.text,
+                    fontSize: 14,
+                  },
+                }}
+              >
                 {streamingText}
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Loading nhỏ nhỏ phía dưới (optional) */}
-          {loading && !streamingText && (
-            <View
-              style={{
-                alignSelf: "flex-start",
-                flexDirection: "row",
-                alignItems: "center",
-                marginBottom: 8,
-              }}
-            >
-              <ActivityIndicator size="small" color={colors.brand} />
-              <Text style={{ marginLeft: 8, color: colors.text }}>
-                SAMI bot đang trả lời...
-              </Text>
+              </Markdown>
             </View>
           )}
 
-          {/* (Optional) Gợi ý câu hỏi */}
-          {/* {suggestedQuestions.length > 0 && (
-            <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap" }}>
-              {suggestedQuestions.map((q, idx) => (
+          {/* 🔹 Khi chưa có streamingText nhưng loading */}
+          {loading && streamingText === "" && (
+            <View
+              style={{
+                alignSelf: "flex-start",
+                backgroundColor: "#F0F0F0",
+                padding: 12,
+                borderRadius: 18,
+                marginBottom: 8,
+                maxWidth: "80%",
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <ActivityIndicator size="small" style={{ marginRight: 8 }} />
+              <Text style={{ color: colors.text }}>Đang trả lời...</Text>
+            </View>
+          )}
+        </KeyboardAwareScrollView>
+
+        {/* suggested */}
+        {suggestedQuestions.length > 0 && (
+          <View style={{ paddingHorizontal: 12, marginBottom: 6 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {suggestedQuestions.map((q, i) => (
                 <TouchableOpacity
-                  key={idx}
-                  onPress={() => setInput(q)}
+                  key={i}
+                  onPress={() => handleSendFromSuggestion(q)}
                   style={{
-                    paddingHorizontal: 12,
+                    backgroundColor: "#fff",
                     paddingVertical: 8,
-                    borderRadius: 999,
-                    backgroundColor: "white",
+                    paddingHorizontal: 14,
+                    borderRadius: 16,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: "#ddd",
                     marginRight: 8,
-                    marginBottom: 8,
                   }}
                 >
-                  <Text style={{ fontSize: 13, color: colors.text }}>{q}</Text>
+                  <Text style={{ color: "#333" }}>{q}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
-          )} */}
-        </ScrollView>
+            </ScrollView>
+          </View>
+        )}
 
-        {/* Ô nhập tin nhắn */}
+        {/* Input */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            paddingHorizontal: 16,
-            paddingVertical: 10,
+            padding: 12,
             backgroundColor: "#fff",
             borderTopWidth: 1,
             borderTopColor: "#eee",
@@ -387,7 +420,7 @@ export default function ChatbotScreen() {
           <TextInput
             style={{
               flex: 1,
-              backgroundColor: "white",
+              backgroundColor: "#fff",
               borderRadius: 25,
               paddingHorizontal: 16,
               paddingVertical: 10,
@@ -407,13 +440,15 @@ export default function ChatbotScreen() {
               borderRadius: 999,
               padding: 10,
               marginLeft: 8,
-              opacity: loading ? 0.7 : 1,
             }}
           >
-            <Ionicons name="send" size={20} color="white" />
+            <Ionicons name="send" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+
+
+
 }
