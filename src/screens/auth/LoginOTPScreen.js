@@ -19,7 +19,7 @@ import { useAuthStore } from "../../auth"; // <-- quan trọng
 
 const API_URL =
   (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "https://lonely-alberta-jackets-academics.trycloudflare.com/api";
+  "https://aid-labeled-adapted-been.trycloudflare.com/api";
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const roleIsTenant = (u) =>
