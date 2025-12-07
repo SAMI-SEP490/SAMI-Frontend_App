@@ -18,9 +18,7 @@ import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { useNavigation } from "@react-navigation/native";
 
-const API_URL =
-  (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "http://192.168.1.50:3000/api";
+const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 const unwrap = (res) => res?.data?.data ?? res?.data;
 
 function roleIsTenant(user) {

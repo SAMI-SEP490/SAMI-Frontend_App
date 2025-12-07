@@ -18,9 +18,7 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { useAuthStore } from "../../auth";
 
-const API_URL =
-  (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "https://aid-labeled-adapted-been.trycloudflare.com/api";
+const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const roleIsTenant = (u) =>

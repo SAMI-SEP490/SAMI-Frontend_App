@@ -3,10 +3,7 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 
-export const baseURL = (
-  Constants?.expoConfig?.extra?.apiUrl ||
-  "https://aid-labeled-adapted-been.trycloudflare.com/api"
-).replace(/\/+$/, "");
+export const baseURL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 
 export const http = axios.create({
   baseURL,
