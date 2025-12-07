@@ -65,13 +65,24 @@ export default function RootNavigation() {
     // resetToken();
   }, []);
   useEffect(() => {
-    if (hydrated && token) {
-      setupPushNotifications();
-    }
-  }, [hydrated, token]);
+    let unsubscribe;
 
-  // Chưa hydrate xong thì tạm thời không render navigator để tránh nhấp nháy
-  if (!hydrated) return null;
+    const initNotifications = async () => {
+      if (hydrated && token) {
+        // setupPushNotifications now returns the unsubscribe function
+        unsubscribe = await setupPushNotifications();
+      }
+    };
+
+    initNotifications();
+
+    // Cleanup when component unmounts or token changes
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [hydrated, token]);
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: true }}>
