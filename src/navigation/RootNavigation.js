@@ -85,7 +85,7 @@ export default function RootNavigation() {
   }, [hydrated, token]);
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: true }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
         // ====== ĐÃ ĐĂNG NHẬP: App stack ======
         <>
