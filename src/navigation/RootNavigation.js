@@ -2,8 +2,8 @@
 import React, { useEffect } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-// Tabs (trang chính sau đăng nhập)
-import TabNavigation from "./TabNavigation";
+//DashboardScreen
+import DashboardScreen from "../screens/dashboard/DashboardScreen";
 
 // Guest & Maintenance
 import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrationScreen";
@@ -90,8 +90,8 @@ export default function RootNavigation() {
         // ====== ĐÃ ĐĂNG NHẬP: App stack ======
         <>
           <Stack.Screen
-            name="TabNavigation"
-            component={TabNavigation}
+            name="DashboardScreen"
+            component={DashboardScreen}
             options={{ headerShown: false }}
           />
 
