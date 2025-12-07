@@ -5,7 +5,7 @@ import Constants from "expo-constants";
 
 export const baseURL = (
   Constants?.expoConfig?.extra?.apiUrl ||
-  "https://gratuit-intention-remained-dictionaries.trycloudflare.com/api"
+  "https://itself-watch-danny-store.trycloudflare.com/api"
 ).replace(/\/+$/, "");
 
 export const http = axios.create({
