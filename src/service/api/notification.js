@@ -1,6 +1,6 @@
 // src/service/api/notification.js
 import { Platform } from "react-native";
-import http, { unwrap } from "../http"; // nếu http export khác thì chỉnh lại cho khớp
+import { http, unwrap } from "../http"; // nếu http export khác thì chỉnh lại cho khớp
 
 // Lấy danh sách thông báo của tenant đang đăng nhập
 export async function getMyNotifications() {

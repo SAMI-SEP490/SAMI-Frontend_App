@@ -1,55 +1,79 @@
 // src/service/pushNotifications.js
-import * as Notifications from "expo-notifications";
-import * as Device from "expo-device";
-import { Platform } from "react-native";
+import messaging from '@react-native-firebase/messaging';
+import * as Notifications from 'expo-notifications';
+import { PermissionsAndroid, Platform, Alert } from 'react-native';
 import { registerDeviceToken } from "./api/notification";
 
-// Khi app đang mở mà có noti tới: vẫn hiện banner / sound
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldSetBadge: false,
   }),
 });
 
-export async function setupPushNotifications() {
-  try {
-    if (!Device.isDevice) {
-      console.log("Push notifications chỉ hoạt động trên thiết bị thật.");
-      return;
+export async function requestUserPermission() {
+  // 1. Android 13+ requires explicit permission
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+      console.log('User declined notification permission');
+      return false;
     }
-
-    // Android cần channel
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "default",
-        importance: Notifications.AndroidImportance.MAX,
-      });
-    }
-
-    // Hỏi quyền
-    let { status } = await Notifications.getPermissionsAsync();
-    if (status !== "granted") {
-      const req = await Notifications.requestPermissionsAsync();
-      status = req.status;
-    }
-
-    if (status !== "granted") {
-      console.log("Người dùng từ chối quyền thông báo.");
-      return;
-    }
-
-    // Lấy FCM token (Android) / APNS token (iOS)
-    const pushToken = (await Notifications.getDevicePushTokenAsync()).data;
-    console.log("Device push token:", pushToken);
-
-    if (!pushToken) return;
-
-    // Gửi token lên backend để lưu vào device_tokens
-    await registerDeviceToken(pushToken);
-    console.log("Đã đăng ký device token với backend.");
-  } catch (error) {
-    console.log("setupPushNotifications error:", error);
   }
+
+  // 2. iOS Permission (if you add iOS later)
+  const authStatus = await messaging().requestPermission();
+  const enabled =
+    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+  return enabled;
 }
+
+export async function setupPushNotifications() {
+  const hasPermission = await requestUserPermission();
+  
+  if (hasPermission) {
+    // 3. Get the Native FCM Token
+    try {
+      const token = await messaging().getToken();
+      console.log('FCM Token:', token);
+      
+      // 4. Send to Backend
+      if (token) {
+        await registerDeviceToken(token);
+      }
+    } catch (error) {
+      console.error("Failed to get FCM token:", error);
+    }
+  } else {
+    console.log("No permission for notifications");
+  }
+
+  // 5. Handle Foreground Messages (App is OPEN)
+  // When app is open, notifications don't popup automatically. We must trigger them.
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+    console.log('Foreground Notification:', remoteMessage);
+    
+    // Schedule a local notification
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: remoteMessage.notification?.title || 'Thông báo mới',
+        body: remoteMessage.notification?.body || '',
+        data: remoteMessage.data, // Keep the payload for navigation
+      },
+      trigger: null, // null means "show immediately"
+    });
+  });
+
+  return unsubscribe;
+}
+
+// 6. Handle Background Messages (App is CLOSED/MINIMIZED)
+// This must be called OUTSIDE of any component, usually in index.js or App.js
+messaging().setBackgroundMessageHandler(async remoteMessage => {
+  console.log('Background Notification:', remoteMessage);
+  // You don't need to do anything here. Android SDK handles the popup automatically.
+});
