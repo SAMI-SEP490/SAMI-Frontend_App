@@ -1,7 +1,15 @@
 // src/service/pushNotifications.js
-import messaging from '@react-native-firebase/messaging';
+import { 
+  getMessaging, 
+  getToken, 
+  onMessage, 
+  setBackgroundMessageHandler, 
+  requestPermission, 
+  AuthorizationStatus 
+} from '@react-native-firebase/messaging';
+
 import * as Notifications from 'expo-notifications';
-import { PermissionsAndroid, Platform, Alert } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import { registerDeviceToken } from "./api/notification";
 
 Notifications.setNotificationHandler({
@@ -23,25 +31,27 @@ export async function requestUserPermission() {
     }
   }
 
-  // 2. iOS Permission (if you add iOS later)
-  const authStatus = await messaging().requestPermission();
+  // Pass the messaging instance to the function
+  const messaging = getMessaging();
+  const authStatus = await requestPermission(messaging);
+  
   const enabled =
-    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    authStatus === AuthorizationStatus.AUTHORIZED ||
+    authStatus === AuthorizationStatus.PROVISIONAL;
 
   return enabled;
 }
 
 export async function setupPushNotifications() {
   const hasPermission = await requestUserPermission();
+  const messaging = getMessaging(); // Get the instance once
   
   if (hasPermission) {
-    // 3. Get the Native FCM Token
     try {
-      const token = await messaging().getToken();
+      // 4. New Syntax: getToken(messaging)
+      const token = await getToken(messaging);
       console.log('FCM Token:', token);
       
-      // 4. Send to Backend
       if (token) {
         await registerDeviceToken(token);
       }
@@ -52,28 +62,24 @@ export async function setupPushNotifications() {
     console.log("No permission for notifications");
   }
 
-  // 5. Handle Foreground Messages (App is OPEN)
-  // When app is open, notifications don't popup automatically. We must trigger them.
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
+  const unsubscribe = onMessage(messaging, async remoteMessage => {
     console.log('Foreground Notification:', remoteMessage);
     
-    // Schedule a local notification
     await Notifications.scheduleNotificationAsync({
       content: {
         title: remoteMessage.notification?.title || 'Thông báo mới',
         body: remoteMessage.notification?.body || '',
-        data: remoteMessage.data, // Keep the payload for navigation
+        data: remoteMessage.data,
       },
-      trigger: null, // null means "show immediately"
+      trigger: null,
     });
   });
 
   return unsubscribe;
 }
 
-// 6. Handle Background Messages (App is CLOSED/MINIMIZED)
-// This must be called OUTSIDE of any component, usually in index.js or App.js
-messaging().setBackgroundMessageHandler(async remoteMessage => {
+// setBackgroundMessageHandler(messaging, callback)
+// Note: This must be called immediately, so we call getMessaging() inline
+setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
   console.log('Background Notification:', remoteMessage);
-  // You don't need to do anything here. Android SDK handles the popup automatically.
 });
