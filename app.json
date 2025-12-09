@@ -3,7 +3,7 @@
     "name": "SAMI",
     "slug": "SAMI",
     "extra": {
-      "apiUrl": "https://itself-watch-danny-store.trycloudflare.com/api"
+      "apiUrl": ""
     },
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,7 +16,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.sami",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,11 +26,22 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.sami"
+      "package": "com.anonymous.sami",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-secure-store"]
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
+      [
+        "expo-web-browser",
+        {
+          "experimentalLauncherActivity": true
+        }
+      ]
+    ]
   }
 }

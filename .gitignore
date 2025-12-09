@@ -42,3 +42,6 @@ yarn-error.*
 
 #bun
 bun.lock
+
+#dotenv
+.env

@@ -1,6 +1,6 @@
 // src/service/api/notification.js
 import { Platform } from "react-native";
-import http, { unwrap } from "../http"; // nếu http export khác thì chỉnh lại cho khớp
+import { http, unwrap } from "../http"; // nếu http export khác thì chỉnh lại cho khớp
 
 // Lấy danh sách thông báo của tenant đang đăng nhập
 export async function getMyNotifications() {
@@ -12,6 +12,11 @@ export async function getMyNotifications() {
 export async function markNotificationRead(userNotificationId) {
   const { data } = await http.post(`/notifications/${userNotificationId}/read`);
   return unwrap(data);
+}
+
+// Đánh dấu tất cả thông báo của 1 tenant là đã đọc
+export function markAllNotificationsRead() {
+  return unwrap(http.put("/notifications/read-all"));
 }
 
 // Đăng ký token thiết bị lên backend (để backend gửi push)

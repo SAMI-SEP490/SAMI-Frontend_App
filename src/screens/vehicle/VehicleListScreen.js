@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,17 +6,15 @@ import {
   FlatList,
   TouchableOpacity,
   Modal,
-  StatusBar,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 import Header from "../../components/Header";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-
 import { getVehicleRegistrations } from "../../service/api/vehicle";
 
 const VEHICLE_TYPE_VN = {
@@ -30,7 +28,8 @@ const VEHICLE_TYPE_VN = {
 const STATUS_VN = {
   requested: "Đang chờ",
   approved: "Đã duyệt",
-  rejected: "Bị từ chối",
+  rejected: "Từ chối",
+  cancelled: "Đã hủy",
 };
 
 const VehicleListScreen = () => {
@@ -43,7 +42,6 @@ const VehicleListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
-  // 🔹 Fetch vehicle registrations & parse reason JSON
   const fetchVehicles = async () => {
     try {
       setLoading(true);
@@ -52,11 +50,21 @@ const VehicleListScreen = () => {
 
       const parsed = registrations.map((item) => {
         let reason = {};
+        
+        // --- FIX: Handle non-JSON strings properly ---
         try {
-          reason = item.reason ? JSON.parse(item.reason) : {};
+          if (item.reason && item.reason.trim().startsWith("{")) {
+             reason = JSON.parse(item.reason);
+          } else {
+             // It's a bot message or plain text, treat as empty details
+             reason = {}; 
+          }
         } catch (e) {
-          console.warn("Cannot parse reason JSON:", item.reason);
+          // Silent fail: If parse fails, just assume empty details
+          reason = {};
         }
+        // ---------------------------------------------
+
         return {
           ...item,
           vehicle_type: reason.type || null,
@@ -65,13 +73,10 @@ const VehicleListScreen = () => {
           color: reason.color || null,
         };
       });
-
-      console.log("🚀 Đăng ký xe đã tải (parsed):", parsed);
-
       setVehicleData(parsed);
       setFilteredData(parsed);
     } catch (err) {
-      console.error("❌ Lỗi khi tải danh sách đăng ký xe:", err);
+      console.error("Error fetching vehicles:", err);
       setVehicleData([]);
       setFilteredData([]);
     } finally {
@@ -79,11 +84,12 @@ const VehicleListScreen = () => {
     }
   };
 
-  useEffect(() => {
-    fetchVehicles();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchVehicles();
+    }, [])
+  );
 
-  // 🔹 Filter logic
   useEffect(() => {
     let data = vehicleData;
     if (filterType) {
@@ -95,69 +101,72 @@ const VehicleListScreen = () => {
     setFilteredData(data);
   }, [vehicleData, filterType, filterStatus]);
 
-  // 🔹 Status style helper
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case "approved":
-        return styles.statusApproved;
-      case "requested":
-        return styles.statusPending;
-      case "rejected":
-        return styles.statusRejected;
-      default:
-        return {};
-    }
+  const renderVehicleItem = ({ item }) => {
+    const statusColor =
+      item.status === "approved"
+        ? "#DCFCE7"
+        : item.status === "rejected" || item.status === "cancelled"
+        ? "#FEE2E2"
+        : "#FEF3C7";
+    
+    const statusTextColor = 
+      item.status === "approved"
+        ? "#16A34A"
+        : item.status === "rejected" || item.status === "cancelled"
+        ? "#EF4444"
+        : "#D97706";
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => {
+           if(item.status === 'requested') {
+               navigation.navigate("EditVehicleScreen", { vehicleId: item.assignment_id })
+           }
+        }}
+      >
+        <View style={styles.cardHeader}>
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+            <View style={styles.iconBox}>
+                <Ionicons name={item.vehicle_type === 'car' ? 'car-outline' : 'bicycle-outline'} size={20} color={colors.brand} />
+            </View>
+            <Text style={styles.plateNumber}>{item.license_plate || "N/A"}</Text>
+          </View>
+
+          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+            <Text style={[styles.statusText, { color: statusTextColor }]}>
+              {STATUS_VN[item.status] || item.status}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Loại xe:</Text>
+          <Text style={styles.value}>{VEHICLE_TYPE_VN[item.vehicle_type] || "Không xác định"}</Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Thông tin:</Text>
+          <Text style={styles.value}>
+             {item.brand ? item.brand : '---'} - {item.color ? item.color : '---'}
+          </Text>
+        </View>
+        
+        {item.status === 'requested' && (
+            <View style={{marginTop: 8, alignSelf: 'flex-end'}}>
+                <Text style={{fontSize: 12, color: colors.brand, fontWeight: '600'}}>Chạm để chỉnh sửa</Text>
+            </View>
+        )}
+      </TouchableOpacity>
+    );
   };
 
-  // 🔹 Render item
-  const renderVehicleItem = ({ item, index }) => (
-    <View style={styles.vehicleItem}>
-      <View style={styles.vehicleHeader}>
-        <Text style={styles.itemText}>#{index + 1}</Text>
-        {item.status === "requested" && (
-          <TouchableOpacity
-            style={styles.editIcon}
-            onPress={() =>
-              navigation.navigate("EditVehicleScreen", {
-                vehicleId: item.assignment_id,
-              })
-            }
-          >
-            <Ionicons name="create-outline" size={20} color={colors.brand} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <Text style={styles.itemText}>
-        Loại xe:{" "}
-        {VEHICLE_TYPE_VN[item.vehicle_type] || item.vehicle_type || "N/A"}
-      </Text>
-      <Text style={styles.itemText}>
-        Biển số: {item.license_plate || "N/A"}
-      </Text>
-      <Text style={styles.itemText}>Thương hiệu: {item.brand || "N/A"}</Text>
-      <Text style={styles.itemText}>Màu: {item.color || "N/A"}</Text>
-      <Text style={[styles.itemText, getStatusStyle(item.status)]}>
-        Trạng thái: {STATUS_VN[item.status] || item.status}
-      </Text>
-      <Text style={styles.itemText}>
-        Ngày đăng ký:{" "}
-        {item.requested_at
-          ? new Date(item.requested_at).toLocaleDateString("vi-VN")
-          : "N/A"}
-      </Text>
-      <Text style={styles.itemText}>Ghi chú: {item.note || "Không có"}</Text>
-    </View>
-  );
-
-  // 🔹 Filter Modal
   const FilterModal = () => {
-    const types = [
-      ...new Set(vehicleData.map((i) => i.vehicle_type).filter(Boolean)),
-    ];
-    const statuses = [
-      ...new Set(vehicleData.map((i) => i.status).filter(Boolean)),
-    ];
+    const types = [...new Set(vehicleData.map((i) => i.vehicle_type).filter(Boolean))];
+    const statuses = [...new Set(vehicleData.map((i) => i.status).filter(Boolean))];
 
     return (
       <Modal
@@ -167,70 +176,56 @@ const VehicleListScreen = () => {
         onRequestClose={() => setFilterModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Bộ lọc</Text>
 
-            <Text style={styles.modalSection}>Loại xe</Text>
-            <View style={styles.filterOptionsRow}>
+            <Text style={styles.sectionTitle}>Loại xe</Text>
+            <View style={styles.wrapRow}>
               {types.map((t) => (
                 <TouchableOpacity
                   key={t}
-                  style={[
-                    styles.filterChip,
-                    filterType === t && styles.chipSelected,
-                  ]}
-                  onPress={() => setFilterType(t)}
+                  style={[styles.chip, filterType === t && styles.chipActive]}
+                  onPress={() => setFilterType(t === filterType ? null : t)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      filterType === t && styles.chipTextSelected,
-                    ]}
-                  >
+                  <Text style={[styles.chipText, filterType === t && styles.chipTextActive]}>
                     {VEHICLE_TYPE_VN[t] || t}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.modalSection}>Trạng thái</Text>
-            <View style={styles.filterOptionsRow}>
+            <Text style={styles.sectionTitle}>Trạng thái</Text>
+            <View style={styles.wrapRow}>
               {statuses.map((s) => (
                 <TouchableOpacity
                   key={s}
-                  style={[
-                    styles.filterChip,
-                    filterStatus === s && styles.chipSelected,
-                  ]}
-                  onPress={() => setFilterStatus(s)}
+                  style={[styles.chip, filterStatus === s && styles.chipActive]}
+                  onPress={() => setFilterStatus(s === filterStatus ? null : s)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      filterStatus === s && styles.chipTextSelected,
-                    ]}
-                  >
+                  <Text style={[styles.chipText, filterStatus === s && styles.chipTextActive]}>
                     {STATUS_VN[s] || s}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.brand }]}
-                onPress={() => setFilterModalVisible(false)}
-              >
-                <Text style={styles.modalButtonText}>Áp dụng</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, {backgroundColor: '#F3F4F6'}]} 
                 onPress={() => {
-                  setFilterType(null);
-                  setFilterStatus(null);
+                    setFilterType(null);
+                    setFilterStatus(null);
+                    setFilterModalVisible(false);
                 }}
               >
-                <Text style={styles.modalButtonText}>Xóa lọc</Text>
+                <Text style={{color: '#374151', fontWeight: '600'}}>Xóa lọc</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalBtn, {backgroundColor: colors.brand}]} 
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={{color: 'white', fontWeight: '600'}}>Áp dụng</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -239,150 +234,152 @@ const VehicleListScreen = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color={colors.brand} />
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <Header />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <Header title="Phương tiện" isHome={false} />
       <FilterModal />
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Đăng ký xe của tôi</Text>
-
-        <View style={styles.buttonContainer}>
+      <View style={styles.contentContainer}>
+        {/* Top Actions */}
+        <View style={styles.topRow}>
           <TouchableOpacity
-            style={[
-              styles.newRequestButton,
-              { backgroundColor: colors.brand, flex: 1, marginRight: 8 },
-            ]}
+            style={styles.addButton}
             onPress={() => navigation.navigate("CreateVehicleScreen")}
           >
-            <Text style={styles.newRequestButtonText}>+ Đăng ký xe mới</Text>
+            <Ionicons name="add-circle" size={20} color="white" />
+            <Text style={styles.addButtonText}>Đăng ký mới</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setFilterModalVisible(true)}
           >
-            <Ionicons name="filter" size={16} color="#333" />
-            <Text style={styles.filterButtonText}>Lọc</Text>
+            <Ionicons name="filter" size={20} color={colors.brand} />
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={filteredData}
-          renderItem={renderVehicleItem}
-          keyExtractor={(item) => item.assignment_id.toString()}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <Text style={{ textAlign: "center", marginTop: 20 }}>
-              Không có đăng ký xe nào.
-            </Text>
-          }
-        />
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.brand} style={{marginTop: 40}} />
+        ) : (
+          <FlatList
+            data={filteredData}
+            renderItem={renderVehicleItem}
+            keyExtractor={(item) => item.assignment_id.toString()}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 40}}>
+                 <Text style={{color: colors.muted}}>Chưa có phương tiện nào.</Text>
+              </View>
+            }
+          />
+        )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 16 },
-  buttonContainer: {
-    flexDirection: "row",
-    marginBottom: 16,
-    alignItems: "center",
+  container: { flex: 1, backgroundColor: colors.brand },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    marginTop: -24,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xl + 24, 
   },
-  newRequestButton: {
-    padding: 12,
-    borderRadius: 8,
+  topRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: spacing.md,
+  },
+  addButton: {
+    flex: 1,
+    backgroundColor: colors.brand,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-  },
-  filterButton: {
-    flexDirection: "row",
-    backgroundColor: "#e0e0e0",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  filterButtonText: {
-    color: "#333",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
-  newRequestButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  listContainer: { paddingBottom: 16 },
-  vehicleItem: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: 12,
+    borderRadius: 12,
+    gap: 8,
     elevation: 2,
   },
-  vehicleHeader: {
+  addButtonText: { color: "white", fontWeight: "700", fontSize: 15 },
+  filterButton: {
+    backgroundColor: "white",
+    width: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  card: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  editIcon: { padding: 4 },
-  itemText: { fontSize: 14, marginBottom: 4 },
-  statusApproved: { color: "green", fontWeight: "bold" },
-  statusPending: { color: "orange", fontWeight: "bold" },
-  statusRejected: { color: "red", fontWeight: "bold" },
+  iconBox: {
+      width: 32, height: 32, borderRadius: 8, backgroundColor: "#E0F2FE", alignItems: 'center', justifyContent: 'center'
+  },
+  plateNumber: { fontSize: 16, fontWeight: "700", color: "#111827" },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  statusText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
+  divider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 8 },
+  row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  label: { fontSize: 13, color: "#6B7280" },
+  value: { fontSize: 13, color: "#111827", fontWeight: "500" },
+  
+  // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
-  modalContainer: {
-    backgroundColor: "#fff",
+  modalContent: {
     width: "85%",
-    borderRadius: 12,
+    backgroundColor: "white",
+    borderRadius: 16,
     padding: 20,
   },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 12 },
-  modalSection: { marginTop: 10, fontSize: 16, fontWeight: "600" },
-  filterOptionsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
-  filterChip: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 20,
-    paddingVertical: 6,
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16, textAlign: 'center' },
+  sectionTitle: { fontSize: 14, fontWeight: "600", marginTop: 10, marginBottom: 8, color: '#4B5563' },
+  wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
     paddingHorizontal: 12,
-    margin: 4,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "white",
   },
-  chipSelected: { backgroundColor: colors.brand, borderColor: colors.brand },
-  chipText: { fontSize: 14, color: "#333" },
-  chipTextSelected: { color: "#fff", fontWeight: "bold" },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
+  chipActive: {
+    borderColor: colors.brand,
+    backgroundColor: "#EFF6FF",
   },
-  modalButton: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginHorizontal: 4,
-  },
-  modalButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  chipText: { fontSize: 13, color: "#374151" },
+  chipTextActive: { color: colors.brand, fontWeight: "600" },
+  modalActions: { flexDirection: "row", gap: 10, marginTop: 24 },
+  modalBtn: { flex: 1, padding: 12, borderRadius: 10, alignItems: "center" },
 });
 
 export default VehicleListScreen;

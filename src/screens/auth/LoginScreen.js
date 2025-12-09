@@ -1,44 +1,32 @@
 import React, { useState } from "react";
-import { useNavigation, CommonActions } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import {
   View,
   Text,
   StyleSheet,
-  KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
   Platform,
+  ActivityIndicator,
+  TextInput,
+  TouchableOpacity,
+  ScrollView // Added ScrollView
 } from "react-native";
-import TextField from "../../components/TextField";
-import Button from "../../components/Button";
 import axios from "axios";
 import Constants from "expo-constants";
+// FIX: Use the modern keyboard controller
+import { KeyboardProvider, KeyboardAvoidingView } from "react-native-keyboard-controller";
+
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { useAuthStore } from "../../auth";
 
-const API_URL =
-  (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "https://lonely-alberta-jackets-academics.trycloudflare.com/api";
+const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const roleIsTenant = (u) =>
   String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
-
-// --- DEBUG GUARD: log mọi lần reset (để tìm thủ phạm) ---
-if (__DEV__ && !CommonActions.__samiPatched) {
-  const _reset = CommonActions.reset;
-  CommonActions.reset = (...args) => {
-    console.warn(
-      "⚠️ CommonActions.reset was called with:",
-      JSON.stringify(args)
-    );
-    return _reset(...args);
-  };
-  CommonActions.__samiPatched = true;
-}
-// --------------------------------------------------------
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -47,6 +35,10 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const onLogin = async () => {
+    if (!email || !password) {
+        return Alert.alert("Thông báo", "Vui lòng nhập đầy đủ email và mật khẩu.");
+    }
+
     try {
       setLoading(true);
       const res = await axios.post(
@@ -75,15 +67,12 @@ export default function LoginScreen() {
           refreshToken: data.refreshToken,
           user: data.user,
         });
-        // KHÔNG reset/replace/navigate nữa. RootNavigation sẽ tự chuyển stack.
         return;
       }
 
       throw new Error("Phản hồi không hợp lệ");
     } catch (e) {
-      const msg =
-        e?.response?.data?.message || e.message || "Đăng nhập thất bại";
-      console.log("LOGIN_ERR:", msg);
+      const msg = e?.response?.data?.message || e.message || "Đăng nhập thất bại";
       Alert.alert("Lỗi đăng nhập", msg);
     } finally {
       setLoading(false);
@@ -91,62 +80,156 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.inner}>
-          <Text style={styles.title}>Đăng Nhập</Text>
-
-          <TextField
-            label="Email"
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <TextField
-            label="Mật khẩu"
-            placeholder="••••••••"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-
-          <Button
-            title={loading ? "Đang đăng nhập..." : "Đăng nhập"}
-            onPress={onLogin}
-            style={{ marginTop: spacing.md }}
-          />
-
-          <Text
-            style={styles.forgot}
-            onPress={() => navigation.navigate("ResetPasswordScreen")}
+    <KeyboardProvider>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          {/* ScrollView allows the form to be pushed up cleanly */}
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            Quên mật khẩu?
-          </Text>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+            
+            {/* Logo / Brand Name */}
+            <View style={styles.headerArea}>
+               <Text style={styles.brandName}>SAMI</Text>
+               <Text style={styles.brandSlogan}>Quản lý chung cư thông minh</Text>
+            </View>
+
+            {/* Login Card */}
+            <View style={styles.card}>
+              <Text style={styles.title}>Đăng Nhập</Text>
+
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                  style={styles.input}
+                  placeholder="you@example.com"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+              />
+
+              <Text style={styles.label}>Mật khẩu</Text>
+              <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor="#9CA3AF"
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+              />
+
+              <TouchableOpacity 
+                  style={[styles.button, loading && {opacity: 0.7}]} 
+                  onPress={onLogin}
+                  disabled={loading}
+              >
+                  {loading ? (
+                      <ActivityIndicator color="white" />
+                  ) : (
+                      <Text style={styles.buttonText}>Đăng nhập</Text>
+                  )}
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                  style={styles.forgotBtn}
+                  onPress={() => navigation.navigate("ResetPasswordScreen")}
+              >
+                  <Text style={styles.forgotText}>Quên mật khẩu?</Text>
+              </TouchableOpacity>
+            </View>
+
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </KeyboardProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  inner: { flex: 1, padding: spacing.xl, justifyContent: "center" },
+  container: { 
+      flex: 1, 
+      backgroundColor: colors.brand 
+  },
+  scrollContent: {
+      flexGrow: 1, 
+      justifyContent: "center", // Keeps it centered when keyboard is closed
+      alignItems: 'center',
+      padding: spacing.lg 
+  },
+  headerArea: {
+      alignItems: 'center',
+      marginBottom: 30
+  },
+  brandName: {
+      fontSize: 40,
+      fontWeight: '900',
+      color: 'white',
+      letterSpacing: 2
+  },
+  brandSlogan: {
+      color: '#BFDBFE',
+      fontSize: 14,
+      marginTop: 4
+  },
+  card: {
+      width: '100%',
+      backgroundColor: 'white',
+      borderRadius: 16,
+      padding: 24,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      elevation: 5
+  },
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: colors.text,
-    marginBottom: spacing.lg,
+    color: "#111827",
+    marginBottom: 20,
     textAlign: "center",
   },
-  forgot: {
-    marginTop: spacing.md,
-    textAlign: "center",
-    color: colors.brand,
-    fontWeight: "500",
+  label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#374151',
+      marginBottom: 6
   },
+  input: {
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: '#111827',
+      marginBottom: 16
+  },
+  button: {
+      backgroundColor: colors.brand,
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: 'center',
+      marginTop: 8
+  },
+  buttonText: {
+      color: 'white',
+      fontWeight: '700',
+      fontSize: 16
+  },
+  forgotBtn: {
+      marginTop: 16,
+      alignItems: 'center'
+  },
+  forgotText: {
+      color: colors.brand,
+      fontWeight: '600',
+      fontSize: 14
+  }
 });

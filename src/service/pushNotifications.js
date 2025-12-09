@@ -1,55 +1,85 @@
 // src/service/pushNotifications.js
-import * as Notifications from "expo-notifications";
-import * as Device from "expo-device";
-import { Platform } from "react-native";
+import { 
+  getMessaging, 
+  getToken, 
+  onMessage, 
+  setBackgroundMessageHandler, 
+  requestPermission, 
+  AuthorizationStatus 
+} from '@react-native-firebase/messaging';
+
+import * as Notifications from 'expo-notifications';
+import { PermissionsAndroid, Platform } from 'react-native';
 import { registerDeviceToken } from "./api/notification";
 
-// Khi app đang mở mà có noti tới: vẫn hiện banner / sound
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldSetBadge: false,
   }),
 });
 
-export async function setupPushNotifications() {
-  try {
-    if (!Device.isDevice) {
-      console.log("Push notifications chỉ hoạt động trên thiết bị thật.");
-      return;
+export async function requestUserPermission() {
+  // 1. Android 13+ requires explicit permission
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+      console.log('User declined notification permission');
+      return false;
     }
-
-    // Android cần channel
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "default",
-        importance: Notifications.AndroidImportance.MAX,
-      });
-    }
-
-    // Hỏi quyền
-    let { status } = await Notifications.getPermissionsAsync();
-    if (status !== "granted") {
-      const req = await Notifications.requestPermissionsAsync();
-      status = req.status;
-    }
-
-    if (status !== "granted") {
-      console.log("Người dùng từ chối quyền thông báo.");
-      return;
-    }
-
-    // Lấy FCM token (Android) / APNS token (iOS)
-    const pushToken = (await Notifications.getDevicePushTokenAsync()).data;
-    console.log("Device push token:", pushToken);
-
-    if (!pushToken) return;
-
-    // Gửi token lên backend để lưu vào device_tokens
-    await registerDeviceToken(pushToken);
-    console.log("Đã đăng ký device token với backend.");
-  } catch (error) {
-    console.log("setupPushNotifications error:", error);
   }
+
+  // Pass the messaging instance to the function
+  const messaging = getMessaging();
+  const authStatus = await requestPermission(messaging);
+  
+  const enabled =
+    authStatus === AuthorizationStatus.AUTHORIZED ||
+    authStatus === AuthorizationStatus.PROVISIONAL;
+
+  return enabled;
 }
+
+export async function setupPushNotifications() {
+  const hasPermission = await requestUserPermission();
+  const messaging = getMessaging(); // Get the instance once
+  
+  if (hasPermission) {
+    try {
+      // 4. New Syntax: getToken(messaging)
+      const token = await getToken(messaging);
+      console.log('FCM Token:', token);
+      
+      if (token) {
+        await registerDeviceToken(token);
+      }
+    } catch (error) {
+      console.error("Failed to get FCM token:", error);
+    }
+  } else {
+    console.log("No permission for notifications");
+  }
+
+  const unsubscribe = onMessage(messaging, async remoteMessage => {
+    console.log('Foreground Notification:', remoteMessage);
+    
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: remoteMessage.notification?.title || 'Thông báo mới',
+        body: remoteMessage.notification?.body || '',
+        data: remoteMessage.data,
+      },
+      trigger: null,
+    });
+  });
+
+  return unsubscribe;
+}
+
+// setBackgroundMessageHandler(messaging, callback)
+// Note: This must be called immediately, so we call getMessaging() inline
+setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
+  console.log('Background Notification:', remoteMessage);
+});

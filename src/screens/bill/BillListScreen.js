@@ -1,5 +1,4 @@
-// src/screens/bill/BillListScreen.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,40 +7,72 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
 import { colors } from "../../theme/colors";
 import { getAllTenantBills } from "../../service/api/tenant";
 
+// Helper to format date cleanly (DD/MM/YYYY)
+const formatDate = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN");
+};
+
+// Helper to format currency (1.000.000 đ)
+const VND = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+});
+
+const formatCurrency = (amount) => {
+  if (amount === undefined || amount === null) return "0 đ";
+  return VND.format(amount);
+};
+
 function BillListScreen() {
   const navigation = useNavigation();
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
 
   const fetchBills = async () => {
-    setLoading(true);
-    setError("");
     try {
+      if (!refreshing) setLoading(true);
+      setError("");
       const res = await getAllTenantBills();
-      // unwrap() trả về res.data từ axios, trong đó backend là { success, data }
       const list = res?.data || [];
-      setBills(Array.isArray(list) ? list : []);
+      // Sort: Unpaid first, then by date desc
+      list.sort((a, b) => {
+        if (a.status === 'paid' && b.status !== 'paid') return 1;
+        if (a.status !== 'paid' && b.status === 'paid') return -1;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      setBills(list);
     } catch (err) {
-      console.log("Error fetch tenant bills:", err.message);
-      setError(err.message || "Không thể tải danh sách hóa đơn.");
-      setBills([]);
+      console.log("Error fetch bills:", err);
+      setError("Không thể tải danh sách hóa đơn.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
+  useFocusEffect(
+    useCallback(() => {
+      fetchBills();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
     fetchBills();
-  }, []);
+  };
 
   const toggleSelect = (billId) => {
     setSelectedIds((prev) =>
@@ -60,102 +91,106 @@ function BillListScreen() {
   const handleGoToPayment = () => {
     const selectedBills = bills.filter((b) => selectedIds.includes(b.bill_id));
     if (!selectedBills.length) return;
-    navigation.navigate("OnlinePaymentScreen", {
-      bills: selectedBills,
-    });
-  };
-
-  const handleTransactionHistory = () => {
-    navigation.navigate("TransactionHistoryScreen");
+    navigation.navigate("OnlinePaymentScreen", { bills: selectedBills });
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <Header />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <Header title="Hóa đơn" isHome={false} />
 
-      <View style={styles.content}>
-        {/* Thanh tiêu đề + nút lịch sử */}
+      <View style={styles.contentContainer}>
+        {/* Top Info Row */}
         <View style={styles.topRow}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.title}>Danh sách hóa đơn</Text>
-            <Text style={styles.subtitle}>
-              Bạn có thể tích nhiều hóa đơn để thanh toán
-            </Text>
+            <Text style={styles.subtitle}>Chọn hóa đơn để thanh toán</Text>
           </View>
           <TouchableOpacity
             style={styles.historyBadge}
-            onPress={handleTransactionHistory}
+            onPress={() => navigation.navigate("TransactionHistoryScreen")}
           >
-            <Text style={styles.historyText}>Lịch sử giao dịch</Text>
+            <Text style={styles.historyText}>Lịch sử GD</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Nội dung chính */}
-        {loading && (
+        {loading && !refreshing ? (
           <View style={styles.centerBox}>
-            <ActivityIndicator size="small" color={colors.brand} />
-            <Text style={{ marginTop: 8 }}>Đang tải dữ liệu...</Text>
+            <ActivityIndicator size="large" color={colors.brand} />
           </View>
-        )}
+        ) : (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.brand]} />
+            }
+          >
+            {!loading && !error && bills.length === 0 && (
+                <View style={styles.centerBox}>
+                    <Text style={{ color: colors.muted }}>Không có hóa đơn nào.</Text>
+                </View>
+            )}
 
-        {!loading && error ? (
-          <View style={styles.centerBox}>
-            <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
-          </View>
-        ) : null}
-
-        {!loading && !error && !bills.length && (
-          <View style={styles.centerBox}>
-            <Text>Hiện chưa có hóa đơn nào để thanh toán.</Text>
-          </View>
-        )}
-
-        {!loading && !error && !!bills.length && (
-          <ScrollView style={{ flex: 1 }}>
             {bills.map((bill) => {
               const isSelected = selectedIds.includes(bill.bill_id);
+              const isPaid = bill.status === "paid";
+              const isOverdue = bill.status === "overdue";
+
               return (
                 <TouchableOpacity
                   key={bill.bill_id}
                   style={[
                     styles.billCard,
                     isSelected && styles.billCardSelected,
+                    isPaid && { opacity: 0.6 }
                   ]}
                   onPress={() => toggleSelect(bill.bill_id)}
                   activeOpacity={0.8}
+                  disabled={isPaid}
                 >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                    }}
-                  >
+                  <View style={styles.cardHeader}>
                     <Text style={styles.billTitle}>
-                      Hóa đơn #{bill.bill_number || bill.bill_id}
+                      #{bill.bill_number || bill.bill_id}
                     </Text>
-                    <Text
-                      style={[
-                        styles.statusBadge,
-                        bill.status === "overdue" && {
-                          backgroundColor: "#F97316",
-                        },
-                        bill.status === "paid" && {
-                          backgroundColor: colors.success,
-                        },
-                      ]}
+                    <View
+                        style={[
+                            styles.statusBadge,
+                            isPaid && { backgroundColor: "#DCFCE7" },
+                            isOverdue && { backgroundColor: "#FEE2E2" },
+                            bill.status === "pending" && { backgroundColor: "#FEF3C7" },
+                        ]}
                     >
-                      {bill.status}
+                        <Text style={[
+                            styles.statusText,
+                            isPaid && { color: "#16A34A" },
+                            isOverdue && { color: "#EF4444" },
+                            bill.status === "pending" && { color: "#D97706" },
+                        ]}>
+                            {bill.status === 'paid' ? 'Đã thanh toán' : bill.status === 'overdue' ? 'Quá hạn' : 'Chưa thanh toán'}
+                        </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.divider} />
+
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Kỳ thanh toán:</Text>
+                    <Text style={styles.value}>
+                       {formatDate(bill.billing_period_start)} - {formatDate(bill.billing_period_end)}
                     </Text>
                   </View>
-                  <Text style={styles.billText}>
-                    Kỳ: {bill.billing_period_start} - {bill.billing_period_end}
-                  </Text>
-                  <Text style={styles.billText}>
-                    Số tiền: {bill.total_amount} đ
-                  </Text>
+                  
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Số tiền:</Text>
+                    <Text style={[styles.amountText, { color: colors.brand }]}>
+                      {formatCurrency(bill.total_amount)}
+                    </Text>
+                  </View>
+
                   {isSelected && (
-                    <Text style={styles.selectedLabel}>Đã chọn</Text>
+                    <Text style={styles.selectedLabel}>✓ Đã chọn</Text>
                   )}
                 </TouchableOpacity>
               );
@@ -163,22 +198,21 @@ function BillListScreen() {
           </ScrollView>
         )}
 
-        {/* Thanh tổng & nút thanh toán */}
+        {/* Bottom Floating Bar */}
         <View style={styles.bottomBar}>
           <View>
             <Text style={styles.totalLabel}>Tổng tiền:</Text>
-            <Text style={styles.totalValue}>{totalAmount} đ</Text>
+            <Text style={styles.totalValue}>{formatCurrency(totalAmount)}</Text>
           </View>
           <TouchableOpacity
             style={[
               styles.payButton,
-              (!selectedIds.length || !bills.length) &&
-                styles.payButtonDisabled,
+              (!selectedIds.length) && styles.payButtonDisabled,
             ]}
-            disabled={!selectedIds.length || !bills.length}
+            disabled={!selectedIds.length}
             onPress={handleGoToPayment}
           >
-            <Text style={styles.payButtonText}>Thanh toán</Text>
+            <Text style={styles.payButtonText}>Thanh toán ({selectedIds.length})</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -187,115 +221,80 @@ function BillListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: colors.brand },
+  contentContainer: {
     flex: 1,
-    backgroundColor: "#0F172A", // nền xanh đậm như các màn khác
-  },
-  content: {
-    flex: 1,
-    backgroundColor: "#F1F5F9",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: "#F3F4F6",
+    marginTop: -24,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
+    // FIX: Extra top padding to clear header overlap
+    paddingTop: spacing.xl + 24, 
+    overflow: "hidden"
   },
   topRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.md,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  subtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginTop: 4,
-  },
+  title: { fontSize: 18, fontWeight: "700", color: "#111827" },
+  subtitle: { fontSize: 13, color: "#6B7280", marginTop: 2 },
   historyBadge: {
-    backgroundColor: "#E5E7EB",
-    borderRadius: 999,
+    backgroundColor: "white",
+    borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
-  },
-  historyText: {
-    fontSize: 12,
-    color: "#111827",
-    fontWeight: "600",
-  },
-  centerBox: {
-    marginTop: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  billCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  billCardSelected: {
     borderWidth: 1,
-    borderColor: colors.brand,
+    borderColor: "#E5E7EB",
   },
-  billTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 4,
+  historyText: { fontSize: 12, color: colors.brand, fontWeight: "600" },
+  centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  billCard: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
-  billText: {
-    fontSize: 13,
-    color: "#4B5563",
-    marginTop: 2,
-  },
-  selectedLabel: {
-    marginTop: 6,
-    fontSize: 12,
-    color: colors.brand,
-    fontWeight: "600",
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#E5E7EB",
-    fontSize: 11,
-    color: "#111827",
-    alignSelf: "flex-start",
-    textTransform: "uppercase",
-  },
+  billCardSelected: { borderColor: colors.brand, backgroundColor: "#EFF6FF" },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  billTitle: { fontSize: 16, fontWeight: "700", color: "#111827" },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
+  divider: { height: 1, backgroundColor: "#F3F4F6", marginBottom: 8 },
+  row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  label: { fontSize: 13, color: "#6B7280" },
+  value: { fontSize: 13, color: "#111827", fontWeight: "500", flex: 1, textAlign: 'right' },
+  amountText: { fontSize: 15, fontWeight: "700" },
+  selectedLabel: { marginTop: 8, fontSize: 12, color: colors.brand, fontWeight: "700", textAlign: 'right' },
   bottomBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: "white",
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: 30,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: spacing.md,
+    alignItems: "center"
   },
-  totalLabel: {
-    fontSize: 14,
-    color: "#4B5563",
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  payButton: {
-    backgroundColor: "#22C55E",
-    paddingVertical: 10,
-    paddingHorizontal: 40,
-    borderRadius: 999,
-  },
-  payButtonDisabled: {
-    opacity: 0.5,
-  },
-  payButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 14,
-  },
+  totalLabel: { fontSize: 12, color: "#6B7280" },
+  totalValue: { fontSize: 18, fontWeight: "800", color: colors.brand },
+  payButton: { backgroundColor: colors.brand, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
+  payButtonDisabled: { backgroundColor: "#9CA3AF" },
+  payButtonText: { color: "white", fontWeight: "700", fontSize: 15 },
 });
 
 export default BillListScreen;

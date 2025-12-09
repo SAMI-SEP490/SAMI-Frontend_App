@@ -2,8 +2,8 @@
 import React, { useEffect } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-// Tabs (trang chính sau đăng nhập)
-import TabNavigation from "./TabNavigation";
+//DashboardScreen
+import DashboardScreen from "../screens/dashboard/DashboardScreen";
 
 // Guest & Maintenance
 import CreateGuestRegistrationScreen from "../screens/guest/CreateGuestRegistrationScreen";
@@ -11,6 +11,7 @@ import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrat
 import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 import MaintenanceListScreen from "../screens/maintenance/MaintenanceListScreen";
 import CreateMaintenanceRequestScreen from "../screens/maintenance/CreateMaintenanceRequestScreen";
+import UpdateMaintenanceRequestScreen from "../screens/maintenance/UpdateMaintenanceRequestScreen"
 
 // Auth flow
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -28,7 +29,6 @@ import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
 import BillListScreen from "../screens/bill/BillListScreen";
 import OnlinePaymentScreen from "../screens/bill/OnlinePaymentScreen";
 import TransactionHistoryScreen from "../screens/bill/TransactionHistoryScreen";
-import VnpayWebViewScreen from "../screens/bill/VnpayWebViewScreen";
 
 // Notification
 import NotificationListScreen from "../screens/notification/NotificationListScreen";
@@ -65,22 +65,37 @@ export default function RootNavigation() {
     // resetToken();
   }, []);
   useEffect(() => {
-    if (hydrated && token) {
-      setupPushNotifications();
-    }
+    let unsubscribe;
+
+    const initNotifications = async () => {
+      if (hydrated && token) {
+        // setupPushNotifications now returns the unsubscribe function
+        unsubscribe = await setupPushNotifications();
+      }
+    };
+
+    initNotifications();
+
+    // Cleanup when component unmounts or token changes
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [hydrated, token]);
 
-  // Chưa hydrate xong thì tạm thời không render navigator để tránh nhấp nháy
-  if (!hydrated) return null;
+  if (!hydrated) {
+    return null;
+  }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: true }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
         // ====== ĐÃ ĐĂNG NHẬP: App stack ======
         <>
           <Stack.Screen
-            name="TabNavigation"
-            component={TabNavigation}
+            name="DashboardScreen"
+            component={DashboardScreen}
             options={{ headerShown: false }}
           />
 
@@ -105,6 +120,10 @@ export default function RootNavigation() {
             name="CreateMaintenanceRequestScreen"
             component={CreateMaintenanceRequestScreen}
           />
+          <Stack.Screen
+            name="UpdateMaintenanceRequestScreen"
+            component={UpdateMaintenanceRequestScreen}
+          />
           {/* Floor plan */}
           <Stack.Screen
             name="FloorPlanViewScreen"
@@ -120,11 +139,6 @@ export default function RootNavigation() {
             options={{ headerShown: false }}
           />
 
-          <Stack.Screen
-            name="VnpayWebViewScreen"
-            component={VnpayWebViewScreen}
-            options={{ headerShown: false }}
-          />
           <Stack.Screen
             name="TransactionHistoryScreen"
             component={TransactionHistoryScreen}

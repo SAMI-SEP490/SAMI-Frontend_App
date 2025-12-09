@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "402190254435",
+    "project_id": "sami-9aecf",
+    "storage_bucket": "sami-9aecf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:402190254435:android:535ac0bfea494358ddd356",
+        "android_client_info": {
+          "package_name": "com.anonymous.sami"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARsZ7BoraaoRoRhSjQCoCLmos0IjJT6YI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

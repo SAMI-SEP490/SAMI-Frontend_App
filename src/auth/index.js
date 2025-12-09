@@ -7,10 +7,7 @@ import * as SecureStore from "expo-secure-store";
 const TOKEN_KEY = "sami_access_token";
 const REFRESH_KEY = "sami_refresh_token";
 
-// Lấy API_URL từ app.json -> expo.extra.apiUrl
-export const API_URL =
-  (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "https://itself-watch-danny-store.trycloudflare.com/api"; // TODO: đổi IP LAN của bạn
+export const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 
 // ===== Store Auth (token, refresh, user) =====
 export const useAuthStore = create((set) => ({
@@ -168,3 +165,31 @@ export async function logout() {
     } catch {}
   }
 }
+
+let isAuthAlertShown = false;
+
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    if (error?.response?.status === 401) {
+      if (!isAuthAlertShown) {
+        isAuthAlertShown = true;
+        Alert.alert(
+          "Phiên đăng nhập hết hạn",
+          "Vui lòng đăng nhập lại.",
+          [
+            {
+              text: "OK",
+              onPress: async () => {
+                isAuthAlertShown = false;
+                await useAuthStore.getState().logout();
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+      }
+    }
+    return Promise.reject(error);
+  }
+);

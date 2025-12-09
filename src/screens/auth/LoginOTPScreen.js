@@ -8,19 +8,17 @@ import {
   Keyboard,
   Alert,
   Platform,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator
 } from "react-native";
-import TextField from "../../components/TextField";
-import Button from "../../components/Button";
 import axios from "axios";
 import Constants from "expo-constants";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { useAuthStore } from "../../auth"; // <-- quan trọng
+import { useAuthStore } from "../../auth"; 
 
-const API_URL =
-  (Constants?.expoConfig?.extra?.apiUrl || "").replace(/\/+$/, "") ||
-  "https://lonely-alberta-jackets-academics.trycloudflare.com/api";
-
+const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const roleIsTenant = (u) =>
   String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
@@ -45,12 +43,8 @@ export default function LoginOTPScreen({ route, navigation }) {
 
       if (data?.accessToken && data?.user) {
         if (!roleIsTenant(data.user)) {
-          return Alert.alert(
-            "Không được phép",
-            "Ứng dụng này chỉ dành cho Tenant."
-          );
+          return Alert.alert("Không được phép", "Ứng dụng này chỉ dành cho Tenant.");
         }
-        // cập nhật store -> RootNavigation tự chuyển sang app stack
         await useAuthStore.getState().setAuth({
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
@@ -61,9 +55,7 @@ export default function LoginOTPScreen({ route, navigation }) {
 
       throw new Error("Mã OTP không hợp lệ");
     } catch (e) {
-      const msg =
-        e?.response?.data?.message || e.message || "Xác thực thất bại";
-      console.log("OTP_ERR:", msg);
+      const msg = e?.response?.data?.message || e.message || "Xác thực thất bại";
       Alert.alert("Lỗi", msg);
     } finally {
       setLoading(false);
@@ -77,24 +69,42 @@ export default function LoginOTPScreen({ route, navigation }) {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.inner}>
-          <Text style={styles.title}>Xác thực OTP</Text>
-          <Text style={styles.subtitle}>
-            Mã OTP đã được gửi đến email {email || ""}
-          </Text>
+          
+          <View style={styles.card}>
+            <Text style={styles.title}>Xác thực OTP</Text>
+            <Text style={styles.subtitle}>
+              Mã OTP đã được gửi đến email{"\n"}
+              <Text style={{fontWeight: '700', color: colors.text}}>{email || ""}</Text>
+            </Text>
 
-          <TextField
-            label="Mã OTP"
-            placeholder="Nhập 6 số"
-            keyboardType="number-pad"
-            value={otp}
-            onChangeText={setOtp}
-          />
+            <Text style={styles.label}>Mã xác thực</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Nhập 6 số"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
+                value={otp}
+                onChangeText={setOtp}
+                maxLength={6}
+                autoFocus
+            />
 
-          <Button
-            title={loading ? "Đang xác thực..." : "Xác nhận"}
-            onPress={onVerify}
-            style={{ marginTop: spacing.md }}
-          />
+            <TouchableOpacity 
+                style={[styles.button, loading && {opacity: 0.7}]} 
+                onPress={onVerify}
+                disabled={loading}
+            >
+                {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Xác nhận</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+                style={styles.backBtn}
+                onPress={() => navigation.goBack()}
+            >
+                <Text style={styles.backText}>Quay lại</Text>
+            </TouchableOpacity>
+          </View>
+
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -102,18 +112,52 @@ export default function LoginOTPScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  inner: { flex: 1, padding: spacing.xl, justifyContent: "center" },
+  container: { flex: 1, backgroundColor: colors.brand },
+  inner: { flex: 1, padding: spacing.lg, justifyContent: "center", alignItems: 'center' },
+  card: {
+      width: '100%',
+      backgroundColor: 'white',
+      borderRadius: 16,
+      padding: 24,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      elevation: 5
+  },
   title: {
     fontSize: 22,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: spacing.sm,
+    marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
     textAlign: "center",
-    color: colors.muted,
-    marginBottom: spacing.lg,
+    color: "#6B7280",
+    marginBottom: 24,
+    fontSize: 14,
+    lineHeight: 20
   },
+  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  input: {
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: '#111827',
+      textAlign: 'center',
+      marginBottom: 20,
+      letterSpacing: 4
+  },
+  button: {
+      backgroundColor: colors.brand,
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: 'center',
+  },
+  buttonText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  backBtn: { marginTop: 16, alignItems: 'center' },
+  backText: { color: '#6B7280', fontSize: 14 }
 });
