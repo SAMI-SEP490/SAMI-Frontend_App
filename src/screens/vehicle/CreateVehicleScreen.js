@@ -12,9 +12,12 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
-import * as SecureStore from "expo-secure-store";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
+import Header from "../../components/Header";
+import { colors } from "../../theme/colors";
+import { spacing } from "../../theme/spacing";
 import { createVehicleRegistration } from "../../service/api/vehicle";
 
 const VEHICLE_TYPES = [
@@ -30,16 +33,17 @@ const CreateVehicleScreen = () => {
   const today = new Date().toISOString().split("T")[0];
 
   const [form, setForm] = useState({
-    type: "", // enum: car, motorcycle, ...
+    type: "", 
     license_plate: "",
     brand: "",
     color: "",
     start_date: today,
-    end_date: null, // null nếu chưa chọn
+    end_date: null,
     note: "",
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -48,169 +52,201 @@ const CreateVehicleScreen = () => {
     setShowDatePicker(false);
     if (selectedDate) {
       handleChange("end_date", selectedDate.toISOString().split("T")[0]);
-    } else {
-      handleChange("end_date", null);
     }
   };
 
   const handleSubmit = async () => {
-    if (!form.type || !form.license_plate) {
-      return Alert.alert(
-        "⚠️ Thiếu thông tin",
-        "Vui lòng nhập loại xe và biển số."
-      );
+    if (!form.type) {
+      return Alert.alert("Thiếu thông tin", "Vui lòng chọn loại phương tiện.");
     }
-
+    if (!form.license_plate) {
+      return Alert.alert("Thiếu thông tin", "Vui lòng nhập biển số xe.");
+    }
+    
+    setLoading(true);
     try {
-      const token = await SecureStore.getItemAsync("sami_access_token");
-      if (!token) return Alert.alert("❌ Lỗi", "Không tìm thấy token.");
-
-      // Gửi form lên API
       await createVehicleRegistration(form);
-
-      Alert.alert("✅ Thành công", "Gửi yêu cầu đăng ký xe thành công!", [
+      Alert.alert("Thành công", "Gửi yêu cầu đăng ký xe thành công!", [
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
-      console.error("CreateVehicle Error:", err);
-      Alert.alert(
-        "❌ Lỗi",
-        err?.message || "Không thể gửi yêu cầu. Vui lòng thử lại."
-      );
+      Alert.alert("Lỗi", err?.message || "Không thể gửi yêu cầu.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+    <View style={styles.container}>
+      <Header title="Đăng ký xe mới" isHome={false} />
+
+      <KeyboardAvoidingView
+        style={styles.contentContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <Text style={styles.title}>Đăng Ký Xe Mới</Text>
+        <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          
+          <View style={styles.card}>
+            
+            <Text style={styles.label}>Loại phương tiện <Text style={{color:'red'}}>*</Text></Text>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={form.type}
+                onValueChange={(val) => handleChange("type", val)}
+                dropdownIconColor="#111827"
+                // FIX 1: Force White Background to avoid Dark Mode issues
+                style={{ 
+                    color: '#111827', 
+                    backgroundColor: 'white',
+                    height: Platform.OS === 'ios' ? 200 : 50 // Standard height adjustment
+                }}
+                // FIX 2: Reduce font size for iOS Wheel
+                itemStyle={{ color: '#111827', fontSize: 14, height: 120 }}
+              >
+                {/* Placeholder */}
+                <Picker.Item label="Chọn loại phương tiện..." value="" color="#9CA3AF" style={{ fontSize: 14 }} />
+                
+                {VEHICLE_TYPES.map((t) => (
+                  <Picker.Item 
+                    key={t.value} 
+                    label={t.label} 
+                    value={t.value} 
+                    color="#111827" 
+                    // FIX 3: Reduce font size for Android Dropdown
+                    style={{ fontSize: 14, backgroundColor: 'white' }} 
+                   />
+                ))}
+              </Picker>
+            </View>
 
-        {/* Loại xe */}
-        <Text style={styles.label}>Loại xe</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={form.type}
-            onValueChange={(val) => handleChange("type", val)}
+            <Text style={styles.label}>Biển số xe <Text style={{color:'red'}}>*</Text></Text>
+            <TextInput
+              style={styles.input}
+              placeholder="VD: 51A-123.45"
+              placeholderTextColor="#9CA3AF"
+              value={form.license_plate}
+              onChangeText={(text) => handleChange("license_plate", text)}
+            />
+
+            <View style={{flexDirection: 'row', gap: 10}}>
+                <View style={{flex: 1}}>
+                    <Text style={styles.label}>Thương hiệu</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Honda"
+                        placeholderTextColor="#9CA3AF"
+                        value={form.brand}
+                        onChangeText={(text) => handleChange("brand", text)}
+                    />
+                </View>
+                <View style={{flex: 1}}>
+                    <Text style={styles.label}>Màu xe</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Đen"
+                        placeholderTextColor="#9CA3AF"
+                        value={form.color}
+                        onChangeText={(text) => handleChange("color", text)}
+                    />
+                </View>
+            </View>
+
+            <Text style={styles.label}>Ngày bắt đầu</Text>
+            <View style={[styles.input, { backgroundColor: "#F3F4F6", justifyContent: 'center' }]}>
+                <Text style={{color: '#6B7280'}}>{form.start_date}</Text>
+            </View>
+
+            <Text style={styles.label}>Ngày kết thúc (Tùy chọn)</Text>
+            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
+                 <Text style={{color: form.end_date ? '#111827' : '#9CA3AF'}}>
+                     {form.end_date || "Chọn ngày kết thúc"}
+                 </Text>
+                 <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={{position: 'absolute', right: 10, top: 12}} />
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={form.end_date ? new Date(form.end_date) : new Date()}
+                mode="date"
+                display="default"
+                minimumDate={new Date(today)}
+                onChange={handleDateChange}
+              />
+            )}
+
+            <Text style={styles.label}>Ghi chú</Text>
+            <TextInput
+              style={[styles.input, { height: 80, textAlignVertical: "top" }]}
+              multiline
+              numberOfLines={3}
+              placeholder="Nhập ghi chú..."
+              placeholderTextColor="#9CA3AF"
+              value={form.note}
+              onChangeText={(text) => handleChange("note", text)}
+            />
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.submitButton, loading && {opacity: 0.7}]} 
+            onPress={handleSubmit}
+            disabled={loading}
           >
-            <Picker.Item label="Chọn loại xe" value="" />
-            {VEHICLE_TYPES.map((t) => (
-              <Picker.Item key={t.value} label={t.label} value={t.value} />
-            ))}
-          </Picker>
-        </View>
+            <Text style={styles.submitText}>{loading ? "Đang gửi..." : "Gửi yêu cầu"}</Text>
+          </TouchableOpacity>
 
-        {/* Biển số */}
-        <Text style={styles.label}>Biển số xe</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="VD: 51A-12345"
-          value={form.license_plate}
-          onChangeText={(text) => handleChange("license_plate", text)}
-        />
-
-        {/* Thương hiệu */}
-        <Text style={styles.label}>Thương hiệu (tùy chọn)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="VD: Toyota, Honda"
-          value={form.brand}
-          onChangeText={(text) => handleChange("brand", text)}
-        />
-
-        {/* Màu xe */}
-        <Text style={styles.label}>Màu xe (tùy chọn)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="VD: Đỏ, Trắng, Xanh"
-          value={form.color}
-          onChangeText={(text) => handleChange("color", text)}
-        />
-
-        {/* Ngày bắt đầu */}
-        <Text style={styles.label}>Ngày bắt đầu</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: "#f2f2f2" }]}
-          value={form.start_date}
-          editable={false}
-        />
-
-        {/* Ngày kết thúc */}
-        <Text style={styles.label}>Ngày kết thúc (tùy chọn)</Text>
-        <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-          <TextInput
-            style={styles.input}
-            placeholder="Chọn ngày kết thúc"
-            value={form.end_date ?? ""}
-            editable={false}
-            pointerEvents="none"
-          />
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={form.end_date ? new Date(form.end_date) : new Date()}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"} // ✅ fix all
-            minimumDate={new Date(today)}
-            onChange={handleDateChange}
-          />
-        )}
-
-        {/* Ghi chú */}
-        <Text style={styles.label}>Ghi chú (tùy chọn)</Text>
-        <TextInput
-          style={[styles.input, { height: 80, textAlignVertical: "top" }]}
-          multiline
-          numberOfLines={4}
-          placeholder="Nhập ghi chú nếu có..."
-          value={form.note}
-          onChangeText={(text) => handleChange("note", text)}
-        />
-
-        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>Gửi yêu cầu</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
-export default CreateVehicleScreen;
-
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 80 },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
+  container: { flex: 1, backgroundColor: colors.brand },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    marginTop: -24,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xl + 24, 
   },
-  label: { fontWeight: "600", marginTop: 10 },
+  card: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+    marginBottom: 20
+  },
+  label: { fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 6, marginTop: 12 },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#E5E7EB",
     borderRadius: 10,
-    padding: 10,
-    marginTop: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    backgroundColor: "white",
+    color: "#111827",
   },
-  pickerContainer: {
+  pickerWrapper: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#E5E7EB",
     borderRadius: 10,
-    marginTop: 5,
-    overflow: "hidden",
+    overflow: 'hidden',
+    backgroundColor: "white", // Force white wrapper bg
   },
-  button: {
-    backgroundColor: "#4CAF50",
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 20,
+  submitButton: {
+    backgroundColor: colors.brand,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: "center",
+    marginBottom: 20
   },
-  buttonText: { color: "#fff", fontSize: 16 },
+  submitText: { color: "white", fontSize: 16, fontWeight: "700" },
 });
+
+export default CreateVehicleScreen;
