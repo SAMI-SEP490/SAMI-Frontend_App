@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   ScrollView,
@@ -8,6 +7,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from "react-native";
+import Header from "../../components/Header"; // Using our smart header
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { getBuildings } from "../../service/api/building";
@@ -482,7 +482,9 @@ export default function FloorPlanViewScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: "#F3F4F6" }}>
+      <Header title="Sơ đồ tòa nhà" isHome={false} />
+
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: spacing.lg,
@@ -546,6 +548,6 @@ export default function FloorPlanViewScreen() {
           <FloorPlanCanvas layout={planLayout} />
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
