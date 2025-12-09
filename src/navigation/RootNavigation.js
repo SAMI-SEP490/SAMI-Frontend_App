@@ -84,6 +84,10 @@ export default function RootNavigation() {
     };
   }, [hydrated, token]);
 
+  if (!hydrated) {
+    return null;
+  }
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
