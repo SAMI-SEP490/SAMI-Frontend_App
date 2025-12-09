@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  SafeAreaView,
-  StatusBar,
-  View,
-  Text,
-  FlatList,
-  Pressable,
-} from "react-native";
+import { View, Text, FlatList, Pressable } from "react-native";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import {
@@ -78,9 +71,8 @@ const FEATURES = [
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
-
-  // Tạo mảng data cho toàn bộ màn hình (để FlatList cuộn được tất cả)
   const DATA = [{ type: "header" }, { type: "features" }, { type: "info" }];
+
   const renderItem = ({ item }) => {
     switch (item.type) {
       case "header":
@@ -109,34 +101,28 @@ export default function DashboardScreen() {
             </Text>
           </View>
         );
+
       case "features":
         return (
           <View
             style={{
-              backgroundColor: colors.card,
-              borderRadius: 14,
+              backgroundColor: "#ffffff",
+              borderRadius: 16,
               padding: spacing.lg,
               marginHorizontal: spacing.xl,
-              marginTop: -18,
+              // We added 80px padding in Header, so pulling up 50px leaves ~30px gap below text.
+              marginTop: -50, 
+              zIndex: 99,
               shadowColor: "#000",
-              shadowOpacity: 0.06,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 2,
+              shadowOpacity: 0.1,
+              shadowRadius: 10,
+              elevation: 4,
             }}
           >
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: "700",
-                color: colors.text,
-                marginBottom: spacing.md,
-              }}
-            >
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1F2937", marginBottom: spacing.md }}>
               Chức năng
             </Text>
-
-            <FlatList
+             <FlatList
               data={FEATURES}
               keyExtractor={(it) => it.key}
               numColumns={3}
@@ -188,7 +174,7 @@ export default function DashboardScreen() {
                     style={{
                       textAlign: "center",
                       fontSize: 12,
-                      color: colors.text,
+                      color: "#374151",
                     }}
                   >
                     {item.label}
@@ -198,41 +184,20 @@ export default function DashboardScreen() {
             />
           </View>
         );
-
-      default:
-        return null;
+      default: return null;
     }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: "#F3F4F6" }}>
       <FlatList
         data={DATA}
         keyExtractor={(item, index) => item.type + index}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+        // Add contentContainerStyle to ensure bottom scrolling space
+        contentContainerStyle={{ paddingBottom: 40 }}
       />
-    </SafeAreaView>
-  );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }}
-    >
-      <Text style={{ color: colors.muted, flex: 1 }}>{label}</Text>
-      {typeof value === "string" ? (
-        <Text style={{ color: colors.text, fontWeight: "600" }}>{value}</Text>
-      ) : (
-        value
-      )}
     </View>
   );
 }
