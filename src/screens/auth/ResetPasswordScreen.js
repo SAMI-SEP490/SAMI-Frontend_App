@@ -1,4 +1,4 @@
-import React, { useState,useContext } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,42 +10,47 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Alert,
+  ActivityIndicator
 } from "react-native";
+import axios from "axios";
+import Constants from "expo-constants";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 
+const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
+
 export default function ResetPasswordScreen({ navigation }) {
-const {userData, setUserIdChangepassword} = useContext(UserContext);
-  
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
-const handleNext = () => {
-  if (!identifier.trim()) {
-    Alert.alert("Lỗi", "Vui lòng nhập email khôi phục");
-    return;
-  }
+  const handleNext = async () => {
+    if (!email.trim()) {
+      return Alert.alert("Lỗi", "Vui lòng nhập email khôi phục");
+    }
 
-  // Regex kiểm tra định dạng email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(identifier.trim())) {
-    Alert.alert("Lỗi", "Vui lòng nhập đúng định dạng email hợp lệ");
-    return;
-  }
+    // Email Regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return Alert.alert("Lỗi", "Vui lòng nhập đúng định dạng email hợp lệ");
+    }
 
-  // Kiểm tra email có tồn tại trong userData không
-  const foundUser = userData.find(
-    (user) => user.email.toLowerCase() === identifier.trim().toLowerCase()
-  );
+    setLoading(true);
+    try {
+      // Call API to send OTP to email
+      await axios.post(`${API_URL}/auth/forgot-password`, { email: email.trim() });
+      
+      Alert.alert("Đã gửi mã", `Mã OTP đã được gửi đến ${email}.`);
+      
+      // Navigate to Verify Code Screen (You likely need to create this or reuse LoginOTP logic)
+      navigation.navigate("VerifyCodeScreen", { email: email.trim() });
 
-  if (!foundUser) {
-    Alert.alert("Không tìm thấy", "Email này không tồn tại trong hệ thống");
-    return;
-  }
-
-  // Nếu hợp lệ, chuyển sang màn hình VerifyCodeScreen
-  setUserIdChangepassword(foundUser.id); // Lưu userId để đổi mật khẩu sau này
-  navigation.navigate("VerifyCodeScreen");
-};
+    } catch (error) {
+      const msg = error?.response?.data?.message || "Không thể gửi yêu cầu.";
+      Alert.alert("Lỗi", msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -54,23 +59,40 @@ const handleNext = () => {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.inner}>
-          <Text style={styles.title}>Tìm email của bạn</Text>
-          <Text style={styles.subtitle}>
-            Nhập email khôi phục
-          </Text>
+          
+          <View style={styles.card}>
+            <Text style={styles.title}>Quên mật khẩu?</Text>
+            <Text style={styles.subtitle}>
+              Nhập email của bạn để nhận mã xác thực khôi phục mật khẩu.
+            </Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={identifier}
-            onChangeText={setIdentifier}
-            keyboardType="email-address"
-          />
+            <Text style={styles.label}>Email khôi phục</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="you@example.com"
+              placeholderTextColor="#9CA3AF"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
 
-          <TouchableOpacity style={styles.button} onPress={handleNext}>
-            <Text style={styles.buttonText}>Tiếp theo</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+                style={[styles.button, loading && {opacity: 0.7}]} 
+                onPress={handleNext}
+                disabled={loading}
+            >
+              {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Tiếp theo</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+                style={styles.backBtn}
+                onPress={() => navigation.goBack()}
+            >
+                <Text style={styles.backText}>Quay lại Đăng nhập</Text>
+            </TouchableOpacity>
+          </View>
+
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -80,53 +102,60 @@ const handleNext = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.brand, // nền xanh
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: colors.brand, // Blue
   },
   inner: {
-    backgroundColor: "#fff", // hộp trắng
-    width: "85%",
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    borderRadius: 12,
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.lg,
+  },
+  card: {
+    width: "100%",
+    backgroundColor: "#fff",
+    padding: 24,
+    borderRadius: 16,
     shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 5,
   },
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#000",
-    marginBottom: spacing.sm,
-    textAlign: "left",
+    color: "#111827",
+    marginBottom: 8,
+    textAlign: "center",
   },
   subtitle: {
-    color: "#555",
+    color: "#6B7280",
     fontSize: 14,
-    marginBottom: spacing.lg,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 20
   },
+  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 6 },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 6,
-    height: 45,
-    fontSize: 16,
-    paddingHorizontal: spacing.md,
-    color: "#000",
-    marginBottom: spacing.lg,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#111827",
+    marginBottom: 20,
   },
   button: {
     backgroundColor: colors.brand,
-    borderRadius: 6,
-    paddingVertical: 12,
+    borderRadius: 10,
+    paddingVertical: 14,
     alignItems: "center",
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: 16,
   },
+  backBtn: { marginTop: 16, alignItems: 'center' },
+  backText: { color: colors.brand, fontWeight: '600', fontSize: 14 }
 });

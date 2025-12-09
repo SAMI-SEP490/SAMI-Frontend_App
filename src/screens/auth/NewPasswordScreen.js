@@ -1,5 +1,5 @@
-import React, { useState, useContext } from "react";
-import { useNavigation } from "@react-navigation/native";
+import React, { useState } from "react";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -7,81 +7,119 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ActivityIndicator
 } from "react-native";
 import { colors } from "../../theme/colors";
+import { resetPassword } from "../../service/api/auth";
 
 export default function NewPasswordScreen() {
   const navigation = useNavigation();
-  const { userData, setUserData, userIdChangepassword } = useContext(UserContext);
+  const route = useRoute();
+  
+  // Retrieve passed data (needed for API verification)
+  const { email, otp } = route.params || {};
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // ✅ Validate password (ít nhất 1 chữ thường, 1 chữ hoa, 1 ký tự đặc biệt)
+  // Regex: 1 lowercase, 1 uppercase, 1 special char
   const validatePassword = (password) => {
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-={}[\]|\\:;"'<>,.?/~`]).+$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-={}[\]|\\:;"'<>,.?/~`]).+$/;
     return passwordRegex.test(password);
   };
 
-const handleConfirm = () => {
-  if (!password || !confirmPassword) {
-    Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin.");
-    return;
-  }
+  const handleConfirm = async () => {
+    if (!password || !confirmPassword) {
+      return Alert.alert("Thông báo", "Vui lòng nhập đầy đủ thông tin.");
+    }
 
-  if (!validatePassword(password)) {
-    Alert.alert(
-      "Mật khẩu yếu",
-      "Mật khẩu phải có ít nhất 1 chữ thường, 1 chữ hoa và 1 ký tự đặc biệt."
-    );
-    return;
-  }
+    if (password.length < 6) {
+        return Alert.alert("Mật khẩu yếu", "Mật khẩu phải có ít nhất 6 ký tự.");
+    }
 
-  if (password !== confirmPassword) {
-    Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
-    return;
-  }
+    if (!validatePassword(password)) {
+      return Alert.alert(
+        "Mật khẩu yếu",
+        "Mật khẩu phải có ít nhất 1 chữ thường, 1 chữ hoa và 1 ký tự đặc biệt."
+      );
+    }
 
-  // ✅ Tìm user cần đổi mật khẩu
-  const updatedUsers = userData.map((user) =>
-    user.id ===  userIdChangepassword? { ...user, password } : user
-  );
+    if (password !== confirmPassword) {
+      return Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
+    }
 
-  setUserData(updatedUsers);
+    setLoading(true);
+    try {
+      // Call API
+      await resetPassword({
+        email,
+        otp,
+        new_password: password,
+        confirm_password: confirmPassword
+      });
 
-  Alert.alert("Thành công", "Mật khẩu đã được thay đổi!");
-  navigation.navigate("Login");
-};
+      Alert.alert("Thành công", "Mật khẩu đã được thay đổi! Vui lòng đăng nhập lại.", [
+          { text: "Về trang đăng nhập", onPress: () => navigation.popToTop() } // Go back to Login
+      ]);
+
+    } catch (err) {
+      const msg = err?.response?.data?.message || "Không thể đặt lại mật khẩu.";
+      Alert.alert("Lỗi", msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.whiteBox}>
-        <Text style={styles.title}>Tạo mật khẩu mới</Text>
-        <Text style={styles.subtitle}>
-          Hãy nhập mật khẩu mới để hoàn tất việc đặt lại tài khoản.
-        </Text>
+    <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.inner}>
+            <View style={styles.card}>
+                <Text style={styles.title}>Tạo mật khẩu mới</Text>
+                <Text style={styles.subtitle}>
+                Đặt lại mật khẩu cho tài khoản{"\n"}
+                <Text style={{fontWeight: '700'}}>{email}</Text>
+                </Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Nhập mật khẩu mới"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+                <Text style={styles.label}>Mật khẩu mới</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ít nhất 6 ký tự (Hoa, thường, ký tự đặc biệt)"
+                    placeholderTextColor="#9CA3AF"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Xác nhận mật khẩu"
-          secureTextEntry
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
+                <Text style={styles.label}>Xác nhận mật khẩu</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Nhập lại mật khẩu mới"
+                    placeholderTextColor="#9CA3AF"
+                    secureTextEntry
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                />
 
-        <TouchableOpacity style={styles.button} onPress={handleConfirm}>
-          <Text style={styles.buttonText}>Xác nhận</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+                <TouchableOpacity 
+                    style={[styles.button, loading && {opacity: 0.7}]} 
+                    onPress={handleConfirm}
+                    disabled={loading}
+                >
+                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Xác nhận</Text>}
+                </TouchableOpacity>
+            </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -89,56 +127,60 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.brand,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
   },
-  whiteBox: {
+  inner: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20
+  },
+  card: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 25,
+    padding: 24,
     width: "100%",
-    maxWidth: 380,
-    alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 10,
+    elevation: 5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    marginBottom: 10,
-    color: "#000",
+    marginBottom: 8,
+    color: "#111827",
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 14,
-    color: "#555",
+    color: "#6B7280",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 24,
+    lineHeight: 20
   },
+  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 6 },
   input: {
     width: "100%",
-    height: 48,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#E5E7EB",
     borderRadius: 10,
     paddingHorizontal: 12,
-    marginBottom: 15,
-    backgroundColor: "#fff",
+    paddingVertical: 12,
+    marginBottom: 16,
+    fontSize: 15,
+    color: "#111827",
   },
   button: {
     backgroundColor: colors.brand,
     borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
     width: "100%",
     alignItems: "center",
+    marginTop: 8
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });

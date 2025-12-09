@@ -14,3 +14,30 @@ import { http, unwrap } from "../http";
 export function changePassword(data) {
   return unwrap(http.post("/auth/change-password", data));
 }
+
+/**
+ * Xác thực OTP cho quy trình quên mật khẩu
+ * Endpoint: POST /auth/verify-otp-forgot
+ * @param {Object} data - { email, otp }
+ */
+export function verifyForgotOtp(data) {
+  return unwrap(http.post("/auth/verify-otp-forgot", data));
+}
+
+/**
+ * Gửi lại OTP cho quy trình quên mật khẩu
+ * Endpoint: POST /auth/resend-otp-forgot
+ * @param {Object} data - { email }
+ */
+export function resendForgotOtp(data) {
+  return unwrap(http.post("/auth/resend-otp-forgot", data));
+}
+
+/**
+ * Đặt lại mật khẩu mới
+ * Endpoint: POST /auth/reset-password
+ * @param {Object} data - { email, otp, new_password, confirm_password }
+ */
+export function resetPassword(data) {
+  return unwrap(http.post("/auth/reset-password", data));
+}
