@@ -14,6 +14,11 @@ export async function markNotificationRead(userNotificationId) {
   return unwrap(data);
 }
 
+// Đánh dấu tất cả thông báo của 1 tenant là đã đọc
+export function markAllNotificationsRead() {
+  return unwrap(http.put("/notifications/read-all"));
+}
+
 // Đăng ký token thiết bị lên backend (để backend gửi push)
 export async function registerDeviceToken(token) {
   const { data } = await http.post("/notifications/register-device", {

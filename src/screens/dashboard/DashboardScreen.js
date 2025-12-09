@@ -77,29 +77,17 @@ export default function DashboardScreen() {
     switch (item.type) {
       case "header":
         return (
-          <View
-            style={{
-              backgroundColor: colors.brand,
-              paddingHorizontal: spacing.xl,
-              paddingTop: spacing.lg,
-              paddingBottom: spacing.xl,
-              borderBottomLeftRadius: 20,
-              borderBottomRightRadius: 20,
-            }}
-          >
-            <StatusBar barStyle="light-content" />
-            <View
-              style={{ paddingBottom: spacing.lg, paddingTop: spacing.xxl }}
-            >
-              <Header />
+          <Header isHome={true} title="SAMI">
+            <View style={{ marginTop: spacing.xs }}>
+              <Text style={{ color: "#CFE1FF", fontSize: 14, marginBottom: 6 }}>
+                Xin chào!
+              </Text>
+              <Text style={{ color: "white", fontSize: 24, fontWeight: "800" }}>
+                Chào mừng bạn trở lại
+              </Text>
+              {/* No padding needed here, the Header container handles the bottom space now */}
             </View>
-            <Text style={{ color: "#CFE1FF", fontSize: 14, marginBottom: 6 }}>
-              Xin chào!
-            </Text>
-            <Text style={{ color: "white", fontSize: 22, fontWeight: "800" }}>
-              Chào mừng bạn trở lại
-            </Text>
-          </View>
+          </Header>
         );
 
       case "features":
