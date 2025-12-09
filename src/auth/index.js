@@ -165,3 +165,31 @@ export async function logout() {
     } catch {}
   }
 }
+
+let isAuthAlertShown = false;
+
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    if (error?.response?.status === 401) {
+      if (!isAuthAlertShown) {
+        isAuthAlertShown = true;
+        Alert.alert(
+          "Phiên đăng nhập hết hạn",
+          "Vui lòng đăng nhập lại.",
+          [
+            {
+              text: "OK",
+              onPress: async () => {
+                isAuthAlertShown = false;
+                await useAuthStore.getState().logout();
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+      }
+    }
+    return Promise.reject(error);
+  }
+);
