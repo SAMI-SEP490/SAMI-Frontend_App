@@ -1,5 +1,4 @@
-// src/screens/regulation/RegulationListScreen.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,8 +7,12 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 import Header from "../../components/Header";
 import { colors } from "../../theme/colors";
@@ -23,32 +26,29 @@ import {
 const RegulationListScreen = () => {
   const [regulations, setRegulations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null); // Track expanded item
 
-  // 🔹 Fetch list regulations published
+  // 🔹 Fetch list regulations
   const fetchRegulations = async () => {
     try {
       setLoading(true);
       const res = await listRegulations();
       const regs = res?.data ?? [];
 
-      // chỉ lấy target tenants/all và status published
+      // Filter: tenants/all & published
       const publishedRegs = regs.filter(
         (r) =>
           (r.target === "tenants" || r.target === "all") &&
           r.status === "published"
       );
 
-      // Lấy nội dung riêng cho mỗi regulation
+      // Fetch content details
       const regsWithContent = await Promise.all(
         publishedRegs.map(async (r) => {
           try {
             const detail = await getRegulationById(r.regulation_id);
             return { ...r, content: detail?.data?.content || "" };
           } catch (err) {
-            console.error(
-              `❌ Lỗi lấy nội dung regulation ${r.regulation_id}:`,
-              err
-            );
             return { ...r, content: "" };
           }
         })
@@ -56,7 +56,7 @@ const RegulationListScreen = () => {
 
       setRegulations(regsWithContent);
     } catch (err) {
-      console.error("❌ Lỗi khi tải danh sách regulation:", err);
+      console.error("❌ Lỗi tải quy định:", err);
       setRegulations([]);
     } finally {
       setLoading(false);
@@ -67,74 +67,151 @@ const RegulationListScreen = () => {
     fetchRegulations();
   }, []);
 
-  // 🔹 Render item
-  const renderRegulationItem = ({ item, index }) => (
-    <View style={styles.itemContainer}>
-      <Text style={styles.itemIndex}>#{index + 1}</Text>
-      <Text style={styles.itemTitle}>Tiêu đề: {item.title}</Text>
-      <Text style={styles.itemText}>
-        Ngày hiệu lực:{" "}
-        {item.effective_date
-          ? new Date(item.effective_date).toLocaleDateString("vi-VN")
-          : "N/A"}
-      </Text>
-      <Text style={styles.itemContent}>
-        {item.content || "Không có nội dung"}
-      </Text>
-    </View>
-  );
+  const toggleExpand = (id) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedId(expandedId === id ? null : id);
+  };
 
-  if (loading) {
+  // 🔹 Render item
+  const renderRegulationItem = ({ item, index }) => {
+    const isExpanded = expandedId === item.regulation_id;
+    const dateStr = item.effective_date
+      ? new Date(item.effective_date).toLocaleDateString("vi-VN")
+      : "N/A";
+
     return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color={colors.brand} />
-      </SafeAreaView>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => toggleExpand(item.regulation_id)}
+      >
+        {/* Header Row */}
+        <View style={styles.cardHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+            <View style={styles.iconBox}>
+              <Ionicons name="book-outline" size={22} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <Text style={styles.itemDate}>Hiệu lực từ: {dateStr}</Text>
+            </View>
+          </View>
+          
+          <Ionicons 
+            name={isExpanded ? "chevron-up" : "chevron-down"} 
+            size={20} 
+            color={colors.muted} 
+          />
+        </View>
+
+        {/* Content (Collapsible) */}
+        {isExpanded && (
+          <View style={styles.contentBox}>
+            <View style={styles.divider} />
+            <Text style={styles.itemContent}>
+              {item.content || "Không có nội dung chi tiết."}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <Header />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <Header title="Nội quy & Quy định" isHome={false} />
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Danh sách Regulation</Text>
-
-        <FlatList
-          data={regulations}
-          renderItem={renderRegulationItem}
-          keyExtractor={(item) => item.regulation_id.toString()}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <Text style={{ textAlign: "center", marginTop: 20 }}>
-              Không có regulation nào.
-            </Text>
-          }
-        />
+      <View style={styles.contentContainer}>
+        {loading ? (
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+             <ActivityIndicator size="large" color={colors.brand} />
+             <Text style={{ marginTop: 10, color: colors.muted }}>Đang tải quy định...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={regulations}
+            renderItem={renderRegulationItem}
+            keyExtractor={(item) => item.regulation_id.toString()}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={{ alignItems: "center", marginTop: 40 }}>
+                <Text style={{ color: colors.muted }}>
+                  Hiện chưa có quy định nào được ban hành.
+                </Text>
+              </View>
+            }
+          />
+        )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 16 },
-  listContainer: { paddingBottom: 16 },
-  itemContainer: {
-    backgroundColor: "#fff",
+  container: {
+    flex: 1,
+    backgroundColor: colors.brand, // Blue Root
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: "#F3F4F6", // Gray Sheet
+    marginTop: -24, // Overlap Header
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    paddingHorizontal: spacing.md,
+    // Add extra padding to clear the header curve
+    paddingTop: spacing.xl + 24,
+  },
+  card: {
+    backgroundColor: "white",
+    borderRadius: 16,
     padding: 16,
-    borderRadius: 8,
     marginBottom: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
     elevation: 2,
   },
-  itemIndex: { fontWeight: "bold", marginBottom: 4 },
-  itemTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 4 },
-  itemText: { fontSize: 14, marginBottom: 4 },
-  itemContent: { fontSize: 14, marginTop: 6 },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#E0F2FE", // Light Blue
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  itemDate: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  contentBox: {
+    marginTop: 8,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 10,
+  },
+  itemContent: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 22,
+  },
 });
 
 export default RegulationListScreen;
