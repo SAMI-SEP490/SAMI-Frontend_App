@@ -11,6 +11,7 @@ import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrat
 import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 import MaintenanceListScreen from "../screens/maintenance/MaintenanceListScreen";
 import CreateMaintenanceRequestScreen from "../screens/maintenance/CreateMaintenanceRequestScreen";
+import UpdateMaintenanceRequestScreen from "../screens/maintenance/UpdateMaintenanceRequestScreen"
 
 // Auth flow
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -118,6 +119,10 @@ export default function RootNavigation() {
           <Stack.Screen
             name="CreateMaintenanceRequestScreen"
             component={CreateMaintenanceRequestScreen}
+          />
+          <Stack.Screen
+            name="UpdateMaintenanceRequestScreen"
+            component={UpdateMaintenanceRequestScreen}
           />
           {/* Floor plan */}
           <Stack.Screen

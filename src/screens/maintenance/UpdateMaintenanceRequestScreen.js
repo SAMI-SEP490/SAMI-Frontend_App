@@ -12,24 +12,21 @@ import {
   KeyboardAvoidingView,
   Platform
 } from "react-native";
-import * as SecureStore from "expo-secure-store";
-import { useNavigation } from "@react-navigation/native";
-import { jwtDecode } from "jwt-decode";
 import RNPickerSelect from "react-native-picker-select";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import Header from "../../components/Header";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { getRoomsByUserId } from "../../service/api/room";
-import { createMaintenanceRequest } from "../../service/api/maintenance";
+import { updateMaintenanceRequest, getMaintenanceRequestById } from "../../service/api/maintenance";
 
 const maintenanceTypes = [
   { key: "plumbing", label: "Điện nước" },
   { key: "electrical", label: "Điện" },
   { key: "hvac", label: "Điều hòa" },
   { key: "carpentry", label: "Mộc" },
-  { key: "structural", label: "Kết cấu" }, // Added Structural
+  { key: "structural", label: "Kết cấu" },
   { key: "cleaning", label: "Vệ sinh" },
   { key: "other", label: "Khác" },
 ];
@@ -41,12 +38,26 @@ const priorityLevels = [
   { key: "urgent", label: "Khẩn cấp" },
 ];
 
-const CreateMaintenanceRequestScreen = () => {
+// Translation Map
+const maintenanceStatus = {
+  pending: "Đang chờ",
+  in_progress: "Đang xử lý",
+  on_hold: "Tạm hoãn",
+  resolved: "Đã xử lý",
+  completed: "Hoàn thành",
+  cancelled: "Đã hủy",
+  rejected: "Từ chối"
+};
+
+const UpdateMaintenanceRequestScreen = () => {
   const navigation = useNavigation();
-  const [loading, setLoading] = useState(false);
-  const [roomId, setRoomId] = useState(null);
-  const [roomInfo, setRoomInfo] = useState({});
-  
+  const route = useRoute();
+  const { requestId } = route.params;
+
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [requestData, setRequestData] = useState(null);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState(null);
@@ -54,39 +65,38 @@ const CreateMaintenanceRequestScreen = () => {
   const [note, setNote] = useState("");
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const storedToken = await SecureStore.getItemAsync("sami_access_token");
-        if (!storedToken) return;
-        const decoded = jwtDecode(storedToken);
-        const userId = decoded?.id || decoded?.userId;
-        const roomRes = await getRoomsByUserId(userId);
-        const currentRoom = roomRes.data?.current_room;
-        if (currentRoom) {
-            setRoomId(currentRoom.room_id);
-            setRoomInfo(currentRoom);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    init();
-  }, []);
+    fetchRequestDetails();
+  }, [requestId]);
 
-  const handleSubmit = async () => {
-    if (!title || !description || !category || !note) {
+  const fetchRequestDetails = async () => {
+    try {
+      setLoading(true);
+      const res = await getMaintenanceRequestById(requestId);
+      const data = res.data;
+      setRequestData(data);
+
+      setTitle(data.title);
+      setDescription(data.description);
+      setCategory(data.category);
+      setPriority(data.priority);
+      setNote(data.note || "");
+    } catch (err) {
+      Alert.alert("Lỗi", "Không thể tải thông tin yêu cầu.");
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!title || !description || !category) {
       Alert.alert("Thiếu thông tin", "Vui lòng điền đầy đủ thông tin bắt buộc.");
       return;
     }
-    if (!roomId) {
-      Alert.alert("Lỗi", "Không tìm thấy thông tin phòng của bạn.");
-      return;
-    }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
-      await createMaintenanceRequest({
-        room_id: roomId,
+      await updateMaintenanceRequest(requestId, {
         title,
         description,
         category,
@@ -94,20 +104,35 @@ const CreateMaintenanceRequestScreen = () => {
         note,
       });
 
-      Alert.alert("Thành công", "Đã gửi yêu cầu bảo trì.", [
-        { text: "OK", onPress: () => navigation.navigate("MaintenanceListScreen") },
+      Alert.alert("Thành công", "Cập nhật yêu cầu thành công!", [
+        { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
-      const msg = err.response?.data?.message || "Không thể tạo yêu cầu.";
+      const msg = err.response?.data?.message || "Không thể cập nhật yêu cầu.";
       Alert.alert("Lỗi", msg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Header title="Chi tiết yêu cầu" isHome={false} />
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color={colors.brand} />
+        </View>
+      </View>
+    );
+  }
+
+  const isEditable = requestData?.status === 'pending';
+  const statusLabel = maintenanceStatus[requestData?.status] || requestData?.status;
+
   return (
     <View style={styles.container}>
-      <Header title="Tạo yêu cầu" isHome={false} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <Header title={isEditable ? "Cập nhật yêu cầu" : "Chi tiết yêu cầu"} isHome={false} />
 
       <KeyboardAvoidingView 
         style={styles.contentContainer}
@@ -115,40 +140,36 @@ const CreateMaintenanceRequestScreen = () => {
       >
         <ScrollView contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
           
-          {roomInfo.room_number && (
-              <View style={styles.roomBanner}>
-                  <Ionicons name="home" size={18} color={colors.brand} />
-                  <Text style={styles.roomText}>
-                      Phòng {roomInfo.room_number} - {roomInfo.building_name}
-                  </Text>
-              </View>
-          )}
-
           <View style={styles.card}>
+            <Text style={styles.statusLabel}>
+                Trạng thái: <Text style={{fontWeight: 'bold', color: colors.brand}}>{statusLabel}</Text>
+            </Text>
+
             <Text style={styles.label}>Tiêu đề <Text style={{color:'red'}}>*</Text></Text>
             <TextInput
-              style={styles.input}
-              placeholder="VD: Hỏng vòi nước..."
-              placeholderTextColor="#9CA3AF"
+              style={[styles.input, !isEditable && styles.disabledInput]}
               value={title}
               onChangeText={setTitle}
+              editable={isEditable}
+              placeholderTextColor="#9CA3AF"
             />
 
             <Text style={styles.label}>Loại bảo trì <Text style={{color:'red'}}>*</Text></Text>
-            <View style={styles.pickerWrapper}>
+            <View style={[styles.pickerWrapper, !isEditable && styles.disabledInput]}>
                 <RNPickerSelect
                     onValueChange={(value) => setCategory(value)}
                     value={category}
-                    placeholder={{ label: "Chọn loại bảo trì...", value: null, color: '#9CA3AF' }}
+                    placeholder={{ label: "Chọn loại...", value: null }}
                     items={maintenanceTypes.map((t) => ({ label: t.label, value: t.key }))}
                     style={pickerSelectStyles}
                     useNativeAndroidPickerStyle={false}
+                    disabled={!isEditable}
                     Icon={() => <Ionicons name="chevron-down" size={20} color="#9CA3AF" style={{marginTop: 12, marginRight: 10}} />}
                 />
             </View>
 
             <Text style={styles.label}>Mức độ ưu tiên</Text>
-            <View style={styles.pickerWrapper}>
+            <View style={[styles.pickerWrapper, !isEditable && styles.disabledInput]}>
                 <RNPickerSelect
                     onValueChange={(value) => setPriority(value)}
                     value={priority}
@@ -156,34 +177,41 @@ const CreateMaintenanceRequestScreen = () => {
                     items={priorityLevels.map((p) => ({ label: p.label, value: p.key }))}
                     style={pickerSelectStyles}
                     useNativeAndroidPickerStyle={false}
+                    disabled={!isEditable}
                     Icon={() => <Ionicons name="chevron-down" size={20} color="#9CA3AF" style={{marginTop: 12, marginRight: 10}} />}
                 />
             </View>
 
             <Text style={styles.label}>Mô tả chi tiết <Text style={{color:'red'}}>*</Text></Text>
             <TextInput
-              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-              placeholder="Mô tả kỹ tình trạng hư hỏng..."
-              placeholderTextColor="#9CA3AF"
+              style={[styles.input, { height: 120, textAlignVertical: 'top' }, !isEditable && styles.disabledInput]}
               value={description}
               onChangeText={setDescription}
               multiline
+              editable={isEditable}
+              placeholderTextColor="#9CA3AF"
             />
 
-            <Text style={styles.label}>Ghi chú thêm <Text style={{color:'red'}}>*</Text></Text>
+            <Text style={styles.label}>Ghi chú thêm</Text>
             <TextInput
-              style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
-              placeholder="VD: Thời gian rảnh để thợ đến..."
-              placeholderTextColor="#9CA3AF"
+              style={[styles.input, { height: 80, textAlignVertical: 'top' }, !isEditable && styles.disabledInput]}
               value={note}
               onChangeText={setNote}
               multiline
+              editable={isEditable}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
-             {loading ? <ActivityIndicator color="white" /> : <Text style={styles.submitButtonText}>Gửi yêu cầu</Text>}
-          </TouchableOpacity>
+          {isEditable && (
+            <TouchableOpacity 
+                style={[styles.submitButton, submitting && {opacity: 0.7}]} 
+                onPress={handleUpdate}
+                disabled={submitting}
+            >
+                {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.submitText}>Lưu thay đổi</Text>}
+            </TouchableOpacity>
+          )}
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -200,20 +228,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 24, 
+    paddingTop: spacing.xl + 24,
   },
-  roomBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#EFF6FF',
-      padding: 12,
-      borderRadius: 12,
-      marginBottom: 16,
-      gap: 8,
-      borderWidth: 1,
-      borderColor: '#DBEAFE'
-  },
-  roomText: { fontSize: 14, color: '#1E40AF', fontWeight: '600' },
+  centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   card: {
     backgroundColor: "white",
     borderRadius: 16,
@@ -224,6 +241,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 20
   },
+  statusLabel: { fontSize: 14, marginBottom: 12, color: "#4B5563", alignSelf: 'flex-end' },
   label: { fontSize: 13, marginBottom: 6, fontWeight: "600", color: "#374151", marginTop: 10 },
   input: {
     backgroundColor: "#fff",
@@ -235,6 +253,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
   },
+  disabledInput: {
+    backgroundColor: "#F9FAFB",
+    color: "#6B7280"
+  },
   pickerWrapper: { marginBottom: 0 },
   submitButton: {
     backgroundColor: colors.brand,
@@ -243,7 +265,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20
   },
-  submitButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });
 
 const pickerSelectStyles = StyleSheet.create({
@@ -273,4 +295,4 @@ const pickerSelectStyles = StyleSheet.create({
   },
 });
 
-export default CreateMaintenanceRequestScreen;
+export default UpdateMaintenanceRequestScreen;
