@@ -15,12 +15,12 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { useNotificationStore } from "../../service/notificationStore"; // New path
+import { useNotificationStore } from "../../service/notificationStore";
 
 import {
   getMyNotifications,
   markNotificationRead,
-  markAllNotificationsRead, // Import new API
+  markAllNotificationsRead,
 } from "../../service/api/notification";
 
 export default function NotificationListScreen() {
@@ -55,14 +55,11 @@ export default function NotificationListScreen() {
           if (Number.isNaN(t.getTime())) return true;
           return t <= now;
         })
+        // Strictly by Date (Newest First)
         .sort((a, b) => {
-          // Sort unread first, then by date
-          if (a.isRead === b.isRead) {
-             const t1 = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-             const t2 = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-             return t2 - t1;
-          }
-          return a.isRead ? 1 : -1;
+           const t1 = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+           const t2 = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+           return t2 - t1; 
         });
 
       setNotifications(mapped);

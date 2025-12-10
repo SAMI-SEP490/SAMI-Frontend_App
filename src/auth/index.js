@@ -3,53 +3,14 @@ import axios from "axios";
 import Constants from "expo-constants";
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
-
-const TOKEN_KEY = "sami_access_token";
-const REFRESH_KEY = "sami_refresh_token";
+import { getMessaging, getToken } from '@react-native-firebase/messaging'; 
+import { unregisterDeviceToken } from "../service/api/notification";
+import { useAuthStore, TOKEN_KEY, REFRESH_KEY } from "./store";
 
 export const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 
 // ===== Store Auth (token, refresh, user) =====
-export const useAuthStore = create((set) => ({
-  token: null,
-  refreshToken: null,
-  user: null,
-  hydrated: false,
-
-  hydrate: async () => {
-    try {
-      const [t, r] = await Promise.all([
-        SecureStore.getItemAsync(TOKEN_KEY),
-        SecureStore.getItemAsync(REFRESH_KEY),
-      ]);
-      set({ token: t || null, refreshToken: r || null, hydrated: true });
-    } catch {
-      set({ hydrated: true });
-    }
-  },
-
-  setAuth: async ({ accessToken, refreshToken, user }) => {
-    if (accessToken)
-      await SecureStore.setItemAsync(TOKEN_KEY, String(accessToken));
-    if (refreshToken)
-      await SecureStore.setItemAsync(REFRESH_KEY, String(refreshToken));
-    set({
-      token: accessToken || null,
-      refreshToken: refreshToken || null,
-      user: user || null,
-    });
-  },
-
-  setUser: (user) => set({ user }),
-
-  logout: async () => {
-    await Promise.all([
-      SecureStore.deleteItemAsync(TOKEN_KEY),
-      SecureStore.deleteItemAsync(REFRESH_KEY),
-    ]);
-    set({ token: null, refreshToken: null, user: null });
-  },
-}));
+export { useAuthStore };
 
 // ===== Axios instance + interceptors =====
 export const api = axios.create({
@@ -135,7 +96,21 @@ export async function changePassword({ currentPassword, newPassword }) {
 
 export async function logout() {
   try {
-    // gọi API nếu backend có route /auth/logout (không bắt buộc)
+    // 1. Attempt to unregister FCM token from backend
+    // We do this BEFORE deleting the local token so the API call is authenticated
+    try {
+      const messaging = getMessaging();
+      const currentPushToken = await getToken(messaging);
+      
+      if (currentPushToken) {
+        console.log("Unregistering token:", currentPushToken);
+        await unregisterDeviceToken(currentPushToken);
+      }
+    } catch (err) {
+      console.log("Error getting/unregistering token during logout:", err);
+    }
+
+    // 2. Call backend logout (if exists)
     if (typeof api?.post === "function") {
       try {
         await api.post("/auth/logout");
@@ -144,7 +119,7 @@ export async function logout() {
       }
     }
   } finally {
-    // xóa token ở SecureStore
+    // 3. Always clear local session (SecureStore + Zustand)
     try {
       await Promise.all([
         SecureStore.deleteItemAsync(TOKEN_KEY),
