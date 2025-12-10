@@ -12,10 +12,10 @@ import {
   Alert,
   ActivityIndicator
 } from "react-native";
-import axios from "axios";
 import Constants from "expo-constants";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
+import { forgotPassword } from "../../service/api/auth";
 
 const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 
@@ -37,12 +37,15 @@ export default function ResetPasswordScreen({ navigation }) {
     setLoading(true);
     try {
       // Call API to send OTP to email
-      await axios.post(`${API_URL}/auth/forgot-password`, { email: email.trim() });
-      
+      const res = await forgotPassword(email.trim());
+
       Alert.alert("Đã gửi mã", `Mã OTP đã được gửi đến ${email}.`);
       
-      // Navigate to Verify Code Screen (You likely need to create this or reuse LoginOTP logic)
-      navigation.navigate("VerifyCodeScreen", { email: email.trim() });
+      // Navigate to Verify Code Screen
+      navigation.navigate("VerifyCodeScreen", { 
+        email: email.trim(),
+        userId: res.userId
+      });
 
     } catch (error) {
       const msg = error?.response?.data?.message || "Không thể gửi yêu cầu.";

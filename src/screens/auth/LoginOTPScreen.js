@@ -12,11 +12,11 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from "react-native";
-import axios from "axios";
 import Constants from "expo-constants";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { useAuthStore } from "../../auth"; 
+import { verifyLoginOtp } from "../../service/api/auth";
 
 const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 const unwrap = (res) => res?.data?.data ?? res?.data;
@@ -34,12 +34,7 @@ export default function LoginOTPScreen({ route, navigation }) {
         return Alert.alert("Thiếu thông tin", "Vui lòng nhập mã OTP.");
       setLoading(true);
 
-      const res = await axios.post(
-        `${API_URL}/auth/verify-otp`,
-        { userId, otp },
-        { timeout: 15000 }
-      );
-      const data = unwrap(res);
+      const data = await verifyLoginOtp({ userId, otp });
 
       if (data?.accessToken && data?.user) {
         if (!roleIsTenant(data.user)) {

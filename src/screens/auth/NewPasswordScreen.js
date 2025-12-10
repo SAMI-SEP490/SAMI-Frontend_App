@@ -21,7 +21,7 @@ export default function NewPasswordScreen() {
   const route = useRoute();
   
   // Retrieve passed data (needed for API verification)
-  const { email, otp } = route.params || {};
+  const { userId, resetToken, email } = route.params || {};
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -57,10 +57,9 @@ export default function NewPasswordScreen() {
     try {
       // Call API
       await resetPassword({
-        email,
-        otp,
-        new_password: password,
-        confirm_password: confirmPassword
+        userId,
+        resetToken,
+        newPassword: password
       });
 
       Alert.alert("Thành công", "Mật khẩu đã được thay đổi! Vui lòng đăng nhập lại.", [
