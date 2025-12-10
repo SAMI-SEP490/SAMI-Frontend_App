@@ -27,3 +27,14 @@ export async function registerDeviceToken(token) {
   });
   return unwrap(data);
 }
+
+// Hủy đăng ký token khi logout
+export async function unregisterDeviceToken(token) {
+  try {
+    const { data } = await http.post("/notifications/unregister-device", { token });
+    return unwrap(data);
+  } catch (error) {
+    // Silent fail: If unregister fails (e.g. offline), we still want to let the user logout
+    console.log("Unregister token failed:", error);
+  }
+}

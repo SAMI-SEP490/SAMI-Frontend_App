@@ -3,6 +3,8 @@ import axios from "axios";
 import Constants from "expo-constants";
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
+import { getMessaging, getToken } from '@react-native-firebase/messaging'; 
+import { unregisterDeviceToken } from "../service/api/notification";
 
 const TOKEN_KEY = "sami_access_token";
 const REFRESH_KEY = "sami_refresh_token";
@@ -135,7 +137,21 @@ export async function changePassword({ currentPassword, newPassword }) {
 
 export async function logout() {
   try {
-    // gọi API nếu backend có route /auth/logout (không bắt buộc)
+    // 1. Attempt to unregister FCM token from backend
+    // We do this BEFORE deleting the local token so the API call is authenticated
+    try {
+      const messaging = getMessaging();
+      const currentPushToken = await getToken(messaging);
+      
+      if (currentPushToken) {
+        console.log("Unregistering token:", currentPushToken);
+        await unregisterDeviceToken(currentPushToken);
+      }
+    } catch (err) {
+      console.log("Error getting/unregistering token during logout:", err);
+    }
+
+    // 2. Call backend logout (if exists)
     if (typeof api?.post === "function") {
       try {
         await api.post("/auth/logout");
@@ -144,7 +160,7 @@ export async function logout() {
       }
     }
   } finally {
-    // xóa token ở SecureStore
+    // 3. Always clear local session (SecureStore + Zustand)
     try {
       await Promise.all([
         SecureStore.deleteItemAsync(TOKEN_KEY),
