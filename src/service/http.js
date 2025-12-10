@@ -2,7 +2,7 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { Alert } from "react-native"; 
-import { useAuthStore } from "../auth"; // Import store để gọi hàm logout
+import { useAuthStore } from "../auth/store";
 
 export const baseURL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 

@@ -5,53 +5,12 @@ import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
 import { getMessaging, getToken } from '@react-native-firebase/messaging'; 
 import { unregisterDeviceToken } from "../service/api/notification";
-
-const TOKEN_KEY = "sami_access_token";
-const REFRESH_KEY = "sami_refresh_token";
+import { useAuthStore, TOKEN_KEY, REFRESH_KEY } from "./store";
 
 export const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 
 // ===== Store Auth (token, refresh, user) =====
-export const useAuthStore = create((set) => ({
-  token: null,
-  refreshToken: null,
-  user: null,
-  hydrated: false,
-
-  hydrate: async () => {
-    try {
-      const [t, r] = await Promise.all([
-        SecureStore.getItemAsync(TOKEN_KEY),
-        SecureStore.getItemAsync(REFRESH_KEY),
-      ]);
-      set({ token: t || null, refreshToken: r || null, hydrated: true });
-    } catch {
-      set({ hydrated: true });
-    }
-  },
-
-  setAuth: async ({ accessToken, refreshToken, user }) => {
-    if (accessToken)
-      await SecureStore.setItemAsync(TOKEN_KEY, String(accessToken));
-    if (refreshToken)
-      await SecureStore.setItemAsync(REFRESH_KEY, String(refreshToken));
-    set({
-      token: accessToken || null,
-      refreshToken: refreshToken || null,
-      user: user || null,
-    });
-  },
-
-  setUser: (user) => set({ user }),
-
-  logout: async () => {
-    await Promise.all([
-      SecureStore.deleteItemAsync(TOKEN_KEY),
-      SecureStore.deleteItemAsync(REFRESH_KEY),
-    ]);
-    set({ token: null, refreshToken: null, user: null });
-  },
-}));
+export { useAuthStore };
 
 // ===== Axios instance + interceptors =====
 export const api = axios.create({
