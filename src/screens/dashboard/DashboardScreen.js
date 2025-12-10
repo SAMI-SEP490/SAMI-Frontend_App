@@ -99,7 +99,7 @@ export default function DashboardScreen() {
               padding: spacing.lg,
               marginHorizontal: spacing.xl,
               // We added 80px padding in Header, so pulling up 50px leaves ~30px gap below text.
-              marginTop: -50, 
+              marginTop: -50,
               zIndex: 99,
               shadowColor: "#000",
               shadowOpacity: 0.1,
@@ -107,10 +107,17 @@ export default function DashboardScreen() {
               elevation: 4,
             }}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1F2937", marginBottom: spacing.md }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: "#1F2937",
+                marginBottom: spacing.md,
+              }}
+            >
               Chức năng
             </Text>
-             <FlatList
+            <FlatList
               data={FEATURES}
               keyExtractor={(it) => it.key}
               numColumns={3}
@@ -143,6 +150,9 @@ export default function DashboardScreen() {
                     if (item.key === "map") {
                       navigation.navigate("FloorPlanViewScreen");
                     }
+                    if (item.key === "contract") {
+                      navigation.navigate("ContractScreen");
+                    }
                   }}
                   style={{ width: "30%", alignItems: "center", gap: 8 }}
                 >
@@ -172,7 +182,8 @@ export default function DashboardScreen() {
             />
           </View>
         );
-      default: return null;
+      default:
+        return null;
     }
   };
 

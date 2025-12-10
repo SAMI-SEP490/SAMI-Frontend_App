@@ -11,7 +11,7 @@ import UpdateGuestRegistrationScreen from "../screens/guest/UpdateGuestRegistrat
 import GuestRegistrationListScreen from "../screens/guest/GuestRegistrationListScreen";
 import MaintenanceListScreen from "../screens/maintenance/MaintenanceListScreen";
 import CreateMaintenanceRequestScreen from "../screens/maintenance/CreateMaintenanceRequestScreen";
-import UpdateMaintenanceRequestScreen from "../screens/maintenance/UpdateMaintenanceRequestScreen"
+import UpdateMaintenanceRequestScreen from "../screens/maintenance/UpdateMaintenanceRequestScreen";
 
 // Auth flow
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -49,6 +49,7 @@ import EditVehicleScreen from "../screens/vehicle/EditVehicleScreen";
 import RegulationListScreen from "../screens/regulation/RegulationListScreen";
 
 import FloorPlanViewScreen from "../screens/floorplan/FloorPlanViewScreen";
+import ContractScreen from "../screens/contract/ContractScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -180,7 +181,8 @@ export default function RootNavigation() {
             name="RegulationListScreen"
             component={RegulationListScreen}
           />
-
+          {/* Contract  */}
+          <Stack.Screen name="ContractScreen" component={ContractScreen} />
           {/* Chatbot */}
           <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
         </>
