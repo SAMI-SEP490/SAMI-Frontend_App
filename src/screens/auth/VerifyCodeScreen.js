@@ -17,7 +17,7 @@ import { spacing } from "../../theme/spacing";
 import { verifyForgotOtp, resendForgotOtp } from "../../service/api/auth";
 
 export default function VerifyCodeScreen({ navigation, route }) {
-  const { email } = route.params || {};
+  const { email, userId } = route.params || {};
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -29,11 +29,15 @@ export default function VerifyCodeScreen({ navigation, route }) {
     setLoading(true);
     try {
       // Call API to verify OTP
-      await verifyForgotOtp({ email, otp: code });
+      const res = await verifyForgotOtp({ userId, otp: code });
       
       // If success, navigate to NewPasswordScreen
       // Pass the email and code forward because the reset endpoint will likely need them
-      navigation.navigate("NewPasswordScreen", { email, otp: code });
+      navigation.navigate("NewPasswordScreen", { 
+        userId: userId,
+        resetToken: res.resetToken,
+        email: email
+      });
 
     } catch (error) {
       const msg = error?.response?.data?.message || "Mã xác thực không đúng.";
@@ -45,7 +49,7 @@ export default function VerifyCodeScreen({ navigation, route }) {
 
   const handleResend = async () => {
     try {
-      await resendForgotOtp({ email });
+      await resendForgotOtp({ userId });
       Alert.alert("Thành công", "Mã xác thực mới đã được gửi.");
     } catch (error) {
       Alert.alert("Lỗi", "Không thể gửi lại mã.");

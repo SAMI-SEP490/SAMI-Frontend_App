@@ -100,19 +100,6 @@ export async function login({ email, password, deviceId }) {
   return data;
 }
 
-export async function verifyLoginOTP({ userId, otp }) {
-  const res = await api.post("/auth/verify-otp", { userId, otp });
-  const data = unwrap(res);
-  if (data?.accessToken) {
-    await useAuthStore.getState().setAuth({
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-      user: data.user,
-    });
-  }
-  return data;
-}
-
 export async function me() {
   const res = await api.get("/auth/profile");
   const data = unwrap(res);
@@ -123,14 +110,6 @@ export async function me() {
   }
   useAuthStore.getState().setUser(data);
   return data;
-}
-
-export async function changePassword({ currentPassword, newPassword }) {
-  const res = await api.post("/auth/change-password", {
-    currentPassword,
-    newPassword,
-  });
-  return unwrap(res);
 }
 
 export async function logout() {
