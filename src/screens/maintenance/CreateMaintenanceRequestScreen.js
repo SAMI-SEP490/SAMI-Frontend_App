@@ -74,7 +74,7 @@ const CreateMaintenanceRequestScreen = () => {
   }, []);
 
   const handleSubmit = async () => {
-    if (!title || !description || !category || !note) {
+    if (!title || !description || !category ) {
       Alert.alert("Thiếu thông tin", "Vui lòng điền đầy đủ thông tin bắt buộc.");
       return;
     }
@@ -170,7 +170,7 @@ const CreateMaintenanceRequestScreen = () => {
               multiline
             />
 
-            <Text style={styles.label}>Ghi chú thêm <Text style={{color:'red'}}>*</Text></Text>
+            <Text style={styles.label}>Ghi chú thêm</Text>
             <TextInput
               style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
               placeholder="VD: Thời gian rảnh để thợ đến..."
