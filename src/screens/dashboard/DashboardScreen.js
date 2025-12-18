@@ -26,13 +26,7 @@ const FEATURES = [
   {
     key: "residence",
     label: "Đăng ký tạm trú",
-    icon: (p) => (
-      <MaterialCommunityIcons
-        name="file-document-outline"
-        size={26}
-        color={p}
-      />
-    ),
+    icon: (p) => <Ionicons name="people-outline" size={26} color={p} />,
     bg: "#F9EEFF",
   },
   {
