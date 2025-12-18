@@ -19,7 +19,8 @@ import { useAuthStore } from "../../auth";
 import { verifyLoginOtp } from "../../service/api/auth";
 
 const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
-const unwrap = (res) => res?.data?.data ?? res?.data;
+
+// Helper to check role safely
 const roleIsTenant = (u) =>
   String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
 
@@ -34,22 +35,50 @@ export default function LoginOTPScreen({ route, navigation }) {
         return Alert.alert("Thiếu thông tin", "Vui lòng nhập mã OTP.");
       setLoading(true);
 
-      const data = await verifyLoginOtp({ userId, otp });
+      // 1. Call API
+      const responseData = await verifyLoginOtp({ userId, otp });
+      
+      // DEBUG: Log the exact response from backend
+      console.log("OTP Response Raw:", JSON.stringify(responseData, null, 2));
 
-      if (data?.accessToken && data?.user) {
-        if (!roleIsTenant(data.user)) {
+      // 2. Robust Extraction: Handle both flat and nested 'data' structures
+      // Sometimes unwrap() returns the body, sometimes the data inside body.
+      const token = responseData?.accessToken || responseData?.data?.accessToken;
+      const user = responseData?.user || responseData?.data?.user;
+
+      // 3. Check Success
+      if (token && user) {
+        // Validate Role
+        if (!roleIsTenant(user)) {
           return Alert.alert("Không được phép", "Ứng dụng này chỉ dành cho Tenant.");
         }
+
+        // Update Store
         await useAuthStore.getState().setAuth({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          user: data.user,
+          accessToken: token,
+          refreshToken: responseData?.refreshToken || responseData?.data?.refreshToken,
+          user: user,
         });
+        
+        // Success! RootNavigation will handle the switch to App Stack
         return;
       }
 
-      throw new Error("Mã OTP không hợp lệ");
+      // 4. Edge Case: Backend verified successfully (200 OK) but didn't return token?
+      // This happens if the user was verified but logic flow requires re-login
+      if (responseData?.success || responseData?.message === 'OTP verified successfully') {
+         Alert.alert("Thành công", "Xác thực thành công! Vui lòng đăng nhập lại.", [
+            { text: "OK", onPress: () => navigation.navigate("Login") }
+         ]);
+         return;
+      }
+
+      // 5. If we get here, the structure didn't match what we expected
+      throw new Error("Mã OTP không hợp lệ hoặc lỗi hệ thống");
+
     } catch (e) {
+      console.log("Verify OTP Error:", e);
+      // Determine if error came from backend response or local throw
       const msg = e?.response?.data?.message || e.message || "Xác thực thất bại";
       Alert.alert("Lỗi", msg);
     } finally {
