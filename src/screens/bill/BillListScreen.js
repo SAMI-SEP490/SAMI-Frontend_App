@@ -128,9 +128,9 @@ function BillListScreen() {
             }
           >
             {!loading && !error && bills.length === 0 && (
-                <View style={styles.centerBox}>
-                    <Text style={{ color: colors.muted }}>Không có hóa đơn nào.</Text>
-                </View>
+              <View style={styles.centerBox}>
+                <Text style={{ color: colors.muted }}>Không có hóa đơn nào.</Text>
+              </View>
             )}
 
             {bills.map((bill) => {
@@ -150,39 +150,51 @@ function BillListScreen() {
                   activeOpacity={0.8}
                   disabled={isPaid}
                 >
+                  {/* Header: ID + Status */}
                   <View style={styles.cardHeader}>
                     <Text style={styles.billTitle}>
                       #{bill.bill_number || bill.bill_id}
                     </Text>
                     <View
-                        style={[
-                            styles.statusBadge,
-                            isPaid && { backgroundColor: "#DCFCE7" },
-                            isOverdue && { backgroundColor: "#FEE2E2" },
-                            bill.status === "pending" && { backgroundColor: "#FEF3C7" },
-                        ]}
+                      style={[
+                        styles.statusBadge,
+                        isPaid && { backgroundColor: "#DCFCE7" },
+                        isOverdue && { backgroundColor: "#FEE2E2" },
+                        bill.status === "pending" && { backgroundColor: "#FEF3C7" },
+                      ]}
                     >
-                        <Text style={[
-                            styles.statusText,
-                            isPaid && { color: "#16A34A" },
-                            isOverdue && { color: "#EF4444" },
-                            bill.status === "pending" && { color: "#D97706" },
-                        ]}>
-                            {bill.status === 'paid' ? 'Đã thanh toán' : bill.status === 'overdue' ? 'Quá hạn' : 'Chưa thanh toán'}
-                        </Text>
+                      <Text style={[
+                        styles.statusText,
+                        isPaid && { color: "#16A34A" },
+                        isOverdue && { color: "#EF4444" },
+                        bill.status === "pending" && { color: "#D97706" },
+                      ]}>
+                        {bill.status === 'paid' ? 'Đã thanh toán' : bill.status === 'overdue' ? 'Quá hạn' : 'Chưa thanh toán'}
+                      </Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.divider} />
 
+                  {/* Row 1: Period */}
                   <View style={styles.row}>
                     <Text style={styles.label}>Kỳ thanh toán:</Text>
                     <Text style={styles.value}>
-                       {formatDate(bill.billing_period_start)} - {formatDate(bill.billing_period_end)}
+                      {formatDate(bill.billing_period_start)} - {formatDate(bill.billing_period_end)}
                     </Text>
                   </View>
-                  
-                  <View style={styles.row}>
+
+                  {/* Description Block - Full Text */}
+                  {/* Changed from Row to Vertical Block to support long text */}
+                  <View style={styles.descriptionBlock}>
+                    <Text style={styles.label}>Nội dung:</Text>
+                    <Text style={styles.descriptionText}>
+                      {bill.description || ""}
+                    </Text>
+                  </View>
+
+                  {/* Row 3: Amount */}
+                  <View style={[styles.row, { marginTop: 4 }]}>
                     <Text style={styles.label}>Số tiền:</Text>
                     <Text style={[styles.amountText, { color: colors.brand }]}>
                       {formatCurrency(bill.total_amount)}
@@ -229,8 +241,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    // FIX: Extra top padding to clear header overlap
-    paddingTop: spacing.xl + 24, 
+    paddingTop: spacing.xl + 24,
     overflow: "hidden"
   },
   topRow: {
@@ -270,9 +281,21 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
   divider: { height: 1, backgroundColor: "#F3F4F6", marginBottom: 8 },
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-  label: { fontSize: 13, color: "#6B7280" },
-  value: { fontSize: 13, color: "#111827", fontWeight: "500", flex: 1, textAlign: 'right' },
-  amountText: { fontSize: 15, fontWeight: "700" },
+  label: { fontSize: 13, color: "#6B7280", flex: 1 },
+  value: { fontSize: 13, color: "#111827", fontWeight: "500", flex: 2, textAlign: 'right' },
+
+  // New Description Styles
+  descriptionBlock: {
+    marginBottom: 6,
+  },
+  descriptionText: {
+    fontSize: 13,
+    color: "#374151",
+    marginTop: 2,
+    lineHeight: 18 // Better readability for long text
+  },
+
+  amountText: { fontSize: 15, fontWeight: "700", textAlign: 'right', flex: 2 },
   selectedLabel: { marginTop: 8, fontSize: 12, color: colors.brand, fontWeight: "700", textAlign: 'right' },
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
