@@ -33,7 +33,7 @@ const STATUS_CONFIG = {
 };
 
 const CATEGORY_MAP = {
-  plumbing: "Điện nước",
+  plumbing: "Ống nước",
   electrical: "Điện",
   hvac: "Điều hòa",
   carpentry: "Mộc",

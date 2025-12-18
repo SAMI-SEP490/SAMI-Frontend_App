@@ -22,7 +22,7 @@ import { spacing } from "../../theme/spacing";
 import { updateMaintenanceRequest, getMaintenanceRequestById } from "../../service/api/maintenance";
 
 const maintenanceTypes = [
-  { key: "plumbing", label: "Điện nước" },
+  { key: "plumbing", label: "Ống nước" },
   { key: "electrical", label: "Điện" },
   { key: "hvac", label: "Điều hòa" },
   { key: "carpentry", label: "Mộc" },
