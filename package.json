@@ -21,7 +21,7 @@
     "dotenv": "^17.2.3",
     "expo": "~54.0.13",
     "expo-device": "~8.0.9",
-    "expo-image-picker": "^17.0.8",
+    "expo-image-picker": "^17.0.10",
     "expo-notifications": "^0.32.14",
     "expo-secure-store": "~15.0.7",
     "expo-status-bar": "~3.0.8",

@@ -33,6 +33,19 @@ export function getProfile() {
 }
 
 /**
+ * Cập nhật Profile
+ * Endpoint: PUT /auth/profile
+ * @param {FormData} formData
+ */
+export function updateProfile(formData) {
+  return unwrap(http.put("/auth/profile", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  }));
+}
+
+/**
  * Đổi mật khẩu (Tenant, Owner, Manager)
  * Yêu cầu: Đã đăng nhập (Token sẽ được tự động gắn bởi http interceptor)
  * Endpoint: POST /auth/change-password
