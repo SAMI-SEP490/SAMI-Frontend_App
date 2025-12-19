@@ -17,8 +17,18 @@ export const useNotificationStore = create((set, get) => ({
   fetchUnreadCount: async () => {
     try {
       const res = await getMyNotifications();
-      const list = res || []; 
-      // Count items where is_read is false/0/null
+      
+      // FIX: Handle both Array and Paginated Object responses
+      let list = [];
+      if (Array.isArray(res)) {
+        list = res;
+      } else if (res?.notifications && Array.isArray(res.notifications)) {
+        list = res.notifications;
+      } else if (res?.data && Array.isArray(res.data)) {
+        list = res.data;
+      }
+
+      // Count unread items
       const unread = list.filter(n => !n.is_read).length;
       set({ unreadCount: unread });
     } catch (error) {

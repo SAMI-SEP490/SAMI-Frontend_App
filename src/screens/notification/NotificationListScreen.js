@@ -34,7 +34,18 @@ export default function NotificationListScreen() {
   const fetchNotifications = async () => {
     try {
       if (!refreshing) setLoading(true);
-      const list = await getMyNotifications();
+      const res = await getMyNotifications();
+
+      // FIX: Robust Data Extraction
+      let list = [];
+      if (Array.isArray(res)) {
+          list = res;
+      } else if (res?.notifications && Array.isArray(res.notifications)) {
+          // Common if backend uses pagination: { notifications: [...], total: 5 }
+          list = res.notifications;
+      } else if (res?.data && Array.isArray(res.data)) {
+          list = res.data;
+      }
 
       const now = new Date();
       const mapped = (list || [])

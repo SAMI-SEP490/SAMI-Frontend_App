@@ -6,14 +6,14 @@ import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotificationStore } from "../service/notificationStore";
-import { useAuthStore } from "../auth";
+// FIX: Import the smart logout function
+import { logout } from "../auth";
 
 export default function Header({ title, isHome = false, children }) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   
-  // GET LOGOUT FUNCTION FROM STORE
-  const logout = useAuthStore((state) => state.logout);
+  // NOTE: We don't need to get logout from store anymore
   
   const unreadCount = useNotificationStore((state) => state.unreadCount);
   const fetchUnreadCount = useNotificationStore((state) => state.fetchUnreadCount);
@@ -32,7 +32,7 @@ export default function Header({ title, isHome = false, children }) {
           text: "Đăng xuất",
           style: "destructive",
           onPress: async () => {
-            // CALL STORE LOGOUT
+            // CALL SMART LOGOUT
             await logout(); 
           },
         },

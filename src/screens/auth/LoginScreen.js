@@ -11,20 +11,17 @@ import {
   ActivityIndicator,
   TextInput,
   TouchableOpacity,
-  ScrollView // Added ScrollView
+  ScrollView
 } from "react-native";
-import axios from "axios";
-import Constants from "expo-constants";
 // FIX: Use the modern keyboard controller
 import { KeyboardProvider, KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { useAuthStore } from "../../auth";
 
-const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
+// IMPORT SMART LOGIN FUNCTION
+import { login, useAuthStore } from "../../auth";
 
-const unwrap = (res) => res?.data?.data ?? res?.data;
 const roleIsTenant = (u) =>
   String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
 
@@ -41,13 +38,11 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      const res = await axios.post(
-        `${API_URL}/auth/login`,
-        { email, password },
-        { timeout: 15000 }
-      );
-      const data = unwrap(res);
+      
+      // CALL CENTRALIZED LOGIN
+      const data = await login({ email, password });
 
+      // 1. Case OTP
       if (data?.requiresOTP) {
         return navigation.navigate("LoginOTP", {
           userId: data.userId,
@@ -55,18 +50,19 @@ export default function LoginScreen() {
         });
       }
 
-      if (data?.accessToken && data?.user) {
+      // 2. Case Success
+      // Note: login() already updated the store with the token
+      // We just need to check role and navigate
+      if (data?.user) {
         if (!roleIsTenant(data.user)) {
+          // If wrong role, logout immediately to clear store
+          await useAuthStore.getState().logout();
           return Alert.alert(
             "Không được phép",
             "Ứng dụng này chỉ dành cho Tenant."
           );
         }
-        await useAuthStore.getState().setAuth({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          user: data.user,
-        });
+        // RootNavigation will detect token change and switch stacks
         return;
       }
 
