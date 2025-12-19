@@ -45,3 +45,6 @@ bun.lock
 
 #dotenv
 .env
+
+# package lock file
+package-lock.json
