@@ -10,18 +10,14 @@ import {
   StatusBar
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import axios from "axios";
-import * as SecureStore from "expo-secure-store";
-import Constants from "expo-constants";
+
+// Import centralized API instead of manual Axios
+import { getProfile } from "../../service/api/auth";
 
 import Header from "../../components/Header";
 import Button from "../../components/Button";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-
-// --- HELPERS ---
-const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
-const unwrap = (res) => res?.data?.data ?? res?.data;
 
 const formatDate = (dateString) => {
   if (!dateString) return "Chưa cập nhật";
@@ -38,16 +34,6 @@ function roleIsTenant(user) {
   return r === "tenant";
 }
 
-// Fetch helper
-async function authGet(path) {
-  const token = await SecureStore.getItemAsync("sami_access_token");
-  const res = await axios.get(`${API_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    timeout: 15000,
-  });
-  return unwrap(res);
-}
-
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const [user, setUser] = useState(null);
@@ -56,12 +42,16 @@ export default function ProfileScreen() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const data = await authGet("/auth/profile");
-      const u = data?.user || data;
       
+      // Use centralized API function
+      // http.js interceptor handles the token automatically
+      const data = await getProfile();
+      
+      const u = data?.user || data?.data?.user || data;
+
       if (!roleIsTenant(u)) {
         Alert.alert("Không được phép", "Ứng dụng này chỉ dành cho Tenant.", [
-          { text: "OK", onPress: () => navigation.navigate("Login") },
+          { text: "OK", onPress: () => navigation.navigate("DashboardScreen") },
         ]);
         return;
       }
@@ -97,16 +87,21 @@ export default function ProfileScreen() {
     );
   }
 
+  // Extract nested data for cleaner JSX
+  const tenantInfo = user?.roleDetails;
+  const roomInfo = tenantInfo?.rooms;
+  const buildingInfo = roomInfo?.buildings;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <Header title="Hồ sơ cá nhân" isHome={false} />
 
       <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        
+
         {/* Main Card */}
         <View style={styles.card}>
-          
+
           {/* Avatar Area */}
           <View style={styles.avatarContainer}>
             <Image
@@ -117,26 +112,49 @@ export default function ProfileScreen() {
             />
             <Text style={styles.userName}>{user?.full_name || user?.name}</Text>
             <View style={styles.roleBadge}>
-                <Text style={styles.roleText}>{user?.role || "Tenant"}</Text>
+              <Text style={styles.roleText}>{user?.role || "Tenant"}</Text>
             </View>
           </View>
 
           {/* Section: Basic Info */}
           <View style={styles.sectionHeader}>
-             <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
+            <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
           </View>
           <View style={styles.infoContainer}>
-             <InfoRow label="Ngày sinh" value={formatDate(user?.birthday || user?.dob)} />
-             <InfoRow label="Giới tính" value={user?.gender === 'Male' ? 'Nam' : user?.gender === 'Female' ? 'Nữ' : 'Khác'} />
+            <InfoRow label="Ngày sinh" value={formatDate(user?.birthday || user?.dob)} />
+            <InfoRow label="Giới tính" value={user?.gender === 'Male' ? 'Nam' : user?.gender === 'Female' ? 'Nữ' : 'Khác'} />
           </View>
 
           {/* Section: Contact Info */}
           <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-             <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
+            <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
           </View>
           <View style={styles.infoContainer}>
-             <InfoRow label="Email" value={user?.email} />
-             <InfoRow label="Số điện thoại" value={user?.phone} />
+            <InfoRow label="Email" value={user?.email} />
+            <InfoRow label="Số điện thoại" value={user?.phone} />
+          </View>
+
+          {/* Section: Residence Info (REAL DATA) */}
+          <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+            <Text style={styles.sectionTitle}>Thông tin cư trú</Text>
+          </View>
+          <View style={styles.infoContainer}>
+            <InfoRow 
+                label="Tòa nhà" 
+                value={buildingInfo?.name} 
+            />
+            <InfoRow 
+                label="Địa chỉ" 
+                value={buildingInfo?.address} 
+            />
+            <InfoRow 
+                label="Phòng" 
+                value={roomInfo?.room_number ? `P.${roomInfo.room_number}` : null} 
+            />
+             <InfoRow 
+                label="Tầng" 
+                value={roomInfo?.floor ? `Tầng ${roomInfo.floor}` : null} 
+            />
           </View>
 
           {/* Buttons */}
@@ -255,11 +273,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: "#6B7280",
+    flex: 1
   },
   value: {
     fontSize: 14,
     fontWeight: "600",
     color: "#1F2937",
+    flex: 1.5,
+    textAlign: 'right'
   },
   buttonRow: {
     flexDirection: "row",

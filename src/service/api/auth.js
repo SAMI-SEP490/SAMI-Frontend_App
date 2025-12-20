@@ -3,6 +3,49 @@ import { http, unwrap } from "../http";
 // ====== AUTH API SERVICE ======
 
 /**
+ * Đăng nhập
+ * Endpoint: POST /auth/login
+ */
+export function loginApi(data) {
+  // data includes { email, password, deviceId }
+  // Backend expects headers["x-device-id"] for deviceId
+  const headers = {};
+  if (data.deviceId) headers["x-device-id"] = data.deviceId;
+  
+  return unwrap(http.post("/auth/login", data, { headers }));
+}
+
+/**
+ * Đăng xuất (Backend)
+ * Endpoint: POST /auth/logout
+ */
+export function logoutApi(data) {
+  // data includes { refreshToken }
+  return unwrap(http.post("/auth/logout", data));
+}
+
+/**
+ * Lấy profile user (cho hàm me())
+ * Endpoint: GET /auth/profile
+ */
+export function getProfile() {
+  return unwrap(http.get("/auth/profile"));
+}
+
+/**
+ * Cập nhật Profile
+ * Endpoint: PUT /auth/profile
+ * @param {FormData} formData
+ */
+export function updateProfile(formData) {
+  return unwrap(http.put("/auth/profile", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  }));
+}
+
+/**
  * Đổi mật khẩu (Tenant, Owner, Manager)
  * Yêu cầu: Đã đăng nhập (Token sẽ được tự động gắn bởi http interceptor)
  * Endpoint: POST /auth/change-password

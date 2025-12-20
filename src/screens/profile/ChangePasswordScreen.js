@@ -40,8 +40,8 @@ export default function ChangePasswordScreen() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      Alert.alert("Lỗi", "Mật khẩu mới phải có ít nhất 6 ký tự.");
+    if (newPassword.length < 8) {
+      Alert.alert("Lỗi", "Mật khẩu mới phải có ít nhất 8 ký tự.");
       return;
     }
 
@@ -54,9 +54,8 @@ export default function ChangePasswordScreen() {
     setLoading(true);
     try {
       await changePassword({
-        old_password: oldPassword,
-        new_password: newPassword,
-        confirm_password: confirmPassword
+        currentPassword: oldPassword, 
+        newPassword: newPassword
       });
 
       Alert.alert("Thành công", "Đổi mật khẩu thành công!", [

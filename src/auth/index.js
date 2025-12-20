@@ -1,149 +1,89 @@
 // src/auth/index.js
-import axios from "axios";
-import Constants from "expo-constants";
-import { create } from "zustand";
-import * as SecureStore from "expo-secure-store";
-import { getMessaging, getToken } from '@react-native-firebase/messaging'; 
+import { getMessaging, getToken, deleteToken } from '@react-native-firebase/messaging';
 import { unregisterDeviceToken } from "../service/api/notification";
-import { useAuthStore, TOKEN_KEY, REFRESH_KEY } from "./store";
+import { loginApi, logoutApi, getProfile } from "../service/api/auth";
+import { useAuthStore } from "./store"; 
 
-export const API_URL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
-
-// ===== Store Auth (token, refresh, user) =====
+// Re-export store for convenience
 export { useAuthStore };
 
-// ===== Axios instance + interceptors =====
-export const api = axios.create({
-  baseURL: API_URL, // ví dụ: http://192.168.1.50:3000/api
-  timeout: 15000,
-});
+// ===== SMART LOGOUT =====
+// Use this in UI components instead of store.logout()
+export async function logout() {
+  const { refreshToken } = useAuthStore.getState();
 
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-api.interceptors.response.use(
-  (res) => res,
-  async (error) => {
-    if (error?.response?.status === 401) {
-      await useAuthStore.getState().logout();
+  // 1. Unregister FCM (Best Effort)
+  try {
+    const messaging = getMessaging();
+    const currentPushToken = await getToken(messaging).catch(() => null);
+    
+    if (currentPushToken) {
+      console.log("Unregistering FCM Token:", currentPushToken);
+      // We catch error here so logout flow doesn't stop if API fails
+      await unregisterDeviceToken(currentPushToken).catch(err => console.log("API unregister failed:", err));
+      await deleteToken(messaging).catch(() => null);
     }
-    return Promise.reject(error);
+  } catch (err) {
+    console.log("FCM Logout Error:", err);
   }
-);
 
-// ===== Helpers =====
-const unwrap = (response) => response?.data?.data ?? response?.data;
+  // 2. Call Backend Logout
+  if (refreshToken) {
+    try {
+      await logoutApi({ refreshToken });
+    } catch (e) {
+      console.log("Backend Logout Error:", e);
+    }
+  }
 
-// ===== Services: Auth =====
+  // 3. Local Cleanup (Zustand + SecureStore)
+  await useAuthStore.getState().logout();
+}
+
+// ===== SMART LOGIN =====
 export async function login({ email, password, deviceId }) {
-  const headers = {};
-  if (deviceId) headers["x-device-id"] = deviceId;
+  // Call API
+  const response = await loginApi({ email, password, deviceId });
+  
+  // NOTE: Your unwrap function returns res.data. 
+  // If backend returns { success: true, data: {...} }, then 'response' here is that whole object.
+  // We need to check if the user/token is nested inside 'data' or at the top level.
+  
+  const actualData = response.data || response; 
 
-  const res = await api.post("/auth/login", { email, password }, { headers });
-  const data = unwrap(res);
-
-  // Nếu backend yêu cầu OTP (đăng nhập lần đầu)
-  if (data?.requiresOTP) {
-    return { requiresOTP: true, userId: data.userId, email: data.email };
+  // Handle OTP Case
+  if (actualData?.requiresOTP) {
+    return { 
+      requiresOTP: true, 
+      userId: actualData.userId, 
+      email: actualData.email 
+    };
   }
 
-  // Login bình thường
-  if (data?.accessToken) {
+  // Handle Success Case
+  const token = actualData?.accessToken;
+  
+  if (token) {
     await useAuthStore.getState().setAuth({
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-      user: data.user,
+      accessToken: token,
+      refreshToken: actualData.refreshToken,
+      user: actualData.user,
     });
   }
-  return data;
+  
+  return actualData;
 }
 
+// ===== ME (PROFILE) =====
 export async function me() {
-  const res = await api.get("/auth/profile");
-  const data = unwrap(res);
-  // backend có thể trả { user } hoặc trả user trực tiếp
-  if (data?.user) {
-    useAuthStore.getState().setUser(data.user);
-    return data.user;
+  const response = await getProfile();
+  const actualData = response.data || response;
+
+  const user = actualData?.user || actualData;
+  
+  if (user) {
+    useAuthStore.getState().setUser(user);
+    return user;
   }
-  useAuthStore.getState().setUser(data);
-  return data;
+  return null;
 }
-
-export async function logout() {
-  try {
-    // 1. Attempt to unregister FCM token from backend
-    // We do this BEFORE deleting the local token so the API call is authenticated
-    try {
-      const messaging = getMessaging();
-      const currentPushToken = await getToken(messaging);
-      
-      if (currentPushToken) {
-        console.log("Unregistering token:", currentPushToken);
-        await unregisterDeviceToken(currentPushToken);
-      }
-    } catch (err) {
-      console.log("Error getting/unregistering token during logout:", err);
-    }
-
-    // 2. Call backend logout (if exists)
-    if (typeof api?.post === "function") {
-      try {
-        await api.post("/auth/logout");
-      } catch (e) {
-        /* optional ignore */
-      }
-    }
-  } finally {
-    // 3. Always clear local session (SecureStore + Zustand)
-    try {
-      await Promise.all([
-        SecureStore.deleteItemAsync(TOKEN_KEY),
-        SecureStore.deleteItemAsync(REFRESH_KEY),
-      ]);
-    } catch {}
-
-    // đưa store về trạng thái chưa đăng nhập
-    try {
-      // nếu file đã khai báo useAuthStore rồi:
-      useAuthStore.getState().logout
-        ? await useAuthStore.getState().logout()
-        : useAuthStore.setState({
-            token: null,
-            refreshToken: null,
-            user: null,
-          });
-    } catch {}
-  }
-}
-
-let isAuthAlertShown = false;
-
-api.interceptors.response.use(
-  (res) => res,
-  async (error) => {
-    if (error?.response?.status === 401) {
-      if (!isAuthAlertShown) {
-        isAuthAlertShown = true;
-        Alert.alert(
-          "Phiên đăng nhập hết hạn",
-          "Vui lòng đăng nhập lại.",
-          [
-            {
-              text: "OK",
-              onPress: async () => {
-                isAuthAlertShown = false;
-                await useAuthStore.getState().logout();
-              },
-            },
-          ],
-          { cancelable: false }
-        );
-      }
-    }
-    return Promise.reject(error);
-  }
-);

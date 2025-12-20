@@ -1,17 +1,15 @@
 // src/service/api/notification.js
 import { Platform } from "react-native";
-import { http, unwrap } from "../http"; // nếu http export khác thì chỉnh lại cho khớp
+import { http, unwrap } from "../http";
 
 // Lấy danh sách thông báo của tenant đang đăng nhập
-export async function getMyNotifications() {
-  const { data } = await http.get("/notifications");
-  return unwrap(data);
+export function getMyNotifications() {
+  return unwrap(http.get("/notifications"));
 }
 
 // Đánh dấu 1 thông báo đã đọc
-export async function markNotificationRead(userNotificationId) {
-  const { data } = await http.post(`/notifications/${userNotificationId}/read`);
-  return unwrap(data);
+export function markNotificationRead(userNotificationId) {
+  return unwrap(http.post(`/notifications/${userNotificationId}/read`));
 }
 
 // Đánh dấu tất cả thông báo của 1 tenant là đã đọc
@@ -20,21 +18,15 @@ export function markAllNotificationsRead() {
 }
 
 // Đăng ký token thiết bị lên backend (để backend gửi push)
-export async function registerDeviceToken(token) {
-  const { data } = await http.post("/notifications/register-device", {
+export function registerDeviceToken(token) {
+  return unwrap(http.post("/notifications/register-device", {
     token,
     device_type: Platform.OS === "ios" ? "IOS" : "ANDROID",
-  });
-  return unwrap(data);
+  }));
 }
 
 // Hủy đăng ký token khi logout
-export async function unregisterDeviceToken(token) {
-  try {
-    const { data } = await http.post("/notifications/unregister-device", { token });
-    return unwrap(data);
-  } catch (error) {
-    // Silent fail: If unregister fails (e.g. offline), we still want to let the user logout
-    console.log("Unregister token failed:", error);
-  }
+export function unregisterDeviceToken(token) {
+  // unwrap handles the await internally
+  return unwrap(http.post("/notifications/unregister-device", { token }));
 }

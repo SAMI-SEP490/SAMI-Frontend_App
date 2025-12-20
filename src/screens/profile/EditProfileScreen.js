@@ -16,29 +16,29 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import DateTimePicker from "@react-native-datetimepicker/datetimepicker"; // <-- Import Picker
+import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
+import * as ImagePicker from "expo-image-picker"; // <--- Import Image Picker
 
 import Header from "../../components/Header";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { updateUser } from "../../service/api/user";
+// FIX: Import the new updateProfile API
+import { updateProfile } from "../../service/api/auth"; 
 
 // --- HELPERS ---
-
-// Format Date Object -> "DD/MM/YYYY" for display
 const formatDateDisplay = (date) => {
   if (!date) return "";
-  return date.toLocaleDateString("vi-VN"); // e.g. 10/03/2000
+  return date.toLocaleDateString("vi-VN"); 
 };
 
-const CustomInput = ({ label, value, onChangeText, placeholder, keyboardType, editable = true }) => (
+const CustomInput = ({ label, value, onChangeText, placeholder, keyboardType, editable = true, note }) => (
   <View style={{ marginBottom: 12 }}>
     <Text style={styles.labelText}>
-      {label} <Text style={{ color: "red" }}>*</Text>
+      {label} {editable && <Text style={{ color: "red" }}>*</Text>}
     </Text>
     <View style={[styles.inputContainer, !editable && styles.disabledInput]}>
         <TextInput
-            style={styles.input}
+            style={[styles.input, !editable && { color: "#6B7280" }]}
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}
@@ -47,6 +47,7 @@ const CustomInput = ({ label, value, onChangeText, placeholder, keyboardType, ed
             editable={editable}
         />
     </View>
+    {note && <Text style={styles.noteText}>{note}</Text>}
   </View>
 );
 
@@ -66,10 +67,13 @@ export default function EditProfileScreen() {
 
   // --- STATE ---
   const [name, setName] = useState(incoming.full_name || incoming.name || "");
-  const [email, setEmail] = useState(incoming.email || "");
-  const [phone, setPhone] = useState(incoming.phone || "");
+  const [email] = useState(incoming.email || ""); // Read-only
+  const [phone] = useState(incoming.phone || ""); // Read-only
   const [gender, setGender] = useState(getInitialGender(incoming.gender));
-  const [avatar] = useState(incoming.avatar_url || "https://placehold.co/120x120");
+  
+  // Avatar State
+  const [avatarUri, setAvatarUri] = useState(incoming.avatar_url || "https://placehold.co/120x120");
+  const [newAvatarAsset, setNewAvatarAsset] = useState(null); // Stores the picked file
 
   // Date Logic
   const [dob, setDob] = useState(incoming.birthday ? new Date(incoming.birthday) : new Date());
@@ -86,45 +90,70 @@ export default function EditProfileScreen() {
     }
   };
 
+  const pickImage = async () => {
+    // Request permission (optional on newer Android/iOS but good practice)
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Quyền truy cập bị từ chối', 'Chúng tôi cần quyền truy cập thư viện ảnh để thay đổi avatar.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5, // Compress image
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      setAvatarUri(asset.uri); // Show preview
+      setNewAvatarAsset(asset); // Save for upload
+    }
+  };
+
   const onSave = async () => {
-    // 1️⃣ Validate Empty
-    if (!name.trim() || !email.trim() || !phone.trim()) {
-      Alert.alert("Thiếu thông tin", "Vui lòng nhập đầy đủ tất cả các trường.");
-      return;
-    }
-
-    // 2️⃣ Validate Phone
-    const phoneRegex = /^0\d{9}$/;
-    if (!phoneRegex.test(phone.trim())) {
-      Alert.alert("Sai định dạng", "Số điện thoại phải gồm 10 số và bắt đầu bằng 0.");
-      return;
-    }
-
-    // 3️⃣ Validate Email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert("Sai định dạng", "Email không hợp lệ.");
+    // 1️⃣ Validate Name
+    if (!name.trim()) {
+      Alert.alert("Thiếu thông tin", "Họ và tên không được để trống.");
       return;
     }
 
     setLoading(true);
     try {
-        const payload = {
-            full_name: name.trim(),
-            birthday: dob.toISOString(), // Send ISO format to backend
-            gender: gender === "Nam" ? "male" : gender === "Nữ" ? "female" : "other",
-            email: email.trim(),
-            phone: phone.trim()
-        };
+        // Create FormData
+        const formData = new FormData();
+        
+        // Append fields matches updateProfileSchema
+        formData.append("full_name", name.trim());
+        formData.append("birthday", dob.toISOString());
+        formData.append("gender", gender === "Nam" ? "Male" : gender === "Nữ" ? "Female" : "Other");
+        
+        // Append Avatar if changed
+        if (newAvatarAsset) {
+            // Get filename or generate one
+            let filename = newAvatarAsset.uri.split('/').pop();
+            
+            // Infer type from extension
+            let match = /\.(\w+)$/.exec(filename);
+            let type = match ? `image/${match[1]}` : `image`;
 
-        await updateUser(incoming.user_id || incoming.id, payload);
+            formData.append("avatar", {
+                uri: newAvatarAsset.uri,
+                name: filename,
+                type: type,
+            });
+        }
+
+        // Call the new API
+        await updateProfile(formData);
 
         Alert.alert("Thành công", "Thông tin đã được cập nhật!", [
             { text: "OK", onPress: () => navigation.goBack() }
         ]);
 
     } catch (err) {
-        console.error("Update User Error:", err);
+        console.error("Update Profile Error:", err);
         Alert.alert("Lỗi", err.message || "Không thể cập nhật thông tin.");
     } finally {
         setLoading(false);
@@ -152,16 +181,17 @@ export default function EditProfileScreen() {
             <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
               <View>
                 <Image
-                  source={{ uri: avatar }}
+                  source={{ uri: avatarUri }}
                   style={styles.avatar}
                 />
-                <Pressable
-                  onPress={() => Alert.alert("Tính năng đang phát triển", "Chức năng tải ảnh sẽ sớm ra mắt.")}
+                <TouchableOpacity
+                  onPress={pickImage}
                   style={styles.cameraBtn}
                 >
                   <Ionicons name="camera" size={16} color="#fff" />
-                </Pressable>
+                </TouchableOpacity>
               </View>
+              <Text style={styles.changePhotoText}>Chạm vào biểu tượng máy ảnh để đổi ảnh</Text>
             </View>
 
             {/* Basic Info */}
@@ -194,8 +224,8 @@ export default function EditProfileScreen() {
                 <DateTimePicker
                     value={dob}
                     mode="date"
-                    display="default" // Android default picker
-                    maximumDate={new Date()} // Can't be born in the future
+                    display="default" 
+                    maximumDate={new Date()} 
                     onChange={handleDateChange}
                 />
             )}
@@ -207,24 +237,23 @@ export default function EditProfileScreen() {
 
             <View style={styles.divider} />
 
-            {/* Contact Info */}
+            {/* Contact Info (READ ONLY) */}
             <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
 
-            {/* Note: Often email/phone are unique keys, be careful letting users edit them without OTP verification */}
             <CustomInput
                 label="Email"
                 value={email}
-                onChangeText={setEmail}
+                editable={false}
                 placeholder="example@email.com"
-                keyboardType="email-address"
+                note="Liên hệ quản lý để thay đổi email."
             />
 
             <CustomInput
                 label="Số điện thoại"
                 value={phone}
-                onChangeText={setPhone}
+                editable={false}
                 placeholder="0912345678"
-                keyboardType="phone-pad"
+                note="Liên hệ quản lý để thay đổi số điện thoại."
             />
 
           </View>
@@ -293,12 +322,12 @@ function GenderChips({ value, onChange }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.brand, // Blue Background
+    backgroundColor: colors.brand, 
   },
   contentContainer: {
     flex: 1,
-    backgroundColor: "#F3F4F6", // Gray Sheet
-    marginTop: -24, // Overlap Header
+    backgroundColor: "#F3F4F6", 
+    marginTop: -24, 
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xl + 24, 
     borderTopLeftRadius: 0, 
@@ -332,7 +361,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "white"
+    borderColor: "white",
+    elevation: 2
+  },
+  changePhotoText: {
+      marginTop: 8,
+      fontSize: 12,
+      color: '#6B7280'
   },
   sectionTitle: {
     fontSize: 16,
@@ -354,9 +389,15 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
   },
   disabledInput: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#F3F4F6", // Gray background for disabled
+    borderColor: "#E5E7EB"
   },
-  // Mimics TextInput but touchable
+  noteText: {
+      fontSize: 11,
+      color: '#9CA3AF',
+      marginTop: 4,
+      fontStyle: 'italic'
+  },
   dateInput: {
     borderWidth: 1,
     borderColor: "#E5E7EB",
