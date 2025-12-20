@@ -13,6 +13,8 @@ import {
 } from "react-native";
 // FIX: Use modern keyboard controller
 import { KeyboardProvider, KeyboardAvoidingView } from "react-native-keyboard-controller"; 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { Ionicons } from "@expo/vector-icons";
@@ -68,6 +70,7 @@ const TypingIndicator = () => {
 
 export default function ChatbotScreen() {
   const { token } = useAuthStore();
+  const insets = useSafeAreaInsets();
   
   const [messages, setMessages] = useState([]); 
   const [suggestedQuestions, setSuggestedQuestions] = useState([]);
@@ -311,7 +314,8 @@ export default function ChatbotScreen() {
                 )}
 
                 {/* Input Bar */}
-                <View style={styles.inputContainer}>
+                {/* FIX: Add dynamic bottom padding */}
+                <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
                     <TextInput
                         style={styles.input}
                         placeholder="Hỏi SAMI..."
@@ -342,12 +346,12 @@ export default function ChatbotScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.brand, // Blue background
+    backgroundColor: colors.brand, 
   },
   sheetContainer: {
     flex: 1,
-    backgroundColor: "#F3F4F6", // Gray Sheet
-    marginTop: -24, // Overlap Header
+    backgroundColor: "#F3F4F6", 
+    marginTop: -24, 
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     overflow: 'hidden',
@@ -434,7 +438,7 @@ const styles = StyleSheet.create({
       flexDirection: "row",
       alignItems: "center",
       padding: 12,
-      paddingBottom: 16, 
+      // Padding bottom handled inline
       backgroundColor: "white",
       borderTopWidth: 1,
       borderTopColor: "#E5E7EB",
