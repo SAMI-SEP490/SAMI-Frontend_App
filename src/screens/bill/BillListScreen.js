@@ -33,6 +33,15 @@ const formatCurrency = (amount) => {
   return VND.format(amount);
 };
 
+// Filter Definitions
+const FILTER_OPTIONS = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'pending', label: 'Chưa thanh toán' },
+  { key: 'overdue', label: 'Quá hạn' },
+  { key: 'paid', label: 'Đã thanh toán' },
+  { key: 'cancelled', label: 'Đã hủy' },
+];
+
 function BillListScreen() {
   const navigation = useNavigation();
   const [bills, setBills] = useState([]);
@@ -40,6 +49,9 @@ function BillListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
+  
+  // NEW: Filter State
+  const [filterStatus, setFilterStatus] = useState('all');
 
   const fetchBills = async () => {
     try {
@@ -47,12 +59,18 @@ function BillListScreen() {
       setError("");
       const res = await getAllTenantBills();
       const list = res?.data || [];
-      // Sort: Unpaid first, then by date desc
+      
+      // Sort: Actionable (Pending/Overdue) first, then History (Paid/Cancelled)
       list.sort((a, b) => {
-        if (a.status === 'paid' && b.status !== 'paid') return 1;
-        if (a.status !== 'paid' && b.status === 'paid') return -1;
+        const isHistoryA = a.status === 'paid' || a.status === 'cancelled';
+        const isHistoryB = b.status === 'paid' || b.status === 'cancelled';
+
+        if (isHistoryA && !isHistoryB) return 1; 
+        if (!isHistoryA && isHistoryB) return -1; 
+        
         return new Date(b.created_at) - new Date(a.created_at);
       });
+      
       setBills(list);
     } catch (err) {
       console.log("Error fetch bills:", err);
@@ -82,16 +100,37 @@ function BillListScreen() {
     );
   };
 
+  // NEW: Filter Logic
+  const filteredBills = useMemo(() => {
+    if (filterStatus === 'all') return bills;
+    return bills.filter((b) => b.status === filterStatus);
+  }, [bills, filterStatus]);
+
+  // Calculate Total from Selected (Available in Filtered View)
   const totalAmount = useMemo(() => {
-    return bills
+    // We only sum up selected bills that are currently visible
+    return filteredBills
       .filter((b) => selectedIds.includes(b.bill_id))
       .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-  }, [bills, selectedIds]);
+  }, [filteredBills, selectedIds]);
 
   const handleGoToPayment = () => {
     const selectedBills = bills.filter((b) => selectedIds.includes(b.bill_id));
     if (!selectedBills.length) return;
     navigation.navigate("OnlinePaymentScreen", { bills: selectedBills });
+  };
+
+  const getStatusInfo = (status) => {
+      switch (status) {
+          case 'paid': 
+              return { label: 'Đã thanh toán', bg: '#DCFCE7', text: '#16A34A' };
+          case 'overdue':
+              return { label: 'Quá hạn', bg: '#FEE2E2', text: '#EF4444' };
+          case 'cancelled':
+              return { label: 'Đã hủy', bg: '#F3F4F6', text: '#6B7280' };
+          default:
+              return { label: 'Chưa thanh toán', bg: '#FEF3C7', text: '#D97706' };
+      }
   };
 
   return (
@@ -114,6 +153,26 @@ function BillListScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* NEW: Filter Chips */}
+        <View style={styles.filterContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
+            {FILTER_OPTIONS.map((option) => {
+              const isActive = filterStatus === option.key;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  onPress={() => setFilterStatus(option.key)}
+                  style={[styles.filterChip, isActive && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {loading && !refreshing ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color={colors.brand} />
@@ -127,16 +186,19 @@ function BillListScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.brand]} />
             }
           >
-            {!loading && !error && bills.length === 0 && (
-              <View style={styles.centerBox}>
-                <Text style={{ color: colors.muted }}>Không có hóa đơn nào.</Text>
-              </View>
+            {!loading && !error && filteredBills.length === 0 && (
+                <View style={styles.centerBox}>
+                    <Text style={{ color: colors.muted, marginTop: 40 }}>Không có hóa đơn nào.</Text>
+                </View>
             )}
 
-            {bills.map((bill) => {
+            {filteredBills.map((bill) => {
               const isSelected = selectedIds.includes(bill.bill_id);
               const isPaid = bill.status === "paid";
-              const isOverdue = bill.status === "overdue";
+              const isCancelled = bill.status === "cancelled";
+              
+              const statusInfo = getStatusInfo(bill.status);
+              const isDisabled = isPaid || isCancelled;
 
               return (
                 <TouchableOpacity
@@ -144,56 +206,47 @@ function BillListScreen() {
                   style={[
                     styles.billCard,
                     isSelected && styles.billCardSelected,
-                    isPaid && { opacity: 0.6 }
+                    isDisabled && { opacity: 0.6 }
                   ]}
                   onPress={() => toggleSelect(bill.bill_id)}
                   activeOpacity={0.8}
-                  disabled={isPaid}
+                  disabled={isDisabled}
                 >
-                  {/* Header: ID + Status */}
                   <View style={styles.cardHeader}>
                     <Text style={styles.billTitle}>
                       #{bill.bill_number || bill.bill_id}
                     </Text>
                     <View
-                      style={[
-                        styles.statusBadge,
-                        isPaid && { backgroundColor: "#DCFCE7" },
-                        isOverdue && { backgroundColor: "#FEE2E2" },
-                        bill.status === "pending" && { backgroundColor: "#FEF3C7" },
-                      ]}
+                        style={[
+                            styles.statusBadge,
+                            { backgroundColor: statusInfo.bg }
+                        ]}
                     >
-                      <Text style={[
-                        styles.statusText,
-                        isPaid && { color: "#16A34A" },
-                        isOverdue && { color: "#EF4444" },
-                        bill.status === "pending" && { color: "#D97706" },
-                      ]}>
-                        {bill.status === 'paid' ? 'Đã thanh toán' : bill.status === 'overdue' ? 'Quá hạn' : 'Chưa thanh toán'}
-                      </Text>
+                        <Text style={[
+                            styles.statusText,
+                            { color: statusInfo.text }
+                        ]}>
+                            {statusInfo.label}
+                        </Text>
                     </View>
                   </View>
-
+                  
                   <View style={styles.divider} />
 
-                  {/* Row 1: Period */}
                   <View style={styles.row}>
                     <Text style={styles.label}>Kỳ thanh toán:</Text>
                     <Text style={styles.value}>
-                      {formatDate(bill.billing_period_start)} - {formatDate(bill.billing_period_end)}
+                       {formatDate(bill.billing_period_start)} - {formatDate(bill.billing_period_end)}
                     </Text>
                   </View>
 
-                  {/* Description Block - Full Text */}
-                  {/* Changed from Row to Vertical Block to support long text */}
                   <View style={styles.descriptionBlock}>
                     <Text style={styles.label}>Nội dung:</Text>
                     <Text style={styles.descriptionText}>
-                      {bill.description || ""}
+                       {bill.description || ""}
                     </Text>
                   </View>
-
-                  {/* Row 3: Amount */}
+                  
                   <View style={[styles.row, { marginTop: 4 }]}>
                     <Text style={styles.label}>Số tiền:</Text>
                     <Text style={[styles.amountText, { color: colors.brand }]}>
@@ -210,7 +263,6 @@ function BillListScreen() {
           </ScrollView>
         )}
 
-        {/* Bottom Floating Bar */}
         <View style={styles.bottomBar}>
           <View>
             <Text style={styles.totalLabel}>Tổng tiền:</Text>
@@ -241,14 +293,14 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 24,
+    paddingTop: spacing.xl + 24, 
     overflow: "hidden"
   },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   title: { fontSize: 18, fontWeight: "700", color: "#111827" },
   subtitle: { fontSize: 13, color: "#6B7280", marginTop: 2 },
@@ -261,6 +313,35 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   historyText: { fontSize: 12, color: colors.brand, fontWeight: "600" },
+  
+  // FILTER STYLES
+  filterContainer: {
+    marginBottom: 16,
+    height: 40,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "white",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    justifyContent: 'center'
+  },
+  filterChipActive: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
+  },
+  filterText: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontWeight: "600"
+  },
+  filterTextActive: {
+    color: "white"
+  },
+
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   billCard: {
     backgroundColor: "white",
@@ -283,16 +364,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   label: { fontSize: 13, color: "#6B7280", flex: 1 },
   value: { fontSize: 13, color: "#111827", fontWeight: "500", flex: 2, textAlign: 'right' },
-
-  // New Description Styles
+  
   descriptionBlock: {
-    marginBottom: 6,
+      marginBottom: 6,
   },
   descriptionText: {
-    fontSize: 13,
-    color: "#374151",
-    marginTop: 2,
-    lineHeight: 18 // Better readability for long text
+      fontSize: 13,
+      color: "#374151",
+      marginTop: 2,
+      lineHeight: 18
   },
 
   amountText: { fontSize: 15, fontWeight: "700", textAlign: 'right', flex: 2 },
