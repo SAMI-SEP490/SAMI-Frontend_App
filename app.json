@@ -2,6 +2,7 @@
   "expo": {
     "name": "SAMI",
     "slug": "SAMI",
+    "scheme": "sami",
     "extra": {
       "apiUrl": ""
     },
