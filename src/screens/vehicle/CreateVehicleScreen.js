@@ -28,6 +28,13 @@ const VEHICLE_TYPES = [
   { label: "Khác", value: "other" },
 ];
 
+// --- HELPER ---
+const formatDateDisplay = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN"); // DD/MM/YYYY
+};
+
 const CreateVehicleScreen = () => {
   const navigation = useNavigation();
   const today = new Date().toISOString().split("T")[0];
@@ -48,20 +55,29 @@ const CreateVehicleScreen = () => {
   const handleChange = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  const handleDateChange = (event, selectedDate) => {
+  const handleEndDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
-    if (selectedDate) {
-      handleChange("end_date", selectedDate.toISOString().split("T")[0]);
+    if (!selectedDate) return;
+
+    const startDateObj = new Date(form.start_date);
+    startDateObj.setHours(0,0,0,0);
+    selectedDate.setHours(0,0,0,0);
+
+    if (selectedDate <= startDateObj) {
+        Alert.alert("Lỗi ngày", "Ngày kết thúc phải sau ngày bắt đầu.");
+        return;
     }
+
+    handleChange("end_date", selectedDate.toISOString().split("T")[0]);
   };
 
+  const clearEndDate = () => {
+      handleChange("end_date", null);
+  }
+
   const handleSubmit = async () => {
-    if (!form.type) {
-      return Alert.alert("Thiếu thông tin", "Vui lòng chọn loại phương tiện.");
-    }
-    if (!form.license_plate) {
-      return Alert.alert("Thiếu thông tin", "Vui lòng nhập biển số xe.");
-    }
+    if (!form.type) return Alert.alert("Thiếu thông tin", "Vui lòng chọn loại phương tiện.");
+    if (!form.license_plate) return Alert.alert("Thiếu thông tin", "Vui lòng nhập biển số xe.");
     
     setLoading(true);
     try {
@@ -153,24 +169,37 @@ const CreateVehicleScreen = () => {
 
             <Text style={styles.label}>Ngày bắt đầu</Text>
             <View style={[styles.input, { backgroundColor: "#F3F4F6", justifyContent: 'center' }]}>
-                <Text style={{color: '#6B7280'}}>{form.start_date}</Text>
+                {/* FIX: Use helper function */}
+                <Text style={{color: '#6B7280'}}>{formatDateDisplay(form.start_date)}</Text>
             </View>
 
             <Text style={styles.label}>Ngày kết thúc (Tùy chọn)</Text>
-            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
-                 <Text style={{color: form.end_date ? '#111827' : '#9CA3AF'}}>
-                     {form.end_date || "Chọn ngày kết thúc"}
-                 </Text>
-                 <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={{position: 'absolute', right: 10, top: 12}} />
-            </TouchableOpacity>
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <TouchableOpacity 
+                    onPress={() => setShowDatePicker(true)} 
+                    style={[styles.input, {flex: 1}]}
+                >
+                    <Text style={{color: form.end_date ? '#111827' : '#9CA3AF'}}>
+                        {/* FIX: Use helper function */}
+                        {form.end_date ? formatDateDisplay(form.end_date) : "Chọn ngày kết thúc"}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={{position: 'absolute', right: 10, top: 12}} />
+                </TouchableOpacity>
+                
+                {form.end_date && (
+                    <TouchableOpacity onPress={clearEndDate} style={{marginLeft: 8, padding: 4}}>
+                        <Ionicons name="close-circle" size={24} color="#EF4444" />
+                    </TouchableOpacity>
+                )}
+            </View>
 
             {showDatePicker && (
               <DateTimePicker
-                value={form.end_date ? new Date(form.end_date) : new Date()}
+                value={form.end_date ? new Date(form.end_date) : new Date(new Date().getTime() + 86400000)}
                 mode="date"
                 display="default"
-                minimumDate={new Date(today)}
-                onChange={handleDateChange}
+                minimumDate={new Date(new Date().getTime() + 86400000)}
+                onChange={handleEndDateChange}
               />
             )}
 
