@@ -8,7 +8,8 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
-  Modal
+  Modal,
+  Alert
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
 import { colors } from "../../theme/colors";
-import { getGuestRegistrations } from "../../service/api/guest";
+import { getGuestRegistrations, cancelGuestRegistration } from "../../service/api/guest";
 
 // Status Mapping
 const STATUS_CONFIG = {
@@ -31,7 +32,7 @@ export default function GuestRegistrationListScreen() {
   
   // Data State
   const [guestRegistrations, setGuestRegistrations] = useState([]);
-  const [filteredData, setFilteredData] = useState([]); // Filtered List
+  const [filteredData, setFilteredData] = useState([]); 
   
   // Filter State
   const [filterStatus, setFilterStatus] = useState(null);
@@ -47,7 +48,7 @@ export default function GuestRegistrationListScreen() {
       const registrations = res?.data?.registrations || [];
       
       setGuestRegistrations(registrations);
-      setFilteredData(registrations); // Initialize
+      setFilteredData(registrations);
     } catch (error) {
       console.error("Lỗi lấy danh sách:", error);
     } finally {
@@ -62,7 +63,7 @@ export default function GuestRegistrationListScreen() {
     }, [])
   );
 
-  // Filter Logic Effect
+  // Filter Logic
   useEffect(() => {
     let data = guestRegistrations;
     if (filterStatus) {
@@ -74,6 +75,38 @@ export default function GuestRegistrationListScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchGuestRegistrations();
+  };
+
+  // --- NEW: Cancel Handler ---
+  const handleCancel = (item) => {
+    Alert.alert(
+      "Hủy đăng ký",
+      "Bạn có chắc chắn muốn hủy đơn đăng ký này không?",
+      [
+        { text: "Không", style: "cancel" },
+        {
+          text: "Hủy đơn",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              // Backend expects { cancellation_reason }
+              await cancelGuestRegistration(item.registration_id, {
+                  cancellation_reason: "Đơn hủy qua app."
+              });
+              
+              // Refresh list after success
+              fetchGuestRegistrations();
+              
+            } catch (error) {
+              setLoading(false);
+              const msg = error?.response?.data?.message || "Không thể hủy đơn.";
+              Alert.alert("Lỗi", msg);
+            }
+          }
+        }
+      ]
+    );
   };
 
   // --- FILTER MODAL ---
@@ -186,8 +219,23 @@ export default function GuestRegistrationListScreen() {
             </View>
         )}
 
+        {/* Action Row for Pending Items */}
         {item.status === 'pending' && (
-            <Text style={styles.editText}>Chạm để chỉnh sửa</Text>
+            <View style={styles.actionRow}>
+                {/* Cancel Button */}
+                <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => handleCancel(item)}
+                >
+                    <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+                    <Text style={styles.cancelText}>Hủy đơn</Text>
+                </TouchableOpacity>
+
+                {/* Edit Text (Right Aligned) */}
+                <View style={{flex: 1, alignItems: 'flex-end'}}>
+                    <Text style={styles.editText}>Chạm để chỉnh sửa</Text>
+                </View>
+            </View>
         )}
       </TouchableOpacity>
     );
@@ -322,12 +370,33 @@ const styles = StyleSheet.create({
       padding: 8,
       borderRadius: 6
   },
+  
+  // NEW: Action Row Styles
+  actionRow: {
+      marginTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: '#F3F4F6',
+      paddingTop: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+  },
+  cancelButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 4,
+      paddingRight: 10
+  },
+  cancelText: {
+      color: '#EF4444',
+      fontSize: 12,
+      fontWeight: '600',
+      marginLeft: 4
+  },
   editText: {
-      marginTop: 8,
       fontSize: 12,
       color: colors.brand,
       fontWeight: "600",
-      textAlign: 'right'
   },
   
   // Modal Styles
