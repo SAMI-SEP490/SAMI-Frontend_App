@@ -36,7 +36,7 @@ const formatCurrency = (amount) => {
 // Filter Definitions
 const FILTER_OPTIONS = [
   { key: 'all', label: 'Tất cả' },
-  { key: 'pending', label: 'Chưa thanh toán' },
+  { key: 'issued', label: 'Chưa thanh toán' },
   { key: 'overdue', label: 'Quá hạn' },
   { key: 'paid', label: 'Đã thanh toán' },
   { key: 'cancelled', label: 'Đã hủy' },
@@ -111,7 +111,7 @@ function BillListScreen() {
     // We only sum up selected bills that are currently visible
     return filteredBills
       .filter((b) => selectedIds.includes(b.bill_id))
-      .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+      .reduce((sum, b) => sum + Number(b.total_amount || 0), 0); 
   }, [filteredBills, selectedIds]);
 
   const handleGoToPayment = () => {
