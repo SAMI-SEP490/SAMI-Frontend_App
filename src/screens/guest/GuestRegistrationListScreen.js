@@ -8,6 +8,7 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
+  Modal
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,7 +28,15 @@ const STATUS_CONFIG = {
 
 export default function GuestRegistrationListScreen() {
   const navigation = useNavigation();
+  
+  // Data State
   const [guestRegistrations, setGuestRegistrations] = useState([]);
+  const [filteredData, setFilteredData] = useState([]); // Filtered List
+  
+  // Filter State
+  const [filterStatus, setFilterStatus] = useState(null);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -36,7 +45,9 @@ export default function GuestRegistrationListScreen() {
       if (!refreshing) setLoading(true);
       const res = await getGuestRegistrations({ page: 1, limit: 50 });
       const registrations = res?.data?.registrations || [];
+      
       setGuestRegistrations(registrations);
+      setFilteredData(registrations); // Initialize
     } catch (error) {
       console.error("Lỗi lấy danh sách:", error);
     } finally {
@@ -51,9 +62,69 @@ export default function GuestRegistrationListScreen() {
     }, [])
   );
 
+  // Filter Logic Effect
+  useEffect(() => {
+    let data = guestRegistrations;
+    if (filterStatus) {
+      data = data.filter((item) => item.status === filterStatus);
+    }
+    setFilteredData(data);
+  }, [guestRegistrations, filterStatus]);
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchGuestRegistrations();
+  };
+
+  // --- FILTER MODAL ---
+  const FilterModal = () => {
+    return (
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Lọc theo trạng thái</Text>
+
+            <View style={styles.wrapRow}>
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.chip, filterStatus === key && styles.chipActive]}
+                  onPress={() => setFilterStatus(key === filterStatus ? null : key)}
+                >
+                  <Text style={[styles.chipText, filterStatus === key && styles.chipTextActive]}>
+                    {config.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, {backgroundColor: '#F3F4F6'}]} 
+                onPress={() => {
+                    setFilterStatus(null);
+                    setFilterModalVisible(false);
+                }}
+              >
+                <Text style={{color: '#374151', fontWeight: '600'}}>Xóa lọc</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalBtn, {backgroundColor: colors.brand}]} 
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={{color: 'white', fontWeight: '600'}}>Áp dụng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   const renderItem = ({ item, index }) => {
@@ -126,6 +197,7 @@ export default function GuestRegistrationListScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <Header title="Đăng ký khách" isHome={false} />
+      <FilterModal />
 
       <View style={styles.contentContainer}>
         {/* Top Action Bar */}
@@ -137,13 +209,21 @@ export default function GuestRegistrationListScreen() {
             <Ionicons name="add-circle" size={20} color="white" />
             <Text style={styles.addButtonText}>Tạo đơn mới</Text>
           </TouchableOpacity>
+
+          {/* Filter Button */}
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => setFilterModalVisible(true)}
+          >
+            <Ionicons name="filter" size={20} color={colors.brand} />
+          </TouchableOpacity>
         </View>
 
         {loading && !refreshing ? (
           <ActivityIndicator size="large" color={colors.brand} style={{ marginTop: 40 }} />
         ) : (
           <FlatList
-            data={guestRegistrations}
+            data={filteredData} // Use Filtered Data
             renderItem={renderItem}
             keyExtractor={(item) => item.registration_id.toString()}
             refreshControl={
@@ -152,7 +232,9 @@ export default function GuestRegistrationListScreen() {
             contentContainerStyle={{ paddingBottom: 40 }}
             ListEmptyComponent={
               <View style={{ alignItems: "center", marginTop: 40 }}>
-                <Text style={{ color: colors.muted }}>Chưa có đăng ký khách nào.</Text>
+                <Text style={{ color: colors.muted }}>
+                   {guestRegistrations.length === 0 ? "Chưa có đăng ký khách nào." : "Không tìm thấy kết quả phù hợp."}
+                </Text>
               </View>
             }
           />
@@ -171,12 +253,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 24, // Clear header
+    paddingTop: spacing.xl + 24, 
   },
   topRow: {
+    flexDirection: "row",
+    gap: 10,
     marginBottom: spacing.md,
   },
   addButton: {
+    flex: 1,
     backgroundColor: colors.brand,
     flexDirection: "row",
     alignItems: "center",
@@ -187,6 +272,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   addButtonText: { color: "white", fontWeight: "700", fontSize: 15 },
+  filterButton: {
+    backgroundColor: "white",
+    width: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
   card: {
     backgroundColor: "white",
     borderRadius: 16,
@@ -234,5 +328,37 @@ const styles = StyleSheet.create({
       color: colors.brand,
       fontWeight: "600",
       textAlign: 'right'
-  }
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "85%",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16, textAlign: 'center' },
+  wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "white",
+  },
+  chipActive: {
+    borderColor: colors.brand,
+    backgroundColor: "#EFF6FF",
+  },
+  chipText: { fontSize: 13, color: "#374151" },
+  chipTextActive: { color: colors.brand, fontWeight: "600" },
+  modalActions: { flexDirection: "row", gap: 10, marginTop: 24 },
+  modalBtn: { flex: 1, padding: 12, borderRadius: 10, alignItems: "center" },
 });
