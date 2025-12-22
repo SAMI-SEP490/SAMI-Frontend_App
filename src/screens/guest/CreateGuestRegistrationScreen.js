@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  StatusBar,
   ActivityIndicator,
   Platform,
   Alert,
@@ -14,8 +13,6 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { useNavigation } from "@react-navigation/native";
-import * as SecureStore from "expo-secure-store";
-import { jwtDecode } from "jwt-decode";
 import { Ionicons } from "@expo/vector-icons";
 
 import Header from "../../components/Header";
@@ -23,6 +20,7 @@ import { spacing } from "../../theme/spacing";
 import { colors } from "../../theme/colors";
 import { createGuestRegistration } from "../../service/api/guest";
 import { getRoomsByUserId } from "../../service/api/room";
+import { useAuthStore } from "../../auth"; // Import store
 
 export default function CreateGuestRegistrationScreen() {
   const navigation = useNavigation();
@@ -39,22 +37,23 @@ export default function CreateGuestRegistrationScreen() {
   const [showArrivalPicker, setShowArrivalPicker] = useState(false);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
 
+  const user = useAuthStore((state) => state.user);
+
   useEffect(() => {
     const fetchRoomId = async () => {
       try {
-        const token = await SecureStore.getItemAsync("sami_access_token");
-        if (!token) return;
-        const decoded = jwtDecode(token);
-        const userId = decoded?.id || decoded?.userId;
+        const userId = user?.id || user?.user_id;
+        if (!userId) return;
+
         const roomRes = await getRoomsByUserId(userId);
-        const currentRoom = roomRes?.data?.current_room;
+        const currentRoom = roomRes?.current_room || roomRes?.data?.current_room;
         if (currentRoom) setRoomId(currentRoom.room_id);
       } catch (error) {
-        console.error(error);
+        console.error("Room Init Error:", error);
       }
     };
     fetchRoomId();
-  }, []);
+  }, [user]);
 
   const addGuest = () =>
     setGuestDetails([
@@ -118,7 +117,8 @@ export default function CreateGuestRegistrationScreen() {
           { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể tạo đơn đăng ký.");
+        const msg = error.response?.data?.message || "Không thể tạo đơn đăng ký.";
+        Alert.alert("Lỗi", msg);
     } finally {
       setLoading(false);
     }

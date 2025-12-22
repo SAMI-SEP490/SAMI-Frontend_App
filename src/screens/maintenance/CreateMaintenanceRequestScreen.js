@@ -8,13 +8,10 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-  StatusBar,
   KeyboardAvoidingView,
   Platform
 } from "react-native";
-import * as SecureStore from "expo-secure-store";
 import { useNavigation } from "@react-navigation/native";
-import { jwtDecode } from "jwt-decode";
 import RNPickerSelect from "react-native-picker-select";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -23,13 +20,14 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { getRoomsByUserId } from "../../service/api/room";
 import { createMaintenanceRequest } from "../../service/api/maintenance";
+import { useAuthStore } from "../../auth"; // Import store
 
 const maintenanceTypes = [
   { key: "plumbing", label: "Ống nước" },
   { key: "electrical", label: "Điện" },
   { key: "hvac", label: "Điều hòa" },
   { key: "carpentry", label: "Mộc" },
-  { key: "structural", label: "Kết cấu" }, // Added Structural
+  { key: "structural", label: "Kết cấu" },
   { key: "cleaning", label: "Vệ sinh" },
   { key: "other", label: "Khác" },
 ];
@@ -53,25 +51,29 @@ const CreateMaintenanceRequestScreen = () => {
   const [priority, setPriority] = useState("low");
   const [note, setNote] = useState("");
 
+  const user = useAuthStore((state) => state.user);
+
   useEffect(() => {
     const init = async () => {
       try {
-        const storedToken = await SecureStore.getItemAsync("sami_access_token");
-        if (!storedToken) return;
-        const decoded = jwtDecode(storedToken);
-        const userId = decoded?.id || decoded?.userId;
+        const userId = user?.id || user?.user_id;
+        if (!userId) return;
+
         const roomRes = await getRoomsByUserId(userId);
-        const currentRoom = roomRes.data?.current_room;
+        const currentRoom = roomRes?.current_room || roomRes?.data?.current_room;
+        
         if (currentRoom) {
             setRoomId(currentRoom.room_id);
             setRoomInfo(currentRoom);
+        } else {
+            Alert.alert("Thông báo", "Tài khoản của bạn chưa được gán vào phòng nào.");
         }
       } catch (err) {
-        console.error(err);
+        console.error("Room Init Error:", err);
       }
     };
     init();
-  }, []);
+  }, [user]);
 
   const handleSubmit = async () => {
     if (!title || !description || !category ) {
@@ -115,11 +117,18 @@ const CreateMaintenanceRequestScreen = () => {
       >
         <ScrollView contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
           
-          {roomInfo.room_number && (
+          {roomInfo.room_number ? (
               <View style={styles.roomBanner}>
                   <Ionicons name="home" size={18} color={colors.brand} />
                   <Text style={styles.roomText}>
                       Phòng {roomInfo.room_number} - {roomInfo.building_name}
+                  </Text>
+              </View>
+          ) : (
+             <View style={[styles.roomBanner, {borderColor: '#EF4444', backgroundColor: '#FEF2F2'}]}>
+                  <Ionicons name="alert-circle" size={18} color="#EF4444" />
+                  <Text style={[styles.roomText, {color: '#EF4444'}]}>
+                      Chưa có thông tin phòng
                   </Text>
               </View>
           )}

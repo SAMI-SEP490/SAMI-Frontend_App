@@ -11,8 +11,6 @@ import {
   RefreshControl,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import * as SecureStore from "expo-secure-store";
-import { jwtDecode } from "jwt-decode";
 import { Ionicons } from "@expo/vector-icons";
 
 import Header from "../../components/Header";
@@ -20,6 +18,7 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { getRoomMaintenanceHistory, deleteMaintenanceRequest } from "../../service/api/maintenance";
 import { getRoomsByUserId } from "../../service/api/room";
+import { useAuthStore } from "../../auth"; // Import store
 
 // --- FULL STATUS TRANSLATION ---
 const STATUS_CONFIG = {
@@ -48,21 +47,28 @@ const MaintenanceListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Get user from store directly
+  const user = useAuthStore((state) => state.user);
+
   const fetchMaintenanceData = async () => {
     try {
       if(!refreshing) setLoading(true);
-      const storedToken = await SecureStore.getItemAsync("sami_access_token");
-      if (!storedToken) return;
-
-      const decoded = jwtDecode(storedToken);
-      const userId = decoded?.id || decoded?.userId;
       
+      // Use ID from store
+      const userId = user?.id || user?.user_id;
+      if (!userId) return;
+
       const roomRes = await getRoomsByUserId(userId);
-      const roomInfo = roomRes?.data?.current_room;
-      if (!roomInfo) throw new Error("Chưa có phòng");
+      const roomInfo = roomRes?.current_room || roomRes?.data?.current_room;
+      
+      if (!roomInfo) {
+          // If no room found, just stop (or handle empty state)
+          setLoading(false);
+          return;
+      }
 
       const historyRes = await getRoomMaintenanceHistory(roomInfo.room_id);
-      const historyData = historyRes?.data?.data || [];
+      const historyData = historyRes?.data?.data || historyRes?.data || [];
 
       const mappedData = historyData.map((item) => ({
         ...item,

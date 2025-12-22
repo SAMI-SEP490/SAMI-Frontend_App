@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  StatusBar,
   ActivityIndicator,
   Platform,
   Alert,
@@ -14,8 +13,6 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import * as SecureStore from "expo-secure-store";
-import { jwtDecode } from "jwt-decode";
 import { Ionicons } from "@expo/vector-icons";
 
 import Header from "../../components/Header";
@@ -24,9 +21,9 @@ import { colors } from "../../theme/colors";
 import {
   getGuestRegistrationById,
   updateGuestRegistration,
-  // cancelGuestRegistration // Assuming you have this API, if not, remove the cancel button part
 } from "../../service/api/guest";
 import { getRoomsByUserId } from "../../service/api/room";
+import { useAuthStore } from "../../auth"; // Import store
 
 export default function UpdateGuestRegistrationScreen() {
   const navigation = useNavigation();
@@ -44,19 +41,20 @@ export default function UpdateGuestRegistrationScreen() {
   const [showArrivalPicker, setShowArrivalPicker] = useState(false);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
 
+  const user = useAuthStore((state) => state.user);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = await SecureStore.getItemAsync("sami_access_token");
-        if (!token) return;
-        const decoded = jwtDecode(token);
-        const userId = decoded?.id || decoded?.userId;
+        const userId = user?.id || user?.user_id;
+        if (!userId) return;
+
         const roomRes = await getRoomsByUserId(userId);
-        const currentRoom = roomRes?.data?.current_room;
+        const currentRoom = roomRes?.current_room || roomRes?.data?.current_room;
         if (currentRoom) setRoomId(currentRoom.room_id);
 
         const res = await getGuestRegistrationById(registrationId);
-        const registration = res?.data?.registration;
+        const registration = res?.data?.registration || res?.registration;
         
         if (registration) {
             setArrivalDate(new Date(registration.arrival_date));
@@ -67,6 +65,7 @@ export default function UpdateGuestRegistrationScreen() {
             );
         }
       } catch (error) {
+        console.log("Error loading guest reg:", error);
         Alert.alert("Lỗi", "Không thể tải thông tin đơn.");
         navigation.goBack();
       } finally {
@@ -74,7 +73,7 @@ export default function UpdateGuestRegistrationScreen() {
       }
     };
     fetchData();
-  }, [registrationId]);
+  }, [registrationId, user]);
 
   const addGuest = () =>
     setGuestDetails([
@@ -97,7 +96,10 @@ export default function UpdateGuestRegistrationScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!roomId) return;
+    if (!roomId) {
+        Alert.alert("Lỗi", "Không tìm thấy phòng.");
+        return;
+    }
     setSubmitting(true);
     try {
       const payload = {
@@ -117,7 +119,8 @@ export default function UpdateGuestRegistrationScreen() {
           { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể cập nhật.");
+      const msg = error.response?.data?.message || "Không thể cập nhật.";
+      Alert.alert("Lỗi", msg);
     } finally {
       setSubmitting(false);
     }
