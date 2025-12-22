@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
@@ -28,6 +28,7 @@ const STATUS_CONFIG = {
 };
 
 export default function ContractScreen() {
+  const navigation = useNavigation();
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -66,7 +67,11 @@ export default function ContractScreen() {
     const s = STATUS_CONFIG[item.status] || STATUS_CONFIG.active;
 
     return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.9}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate("ContractDetailScreen", { contractId: item.contract_id })}
+      >
         {/* HEADER */}
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>

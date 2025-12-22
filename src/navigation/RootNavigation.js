@@ -50,6 +50,7 @@ import RegulationListScreen from "../screens/regulation/RegulationListScreen";
 
 import FloorPlanViewScreen from "../screens/floorplan/FloorPlanViewScreen";
 import ContractScreen from "../screens/contract/ContractScreen";
+import ContractDetailScreen from "../screens/contract/ContractDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -183,6 +184,7 @@ export default function RootNavigation() {
           />
           {/* Contract  */}
           <Stack.Screen name="ContractScreen" component={ContractScreen} />
+          <Stack.Screen name="ContractDetailScreen" component={ContractDetailScreen} />
           {/* Chatbot */}
           <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
         </>
