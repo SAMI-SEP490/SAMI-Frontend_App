@@ -54,8 +54,11 @@ import ContractDetailScreen from "../screens/contract/ContractDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
+const roleIsTenant = (u) =>
+  String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
+
 export default function RootNavigation() {
-  const { token, hydrated, hydrate } = useAuthStore();
+  const { token, hydrated, hydrate, user } = useAuthStore();
 
   // Lấy token từ SecureStore 1 lần khi app mở
   useEffect(() => {
@@ -70,7 +73,7 @@ export default function RootNavigation() {
     let unsubscribe;
 
     const initNotifications = async () => {
-      if (hydrated && token) {
+      if (hydrated && token && roleIsTenant(user)) {
         // setupPushNotifications now returns the unsubscribe function
         unsubscribe = await setupPushNotifications();
       }
@@ -84,7 +87,7 @@ export default function RootNavigation() {
         unsubscribe();
       }
     };
-  }, [hydrated, token]);
+  }, [hydrated, token, user]);
 
   if (!hydrated) {
     return null;

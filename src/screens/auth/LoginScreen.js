@@ -21,7 +21,7 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 
 // IMPORT SMART LOGIN FUNCTION
-import { login, useAuthStore } from "../../auth";
+import { login, logout } from "../../auth";
 
 const roleIsTenant = (u) =>
   String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
@@ -60,7 +60,7 @@ export default function LoginScreen() {
       if (data?.user) {
         if (!roleIsTenant(data.user)) {
           // If wrong role, logout immediately to clear store
-          await useAuthStore.getState().logout();
+          await logout();
           return Alert.alert(
             "Không được phép",
             "Ứng dụng này chỉ dành cho Tenant."

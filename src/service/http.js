@@ -2,7 +2,7 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { Alert } from "react-native"; 
-import { useAuthStore } from "../auth/store";
+import { logout } from "../auth/store";
 
 export const baseURL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
 
@@ -54,7 +54,7 @@ http.interceptors.response.use(
                 
                 // 2. Gọi hàm logout trong store
                 // Hành động này sẽ set token = null trong Zustand
-                await useAuthStore.getState().logout();
+                await logout();
                 
                 // 3. RootNavigation sẽ tự động phát hiện token = null
                 // và chuyển (re-render) sang màn hình Login.
