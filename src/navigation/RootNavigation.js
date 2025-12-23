@@ -50,11 +50,15 @@ import RegulationListScreen from "../screens/regulation/RegulationListScreen";
 
 import FloorPlanViewScreen from "../screens/floorplan/FloorPlanViewScreen";
 import ContractScreen from "../screens/contract/ContractScreen";
+import ContractDetailScreen from "../screens/contract/ContractDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
+const roleIsTenant = (u) =>
+  String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
+
 export default function RootNavigation() {
-  const { token, hydrated, hydrate } = useAuthStore();
+  const { token, hydrated, hydrate, user } = useAuthStore();
 
   // Lấy token từ SecureStore 1 lần khi app mở
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function RootNavigation() {
     let unsubscribe;
 
     const initNotifications = async () => {
-      if (hydrated && token) {
+      if (hydrated && token && roleIsTenant(user)) {
         // setupPushNotifications now returns the unsubscribe function
         unsubscribe = await setupPushNotifications();
       }
@@ -83,7 +87,7 @@ export default function RootNavigation() {
         unsubscribe();
       }
     };
-  }, [hydrated, token]);
+  }, [hydrated, token, user]);
 
   if (!hydrated) {
     return null;
@@ -183,6 +187,7 @@ export default function RootNavigation() {
           />
           {/* Contract  */}
           <Stack.Screen name="ContractScreen" component={ContractScreen} />
+          <Stack.Screen name="ContractDetailScreen" component={ContractDetailScreen} />
           {/* Chatbot */}
           <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
         </>

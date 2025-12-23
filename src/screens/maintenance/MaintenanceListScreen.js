@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,9 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import * as SecureStore from "expo-secure-store";
-import { jwtDecode } from "jwt-decode";
 import { Ionicons } from "@expo/vector-icons";
 
 import Header from "../../components/Header";
@@ -20,6 +19,7 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { getRoomMaintenanceHistory, deleteMaintenanceRequest } from "../../service/api/maintenance";
 import { getRoomsByUserId } from "../../service/api/room";
+import { useAuthStore } from "../../auth"; // Import store
 
 // --- FULL STATUS TRANSLATION ---
 const STATUS_CONFIG = {
@@ -44,25 +44,41 @@ const CATEGORY_MAP = {
 
 const MaintenanceListScreen = () => {
   const navigation = useNavigation();
+  
+  // Data State
   const [maintenanceData, setMaintenanceData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]); // Store filtered list
+  
+  // Filter State
+  const [filterCategory, setFilterCategory] = useState(null);
+  const [filterStatus, setFilterStatus] = useState(null);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Get user from store directly
+  const user = useAuthStore((state) => state.user);
 
   const fetchMaintenanceData = async () => {
     try {
       if(!refreshing) setLoading(true);
-      const storedToken = await SecureStore.getItemAsync("sami_access_token");
-      if (!storedToken) return;
-
-      const decoded = jwtDecode(storedToken);
-      const userId = decoded?.id || decoded?.userId;
       
+      // Use ID from store
+      const userId = user?.id || user?.user_id;
+      if (!userId) return;
+
       const roomRes = await getRoomsByUserId(userId);
-      const roomInfo = roomRes?.data?.current_room;
-      if (!roomInfo) throw new Error("Chưa có phòng");
+      const roomInfo = roomRes?.current_room || roomRes?.data?.current_room;
+      
+      if (!roomInfo) {
+          // If no room found, just stop (or handle empty state)
+          setLoading(false);
+          return;
+      }
 
       const historyRes = await getRoomMaintenanceHistory(roomInfo.room_id);
-      const historyData = historyRes?.data?.data || [];
+      const historyData = historyRes?.data?.data || historyRes?.data || [];
 
       const mappedData = historyData.map((item) => ({
         ...item,
@@ -70,7 +86,9 @@ const MaintenanceListScreen = () => {
       }));
 
       mappedData.sort((a, b) => b.request_id - a.request_id);
+      
       setMaintenanceData(mappedData);
+      setFilteredData(mappedData); // Initialize filtered data
     } catch (error) {
       console.error("Fetch Error:", error);
     } finally {
@@ -84,6 +102,21 @@ const MaintenanceListScreen = () => {
       fetchMaintenanceData();
     }, [])
   );
+
+  // Filter Logic Effect
+  useEffect(() => {
+    let data = maintenanceData;
+    
+    if (filterCategory) {
+      data = data.filter((i) => i.category === filterCategory);
+    }
+    
+    if (filterStatus) {
+      data = data.filter((i) => i.status === filterStatus);
+    }
+    
+    setFilteredData(data);
+  }, [maintenanceData, filterCategory, filterStatus]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -114,6 +147,74 @@ const MaintenanceListScreen = () => {
 
   const handlePressItem = (item) => {
       navigation.navigate("UpdateMaintenanceRequestScreen", { requestId: item.request_id });
+  };
+
+  // --- MODAL COMPONENT ---
+  const FilterModal = () => {
+    return (
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Bộ lọc</Text>
+
+            <Text style={styles.sectionTitle}>Loại bảo trì</Text>
+            <View style={styles.wrapRow}>
+              {Object.entries(CATEGORY_MAP).map(([key, label]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.chip, filterCategory === key && styles.chipActive]}
+                  onPress={() => setFilterCategory(key === filterCategory ? null : key)}
+                >
+                  <Text style={[styles.chipText, filterCategory === key && styles.chipTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.sectionTitle}>Trạng thái</Text>
+            <View style={styles.wrapRow}>
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.chip, filterStatus === key && styles.chipActive]}
+                  onPress={() => setFilterStatus(key === filterStatus ? null : key)}
+                >
+                  <Text style={[styles.chipText, filterStatus === key && styles.chipTextActive]}>
+                    {config.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, {backgroundColor: '#F3F4F6'}]} 
+                onPress={() => {
+                    setFilterCategory(null);
+                    setFilterStatus(null);
+                    setFilterModalVisible(false);
+                }}
+              >
+                <Text style={{color: '#374151', fontWeight: '600'}}>Xóa lọc</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalBtn, {backgroundColor: colors.brand}]} 
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={{color: 'white', fontWeight: '600'}}>Áp dụng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   const renderItem = ({ item }) => {
@@ -179,8 +280,10 @@ const MaintenanceListScreen = () => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <Header title="Bảo trì" isHome={false} />
+      <FilterModal />
 
       <View style={styles.contentContainer}>
+        {/* Top Actions */}
         <View style={styles.topRow}>
             <TouchableOpacity
                 style={styles.addButton}
@@ -189,20 +292,29 @@ const MaintenanceListScreen = () => {
                 <Ionicons name="add-circle" size={20} color="white" />
                 <Text style={styles.addButtonText}>Tạo yêu cầu mới</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+                style={styles.filterButton}
+                onPress={() => setFilterModalVisible(true)}
+            >
+                <Ionicons name="filter" size={20} color={colors.brand} />
+            </TouchableOpacity>
         </View>
 
         {loading && !refreshing ? (
              <ActivityIndicator size="large" color={colors.brand} style={{marginTop: 40}} />
         ) : (
             <FlatList
-                data={maintenanceData}
+                data={filteredData} // Use filtered data
                 keyExtractor={(item) => item.request_id?.toString()}
                 renderItem={renderItem}
                 contentContainerStyle={{ paddingBottom: 40 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={
                     <View style={{alignItems: 'center', marginTop: 40}}>
-                        <Text style={{color: colors.muted}}>Chưa có lịch sử bảo trì.</Text>
+                        <Text style={{color: colors.muted}}>
+                           {maintenanceData.length === 0 ? "Chưa có lịch sử bảo trì." : "Không tìm thấy kết quả phù hợp."}
+                        </Text>
                     </View>
                 }
             />
@@ -223,8 +335,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xl + 24, 
   },
-  topRow: { marginBottom: spacing.md },
+  topRow: { 
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: spacing.md 
+  },
   addButton: {
+    flex: 1,
     backgroundColor: colors.brand,
     flexDirection: "row",
     alignItems: "center",
@@ -235,6 +352,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   addButtonText: { color: "white", fontWeight: "700", fontSize: 15 },
+  filterButton: {
+    backgroundColor: "white",
+    width: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
   card: {
     backgroundColor: "white",
     borderRadius: 16,
@@ -270,7 +396,40 @@ const styles = StyleSheet.create({
       alignItems: 'center'
   },
   deleteButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingRight: 10 },
-  deleteText: { color: '#EF4444', fontSize: 12, fontWeight: '600', marginLeft: 4 }
+  deleteText: { color: '#EF4444', fontSize: 12, fontWeight: '600', marginLeft: 4 },
+  
+  // Modal Styles (Copied from VehicleListScreen)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "85%",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16, textAlign: 'center' },
+  sectionTitle: { fontSize: 14, fontWeight: "600", marginTop: 10, marginBottom: 8, color: '#4B5563' },
+  wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "white",
+  },
+  chipActive: {
+    borderColor: colors.brand,
+    backgroundColor: "#EFF6FF",
+  },
+  chipText: { fontSize: 13, color: "#374151" },
+  chipTextActive: { color: colors.brand, fontWeight: "600" },
+  modalActions: { flexDirection: "row", gap: 10, marginTop: 24 },
+  modalBtn: { flex: 1, padding: 12, borderRadius: 10, alignItems: "center" },
 });
 
 export default MaintenanceListScreen;

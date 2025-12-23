@@ -14,11 +14,12 @@ import {
 // FIX: Use modern keyboard controller
 import { KeyboardProvider, KeyboardAvoidingView } from "react-native-keyboard-controller"; 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import Markdown from "react-native-markdown-display";
+import * as WebBrowser from "expo-web-browser";
 
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { Ionicons } from "@expo/vector-icons";
-import Markdown from "react-native-markdown-display";
 import { useAuthStore } from "../../auth";
 import Header from "../../components/Header"; 
 import {
@@ -116,6 +117,14 @@ export default function ChatbotScreen() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamingText, loading]);
+
+  // --- Link Handler ---
+  const onLinkPress = (url) => {
+    if (url) {
+        WebBrowser.openBrowserAsync(url, { createTask: false });
+    }
+    return false; // Return false to stop standard Linking.openURL
+  };
 
   const handleSend = async (manualText = null) => {
     const text = (typeof manualText === 'string' ? manualText : input).trim();
@@ -263,21 +272,29 @@ export default function ChatbotScreen() {
                                     styles.bubble,
                                     msg.sender === "user" ? styles.bubbleUser : styles.bubbleBot
                                 ]}>
-                                    <Markdown style={msg.sender === "user" ? markdownStylesUser : markdownStylesBot}>
+                                    {/* Pass onLinkPress to Markdown */}
+                                    <Markdown 
+                                        style={msg.sender === "user" ? markdownStylesUser : markdownStylesBot}
+                                        onLinkPress={onLinkPress}
+                                    >
                                         {msg.text}
                                     </Markdown>
                                 </View>
                             </View>
                         ))}
 
-                        {/* Streaming Text */}
                         {streamingText !== "" && (
                             <View style={styles.msgRowBot}>
                                 <View style={styles.botAvatar}>
                                     <Ionicons name="sparkles" size={16} color="white" />
                                 </View>
                                 <View style={styles.bubbleBot}>
-                                    <Markdown style={markdownStylesBot}>{streamingText}</Markdown>
+                                    <Markdown 
+                                        style={markdownStylesBot}
+                                        onLinkPress={onLinkPress}
+                                    >
+                                        {streamingText}
+                                    </Markdown>
                                 </View>
                             </View>
                         )}

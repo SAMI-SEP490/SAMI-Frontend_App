@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  StatusBar,
   ActivityIndicator,
   Platform,
   Alert,
@@ -14,8 +13,6 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { useNavigation } from "@react-navigation/native";
-import * as SecureStore from "expo-secure-store";
-import { jwtDecode } from "jwt-decode";
 import { Ionicons } from "@expo/vector-icons";
 
 import Header from "../../components/Header";
@@ -23,12 +20,19 @@ import { spacing } from "../../theme/spacing";
 import { colors } from "../../theme/colors";
 import { createGuestRegistration } from "../../service/api/guest";
 import { getRoomsByUserId } from "../../service/api/room";
+import { useAuthStore } from "../../auth"; // Import store
 
 export default function CreateGuestRegistrationScreen() {
   const navigation = useNavigation();
 
-  const [arrivalDate, setArrivalDate] = useState(new Date());
-  const [departureDate, setDepartureDate] = useState(new Date());
+  // Initialize dates
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const [arrivalDate, setArrivalDate] = useState(today);
+  const [departureDate, setDepartureDate] = useState(tomorrow);
+  
   const [note, setNote] = useState("");
   const [guestDetails, setGuestDetails] = useState([
     { full_name: "", id_type: "national_id", id_number: "", errors: {} },
@@ -39,22 +43,71 @@ export default function CreateGuestRegistrationScreen() {
   const [showArrivalPicker, setShowArrivalPicker] = useState(false);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
 
+  const user = useAuthStore((state) => state.user);
+
   useEffect(() => {
     const fetchRoomId = async () => {
       try {
-        const token = await SecureStore.getItemAsync("sami_access_token");
-        if (!token) return;
-        const decoded = jwtDecode(token);
-        const userId = decoded?.id || decoded?.userId;
+        const userId = user?.id || user?.user_id;
+        if (!userId) return;
+
         const roomRes = await getRoomsByUserId(userId);
-        const currentRoom = roomRes?.data?.current_room;
+        const currentRoom = roomRes?.current_room || roomRes?.data?.current_room;
         if (currentRoom) setRoomId(currentRoom.room_id);
       } catch (error) {
-        console.error(error);
+        console.error("Room Init Error:", error);
       }
     };
     fetchRoomId();
-  }, []);
+  }, [user]);
+
+  // --- DATE LOGIC ---
+  const normalizeDate = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const handleArrivalChange = (event, selectedDate) => {
+    setShowArrivalPicker(false);
+    if (!selectedDate) return; // User cancelled
+
+    const currentToday = normalizeDate(new Date());
+    const newArrival = normalizeDate(selectedDate);
+
+    // 1. Prevent Past Dates
+    if (newArrival < currentToday) {
+        Alert.alert("Ngày không hợp lệ", "Ngày đến không thể là ngày trong quá khứ.");
+        return;
+    }
+
+    setArrivalDate(selectedDate);
+
+    // 2. Auto-adjust Departure if it conflicts (Arrival >= Departure)
+    const currentDeparture = normalizeDate(departureDate);
+    if (newArrival >= currentDeparture) {
+        const newDeparture = new Date(selectedDate);
+        newDeparture.setDate(selectedDate.getDate() + 1); // Departure = Arrival + 1
+        setDepartureDate(newDeparture);
+    }
+  };
+
+  const handleDepartureChange = (event, selectedDate) => {
+    setShowDeparturePicker(false);
+    if (!selectedDate) return;
+
+    const newDeparture = normalizeDate(selectedDate);
+    const currentArrival = normalizeDate(arrivalDate);
+
+    // 3. Ensure Departure > Arrival
+    if (newDeparture <= currentArrival) {
+        Alert.alert("Ngày không hợp lệ", "Ngày đi phải sau ngày đến ít nhất 1 ngày.");
+        // Reset to Arrival + 1
+        const resetDate = new Date(arrivalDate);
+        resetDate.setDate(arrivalDate.getDate() + 1);
+        setDepartureDate(resetDate);
+        return;
+    }
+
+    setDepartureDate(selectedDate);
+  };
+  // ------------------
 
   const addGuest = () =>
     setGuestDetails([
@@ -63,7 +116,7 @@ export default function CreateGuestRegistrationScreen() {
     ]);
 
   const removeGuest = (index) => {
-    if (guestDetails.length === 1) return; // Keep at least one
+    if (guestDetails.length === 1) return; 
     const newDetails = [...guestDetails];
     newDetails.splice(index, 1);
     setGuestDetails(newDetails);
@@ -118,7 +171,8 @@ export default function CreateGuestRegistrationScreen() {
           { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể tạo đơn đăng ký.");
+        const msg = error.response?.data?.message || "Không thể tạo đơn đăng ký.";
+        Alert.alert("Lỗi", msg);
     } finally {
       setLoading(false);
     }
@@ -142,14 +196,14 @@ export default function CreateGuestRegistrationScreen() {
             
             <View style={{flexDirection: 'row', gap: 12}}>
                 <View style={{flex: 1}}>
-                    <Text style={styles.label}>Ngày đến</Text>
+                    <Text style={styles.label}>Ngày đến <Text style={{color:'red'}}>*</Text></Text>
                     <TouchableOpacity style={styles.input} onPress={() => setShowArrivalPicker(true)}>
                         <Text style={{color: '#111827'}}>{formatDateDisplay(arrivalDate)}</Text>
                         <Ionicons name="calendar-outline" size={18} color="#9CA3AF" style={{position: 'absolute', right: 10}}/>
                     </TouchableOpacity>
                 </View>
                 <View style={{flex: 1}}>
-                    <Text style={styles.label}>Ngày đi</Text>
+                    <Text style={styles.label}>Ngày đi <Text style={{color:'red'}}>*</Text></Text>
                     <TouchableOpacity style={styles.input} onPress={() => setShowDeparturePicker(true)}>
                         <Text style={{color: '#111827'}}>{formatDateDisplay(departureDate)}</Text>
                         <Ionicons name="calendar-outline" size={18} color="#9CA3AF" style={{position: 'absolute', right: 10}}/>
@@ -162,7 +216,8 @@ export default function CreateGuestRegistrationScreen() {
                 value={arrivalDate}
                 mode="date"
                 display="default"
-                onChange={(e, d) => { setShowArrivalPicker(false); if(d) setArrivalDate(d); }}
+                minimumDate={new Date()} // Can't pick past dates
+                onChange={handleArrivalChange}
               />
             )}
             {showDeparturePicker && (
@@ -170,7 +225,9 @@ export default function CreateGuestRegistrationScreen() {
                 value={departureDate}
                 mode="date"
                 display="default"
-                onChange={(e, d) => { setShowDeparturePicker(false); if(d) setDepartureDate(d); }}
+                // Can't pick date before arrival
+                minimumDate={new Date(arrivalDate.getTime() + 86400000)} 
+                onChange={handleDepartureChange}
               />
             )}
 

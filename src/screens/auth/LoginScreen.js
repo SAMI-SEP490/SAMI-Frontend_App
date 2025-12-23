@@ -13,14 +13,15 @@ import {
   TouchableOpacity,
   ScrollView
 } from "react-native";
-// FIX: Use the modern keyboard controller
+// Import Icon
+import { Ionicons } from "@expo/vector-icons"; 
 import { KeyboardProvider, KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 
 // IMPORT SMART LOGIN FUNCTION
-import { login, useAuthStore } from "../../auth";
+import { login, logout } from "../../auth";
 
 const roleIsTenant = (u) =>
   String(u?.role || u?.user_type || u?.type || "").toLowerCase() === "tenant";
@@ -30,6 +31,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // State to toggle password visibility
+  const [showPassword, setShowPassword] = useState(false);
 
   const onLogin = async () => {
     if (!email || !password) {
@@ -56,7 +60,7 @@ export default function LoginScreen() {
       if (data?.user) {
         if (!roleIsTenant(data.user)) {
           // If wrong role, logout immediately to clear store
-          await useAuthStore.getState().logout();
+          await logout();
           return Alert.alert(
             "Không được phép",
             "Ứng dụng này chỉ dành cho Tenant."
@@ -112,14 +116,29 @@ export default function LoginScreen() {
               />
 
               <Text style={styles.label}>Mật khẩu</Text>
-              <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  placeholderTextColor="#9CA3AF"
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-              />
+              
+              {/* UPDATED: Password Container with Eye Icon */}
+              <View style={styles.passwordContainer}>
+                  <TextInput
+                      style={styles.passwordInput}
+                      placeholder="••••••••"
+                      placeholderTextColor="#9CA3AF"
+                      // Toggle this prop
+                      secureTextEntry={!showPassword} 
+                      value={password}
+                      onChangeText={setPassword}
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons 
+                        name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                        size={20} 
+                        color="#6B7280" 
+                    />
+                  </TouchableOpacity>
+              </View>
 
               <TouchableOpacity 
                   style={[styles.button, loading && {opacity: 0.7}]} 
@@ -155,7 +174,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
       flexGrow: 1, 
-      justifyContent: "center", // Keeps it centered when keyboard is closed
+      justifyContent: "center",
       alignItems: 'center',
       padding: spacing.lg 
   },
@@ -197,6 +216,7 @@ const styles = StyleSheet.create({
       color: '#374151',
       marginBottom: 6
   },
+  // Original Input Style (Used for Email)
   input: {
       borderWidth: 1,
       borderColor: '#E5E7EB',
@@ -206,6 +226,27 @@ const styles = StyleSheet.create({
       fontSize: 15,
       color: '#111827',
       marginBottom: 16
+  },
+  // NEW: Container for Password (mimics Input style)
+  passwordContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      borderRadius: 10,
+      paddingHorizontal: 12, // padding for the container
+      marginBottom: 16,
+      backgroundColor: 'white'
+  },
+  // NEW: Input inside the container (no borders)
+  passwordInput: {
+      flex: 1,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: '#111827',
+  },
+  eyeIcon: {
+      padding: 4,
   },
   button: {
       backgroundColor: colors.brand,

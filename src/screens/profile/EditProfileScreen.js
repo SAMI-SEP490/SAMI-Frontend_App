@@ -245,7 +245,6 @@ export default function EditProfileScreen() {
                 value={email}
                 editable={false}
                 placeholder="example@email.com"
-                note="Liên hệ quản lý để thay đổi email."
             />
 
             <CustomInput
@@ -253,7 +252,6 @@ export default function EditProfileScreen() {
                 value={phone}
                 editable={false}
                 placeholder="0912345678"
-                note="Liên hệ quản lý để thay đổi số điện thoại."
             />
 
           </View>

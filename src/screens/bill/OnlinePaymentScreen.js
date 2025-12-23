@@ -43,7 +43,7 @@ function OnlinePaymentScreen({ navigation, route }) {
   const [error, setError] = useState("");
 
   const totalAmount = useMemo(
-    () => bills.reduce((sum, b) => sum + (b.total_amount || 0), 0),
+    () => bills.reduce((sum, b) => sum + Number(b.total_amount || 0), 0),
     [bills]
   );
 

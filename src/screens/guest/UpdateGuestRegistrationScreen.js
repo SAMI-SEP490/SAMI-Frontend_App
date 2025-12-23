@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  StatusBar,
   ActivityIndicator,
   Platform,
   Alert,
@@ -14,8 +13,6 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-datetimepicker/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import * as SecureStore from "expo-secure-store";
-import { jwtDecode } from "jwt-decode";
 import { Ionicons } from "@expo/vector-icons";
 
 import Header from "../../components/Header";
@@ -24,9 +21,9 @@ import { colors } from "../../theme/colors";
 import {
   getGuestRegistrationById,
   updateGuestRegistration,
-  // cancelGuestRegistration // Assuming you have this API, if not, remove the cancel button part
 } from "../../service/api/guest";
 import { getRoomsByUserId } from "../../service/api/room";
+import { useAuthStore } from "../../auth"; // Import store
 
 export default function UpdateGuestRegistrationScreen() {
   const navigation = useNavigation();
@@ -44,19 +41,63 @@ export default function UpdateGuestRegistrationScreen() {
   const [showArrivalPicker, setShowArrivalPicker] = useState(false);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
 
+  const user = useAuthStore((state) => state.user);
+
+  // --- SAME DATE LOGIC AS CREATE SCREEN ---
+  const normalizeDate = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const handleArrivalChange = (event, selectedDate) => {
+    setShowArrivalPicker(false);
+    if (!selectedDate) return;
+
+    // Check vs Departure
+    const newArrival = normalizeDate(selectedDate);
+    const currentDeparture = normalizeDate(departureDate);
+
+    // Note: For Updates, we might allow past dates if the registration was already in the past, 
+    // but typically we enforce logic for new inputs.
+    // Let's enforce logical order: Arrival must be < Departure
+    setArrivalDate(selectedDate);
+
+    if (newArrival >= currentDeparture) {
+        const newDeparture = new Date(selectedDate);
+        newDeparture.setDate(selectedDate.getDate() + 1);
+        setDepartureDate(newDeparture);
+        Alert.alert("Cập nhật ngày đi", "Ngày đi đã được tự động điều chỉnh để sau ngày đến 1 ngày.");
+    }
+  };
+
+  const handleDepartureChange = (event, selectedDate) => {
+    setShowDeparturePicker(false);
+    if (!selectedDate) return;
+
+    const newDeparture = normalizeDate(selectedDate);
+    const currentArrival = normalizeDate(arrivalDate);
+
+    if (newDeparture <= currentArrival) {
+        Alert.alert("Lỗi", "Ngày đi phải sau ngày đến ít nhất 1 ngày.");
+        // Reset
+        const resetDate = new Date(arrivalDate);
+        resetDate.setDate(arrivalDate.getDate() + 1);
+        setDepartureDate(resetDate);
+        return;
+    }
+    setDepartureDate(selectedDate);
+  };
+  // ----------------------------------------
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = await SecureStore.getItemAsync("sami_access_token");
-        if (!token) return;
-        const decoded = jwtDecode(token);
-        const userId = decoded?.id || decoded?.userId;
+        const userId = user?.id || user?.user_id;
+        if (!userId) return;
+
         const roomRes = await getRoomsByUserId(userId);
-        const currentRoom = roomRes?.data?.current_room;
+        const currentRoom = roomRes?.current_room || roomRes?.data?.current_room;
         if (currentRoom) setRoomId(currentRoom.room_id);
 
         const res = await getGuestRegistrationById(registrationId);
-        const registration = res?.data?.registration;
+        const registration = res?.data?.registration || res?.registration;
         
         if (registration) {
             setArrivalDate(new Date(registration.arrival_date));
@@ -74,7 +115,7 @@ export default function UpdateGuestRegistrationScreen() {
       }
     };
     fetchData();
-  }, [registrationId]);
+  }, [registrationId, user]);
 
   const addGuest = () =>
     setGuestDetails([
@@ -97,7 +138,10 @@ export default function UpdateGuestRegistrationScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!roomId) return;
+    if (!roomId) {
+        Alert.alert("Lỗi", "Không tìm thấy phòng.");
+        return;
+    }
     setSubmitting(true);
     try {
       const payload = {
@@ -117,7 +161,7 @@ export default function UpdateGuestRegistrationScreen() {
           { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể cập nhật.");
+      Alert.alert("Lỗi", error.response?.data?.message || "Không thể cập nhật.");
     } finally {
       setSubmitting(false);
     }
@@ -125,16 +169,7 @@ export default function UpdateGuestRegistrationScreen() {
 
   const formatDateDisplay = (date) => date.toLocaleDateString("vi-VN");
 
-  if (loading) {
-    return (
-        <View style={styles.container}>
-            <Header title="Chỉnh sửa đơn" isHome={false} />
-            <View style={[styles.contentContainer, {justifyContent:'center', alignItems:'center'}]}>
-                <ActivityIndicator size="large" color={colors.brand} />
-            </View>
-        </View>
-    )
-  }
+  if (loading) return <View style={styles.container}><ActivityIndicator size="large" color={colors.brand} style={{marginTop:50}} /></View>;
 
   return (
     <View style={styles.container}>
@@ -166,14 +201,9 @@ export default function UpdateGuestRegistrationScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
-
-            {showArrivalPicker && (
-              <DateTimePicker value={arrivalDate} mode="date" display="default" onChange={(e, d) => { setShowArrivalPicker(false); if(d) setArrivalDate(d); }} />
-            )}
-            {showDeparturePicker && (
-              <DateTimePicker value={departureDate} mode="date" display="default" onChange={(e, d) => { setShowDeparturePicker(false); if(d) setDepartureDate(d); }} />
-            )}
-
+            {showArrivalPicker && <DateTimePicker value={arrivalDate} mode="date" onChange={handleArrivalChange} />}
+            {showDeparturePicker && <DateTimePicker value={departureDate} mode="date" minimumDate={new Date(arrivalDate.getTime() + 86400000)} onChange={handleDepartureChange} />}
+            
             <Text style={styles.label}>Ghi chú</Text>
             <TextInput
               style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
