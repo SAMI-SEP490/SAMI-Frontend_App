@@ -4,7 +4,7 @@
     "slug": "SAMI",
     "scheme": "sami",
     "extra": {
-      "apiUrl": ""
+      "apiUrl": "https://sami-backend-production.eastasia.cloudapp.azure.com/api"
     },
     "version": "1.0.0",
     "orientation": "portrait",
@@ -41,6 +41,14 @@
         "expo-web-browser",
         {
           "experimentalLauncherActivity": true
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ]
