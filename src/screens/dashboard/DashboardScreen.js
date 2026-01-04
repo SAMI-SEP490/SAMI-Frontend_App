@@ -25,7 +25,7 @@ const FEATURES = [
   },
   {
     key: "residence",
-    label: "Đăng ký tạm trú",
+    label: "Đăng ký khách",
     icon: (p) => <Ionicons name="people-outline" size={26} color={p} />,
     bg: "#F9EEFF",
   },
