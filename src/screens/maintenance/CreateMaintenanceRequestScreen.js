@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import RNPickerSelect from "react-native-picker-select";
@@ -44,7 +44,7 @@ const CreateMaintenanceRequestScreen = () => {
   const [loading, setLoading] = useState(false);
   const [roomId, setRoomId] = useState(null);
   const [roomInfo, setRoomInfo] = useState({});
-  
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState(null);
@@ -58,26 +58,59 @@ const CreateMaintenanceRequestScreen = () => {
       try {
         const userId = user?.id || user?.user_id;
         if (!userId) return;
+        console.log("User ID:", userId);
 
         const roomRes = await getRoomsByUserId(userId);
-        const currentRoom = roomRes?.current_room || roomRes?.data?.current_room;
-        
+        console.log("Room API Response:", roomRes);
+
+        // 🟢 Lấy phòng hiện tại từ current_room
+        let currentRoom = roomRes?.data?.current_room || null;
+        console.log("Current Room from API:", currentRoom);
+
+        // Fallback sang contract_history nếu current_room null
+        if (!currentRoom && roomRes?.data?.contract_history?.length > 0) {
+          // Flatten contract_history (nếu nó là mảng 2 chiều)
+          const allContracts = roomRes.data.contract_history.flat();
+          // Lấy contract active
+          const activeContract = allContracts.find(
+            (c) => c.status === "active"
+          );
+          currentRoom = activeContract?.room || null;
+          console.log(
+            "Fallback Current Room from contract_history:",
+            currentRoom
+          );
+        }
+
         if (currentRoom) {
-            setRoomId(currentRoom.room_id);
-            setRoomInfo(currentRoom);
+          setRoomId(currentRoom.room_id);
+          setRoomInfo({
+            ...currentRoom,
+            building_name:
+              currentRoom.building_name || currentRoom.building?.name || "",
+          });
+          console.log("Set Current Room:", currentRoom);
         } else {
-            Alert.alert("Thông báo", "Tài khoản của bạn chưa được gán vào phòng nào.");
+          Alert.alert(
+            "Thông báo",
+            "Tài khoản của bạn chưa được gán vào phòng nào."
+          );
         }
       } catch (err) {
         console.error("Room Init Error:", err);
+        Alert.alert("Lỗi", "Không thể lấy thông tin phòng.");
       }
     };
+
     init();
   }, [user]);
 
   const handleSubmit = async () => {
-    if (!title || !description || !category ) {
-      Alert.alert("Thiếu thông tin", "Vui lòng điền đầy đủ thông tin bắt buộc.");
+    if (!title || !description || !category) {
+      Alert.alert(
+        "Thiếu thông tin",
+        "Vui lòng điền đầy đủ thông tin bắt buộc."
+      );
       return;
     }
     if (!roomId) {
@@ -97,7 +130,10 @@ const CreateMaintenanceRequestScreen = () => {
       });
 
       Alert.alert("Thành công", "Đã gửi yêu cầu bảo trì.", [
-        { text: "OK", onPress: () => navigation.navigate("MaintenanceListScreen") },
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("MaintenanceListScreen"),
+        },
       ]);
     } catch (err) {
       const msg = err.response?.data?.message || "Không thể tạo yêu cầu.";
@@ -111,30 +147,39 @@ const CreateMaintenanceRequestScreen = () => {
     <View style={styles.container}>
       <Header title="Tạo yêu cầu" isHome={false} />
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.contentContainer}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <ScrollView contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-          
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 60 }}
+          showsVerticalScrollIndicator={false}
+        >
           {roomInfo.room_number ? (
-              <View style={styles.roomBanner}>
-                  <Ionicons name="home" size={18} color={colors.brand} />
-                  <Text style={styles.roomText}>
-                      Phòng {roomInfo.room_number} - {roomInfo.building_name}
-                  </Text>
-              </View>
+            <View style={styles.roomBanner}>
+              <Ionicons name="home" size={18} color={colors.brand} />
+              <Text style={styles.roomText}>
+                Phòng {roomInfo.room_number} - {roomInfo.building_name}
+              </Text>
+            </View>
           ) : (
-             <View style={[styles.roomBanner, {borderColor: '#EF4444', backgroundColor: '#FEF2F2'}]}>
-                  <Ionicons name="alert-circle" size={18} color="#EF4444" />
-                  <Text style={[styles.roomText, {color: '#EF4444'}]}>
-                      Chưa có thông tin phòng
-                  </Text>
-              </View>
+            <View
+              style={[
+                styles.roomBanner,
+                { borderColor: "#EF4444", backgroundColor: "#FEF2F2" },
+              ]}
+            >
+              <Ionicons name="alert-circle" size={18} color="#EF4444" />
+              <Text style={[styles.roomText, { color: "#EF4444" }]}>
+                Chưa có thông tin phòng
+              </Text>
+            </View>
           )}
 
           <View style={styles.card}>
-            <Text style={styles.label}>Tiêu đề <Text style={{color:'red'}}>*</Text></Text>
+            <Text style={styles.label}>
+              Tiêu đề <Text style={{ color: "red" }}>*</Text>
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="VD: Hỏng vòi nước..."
@@ -143,35 +188,63 @@ const CreateMaintenanceRequestScreen = () => {
               onChangeText={setTitle}
             />
 
-            <Text style={styles.label}>Loại bảo trì <Text style={{color:'red'}}>*</Text></Text>
+            <Text style={styles.label}>
+              Loại bảo trì <Text style={{ color: "red" }}>*</Text>
+            </Text>
             <View style={styles.pickerWrapper}>
-                <RNPickerSelect
-                    onValueChange={(value) => setCategory(value)}
-                    value={category}
-                    placeholder={{ label: "Chọn loại bảo trì...", value: null, color: '#9CA3AF' }}
-                    items={maintenanceTypes.map((t) => ({ label: t.label, value: t.key }))}
-                    style={pickerSelectStyles}
-                    useNativeAndroidPickerStyle={false}
-                    Icon={() => <Ionicons name="chevron-down" size={20} color="#9CA3AF" style={{marginTop: 12, marginRight: 10}} />}
-                />
+              <RNPickerSelect
+                onValueChange={(value) => setCategory(value)}
+                value={category}
+                placeholder={{
+                  label: "Chọn loại bảo trì...",
+                  value: null,
+                  color: "#9CA3AF",
+                }}
+                items={maintenanceTypes.map((t) => ({
+                  label: t.label,
+                  value: t.key,
+                }))}
+                style={pickerSelectStyles}
+                useNativeAndroidPickerStyle={false}
+                Icon={() => (
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color="#9CA3AF"
+                    style={{ marginTop: 12, marginRight: 10 }}
+                  />
+                )}
+              />
             </View>
 
             <Text style={styles.label}>Mức độ ưu tiên</Text>
             <View style={styles.pickerWrapper}>
-                <RNPickerSelect
-                    onValueChange={(value) => setPriority(value)}
-                    value={priority}
-                    placeholder={{}}
-                    items={priorityLevels.map((p) => ({ label: p.label, value: p.key }))}
-                    style={pickerSelectStyles}
-                    useNativeAndroidPickerStyle={false}
-                    Icon={() => <Ionicons name="chevron-down" size={20} color="#9CA3AF" style={{marginTop: 12, marginRight: 10}} />}
-                />
+              <RNPickerSelect
+                onValueChange={(value) => setPriority(value)}
+                value={priority}
+                placeholder={{}}
+                items={priorityLevels.map((p) => ({
+                  label: p.label,
+                  value: p.key,
+                }))}
+                style={pickerSelectStyles}
+                useNativeAndroidPickerStyle={false}
+                Icon={() => (
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color="#9CA3AF"
+                    style={{ marginTop: 12, marginRight: 10 }}
+                  />
+                )}
+              />
             </View>
 
-            <Text style={styles.label}>Mô tả chi tiết <Text style={{color:'red'}}>*</Text></Text>
+            <Text style={styles.label}>
+              Mô tả chi tiết <Text style={{ color: "red" }}>*</Text>
+            </Text>
             <TextInput
-              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+              style={[styles.input, { height: 80, textAlignVertical: "top" }]}
               placeholder="Mô tả kỹ tình trạng hư hỏng..."
               placeholderTextColor="#9CA3AF"
               value={description}
@@ -181,7 +254,7 @@ const CreateMaintenanceRequestScreen = () => {
 
             <Text style={styles.label}>Ghi chú thêm</Text>
             <TextInput
-              style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
+              style={[styles.input, { height: 60, textAlignVertical: "top" }]}
               placeholder="VD: Thời gian rảnh để thợ đến..."
               placeholderTextColor="#9CA3AF"
               value={note}
@@ -190,10 +263,17 @@ const CreateMaintenanceRequestScreen = () => {
             />
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
-             {loading ? <ActivityIndicator color="white" /> : <Text style={styles.submitButtonText}>Gửi yêu cầu</Text>}
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.submitButtonText}>Gửi yêu cầu</Text>
+            )}
           </TouchableOpacity>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -209,20 +289,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 24, 
+    paddingTop: spacing.xl + 24,
   },
   roomBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#EFF6FF',
-      padding: 12,
-      borderRadius: 12,
-      marginBottom: 16,
-      gap: 8,
-      borderWidth: 1,
-      borderColor: '#DBEAFE'
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
   },
-  roomText: { fontSize: 14, color: '#1E40AF', fontWeight: '600' },
+  roomText: { fontSize: 14, color: "#1E40AF", fontWeight: "600" },
   card: {
     backgroundColor: "white",
     borderRadius: 16,
@@ -231,9 +311,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 2,
-    marginBottom: 20
+    marginBottom: 20,
   },
-  label: { fontSize: 13, marginBottom: 6, fontWeight: "600", color: "#374151", marginTop: 10 },
+  label: {
+    fontSize: 13,
+    marginBottom: 6,
+    fontWeight: "600",
+    color: "#374151",
+    marginTop: 10,
+  },
   input: {
     backgroundColor: "#fff",
     borderWidth: 1,
@@ -250,7 +336,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
-    marginBottom: 20
+    marginBottom: 20,
   },
   submitButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });
@@ -261,24 +347,24 @@ const pickerSelectStyles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
     borderRadius: 10,
-    color: '#111827',
+    color: "#111827",
     paddingRight: 30,
-    backgroundColor: 'white',
-    marginBottom: 0
+    backgroundColor: "white",
+    marginBottom: 0,
   },
   inputAndroid: {
     fontSize: 14,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
     borderRadius: 10,
-    color: '#111827',
+    color: "#111827",
     paddingRight: 30,
-    backgroundColor: 'white',
-    marginBottom: 0
+    backgroundColor: "white",
+    marginBottom: 0,
   },
 });
 

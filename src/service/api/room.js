@@ -35,6 +35,8 @@ export function getRoomById(id) {
  * @param {string|number} userId
  */
 export function getRoomsByUserId(userId) {
+  console.log("user id ở hàm getroom" + userId);
+
   return unwrap(http.get(`/room/user/${userId}`));
 }
 
