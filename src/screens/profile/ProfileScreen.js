@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   ScrollView,
@@ -7,47 +7,64 @@ import {
   Alert,
   StyleSheet,
   ActivityIndicator,
-  StatusBar
+  StatusBar,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
-// Import centralized API instead of manual Axios
+// APIs
 import { getProfile } from "../../service/api/auth";
+import { getRoomsByUserId } from "../../service/api/room";
 
+// Components
 import Header from "../../components/Header";
 import Button from "../../components/Button";
+
+// Theme
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 
+/* =====================
+ * Utils
+ * ===================== */
 const formatDate = (dateString) => {
   if (!dateString) return "Chưa cập nhật";
-  const date = new Date(dateString);
-  // Returns dd/mm/yyyy
-  return date.toLocaleDateString("vi-VN");
+  return new Date(dateString).toLocaleDateString("vi-VN");
 };
 
-// Check role
+const ROOM_STATUS_VI = {
+  available: "Trống",
+  occupied: "Đang ở",
+  maintenance: "Bảo trì",
+};
+
+const mapRoomStatus = (status) => {
+  if (!status) return "---";
+  return ROOM_STATUS_VI[status] || status;
+};
+
 function roleIsTenant(user) {
-  const r = String(
-    user?.role || user?.user_type || user?.type || ""
-  ).toLowerCase();
+  const r = String(user?.role || "").toLowerCase();
   return r === "tenant";
 }
 
+/* =====================
+ * Screen
+ * ===================== */
 export default function ProfileScreen() {
   const navigation = useNavigation();
+
   const [user, setUser] = useState(null);
+  const [tenantInfo, setTenantInfo] = useState(null);
+  const [roomInfo, setRoomInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      
-      // Use centralized API function
-      // http.js interceptor handles the token automatically
-      const data = await getProfile();
-      
-      const u = data?.user || data?.data?.user || data;
+
+      /* 1. Get user profile */
+      const res = await getProfile();
+      const u = res?.user || res?.data?.user || res;
 
       if (!roleIsTenant(u)) {
         Alert.alert("Không được phép", "Ứng dụng này chỉ dành cho Tenant.", [
@@ -55,7 +72,21 @@ export default function ProfileScreen() {
         ]);
         return;
       }
+
       setUser(u);
+
+      /* 2. Get tenant + room info */
+      if (u?.user_id) {
+        const response = await getRoomsByUserId(u.user_id);
+
+        console.log("Fetched Rooms:", response);
+
+        const data = response?.data;
+        if (!data) return;
+
+        setTenantInfo(data.tenant_info || null);
+        setRoomInfo(data.current_room || null);
+      }
     } catch (e) {
       console.log("Profile Fetch Error:", e);
       Alert.alert(
@@ -67,15 +98,16 @@ export default function ProfileScreen() {
     }
   };
 
-  // Reload profile every time the screen comes into focus (in case of edits)
+  /* Reload when screen focus */
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
     }, [])
   );
 
-  // --- RENDERING ---
-
+  /* =====================
+   * Loading
+   * ===================== */
   if (loading && !user) {
     return (
       <View style={styles.container}>
@@ -87,22 +119,25 @@ export default function ProfileScreen() {
     );
   }
 
-  // Extract nested data for cleaner JSX
-  const tenantInfo = user?.roleDetails;
-  const roomInfo = tenantInfo?.rooms;
-  const buildingInfo = roomInfo?.buildings;
-
+  /* =====================
+   * Render
+   * ===================== */
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
       <Header title="Hồ sơ cá nhân" isHome={false} />
 
-      <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-
-        {/* Main Card */}
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.card}>
-
-          {/* Avatar Area */}
+          {/* Avatar */}
           <View style={styles.avatarContainer}>
             <Image
               source={{
@@ -112,52 +147,50 @@ export default function ProfileScreen() {
             />
             <Text style={styles.userName}>{user?.full_name || user?.name}</Text>
             <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{user?.role || "Tenant"}</Text>
+              <Text style={styles.roleText}>Tenant</Text>
             </View>
           </View>
 
-          {/* Section: Basic Info */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
-          </View>
-          <View style={styles.infoContainer}>
-            <InfoRow label="Ngày sinh" value={formatDate(user?.birthday || user?.dob)} />
-            <InfoRow label="Giới tính" value={user?.gender === 'Male' ? 'Nam' : user?.gender === 'Female' ? 'Nữ' : 'Khác'} />
-          </View>
+          {/* Basic Info */}
+          <Section title="Thông tin cơ bản">
+            <InfoRow
+              label="Ngày bắt đầu thuê"
+              value={formatDate(tenantInfo?.tenant_since)}
+            />
+            <InfoRow label="CCCD / CMND" value={tenantInfo?.id_number} />
+          </Section>
 
-          {/* Section: Contact Info */}
-          <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-            <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
-          </View>
-          <View style={styles.infoContainer}>
+          {/* Contact Info */}
+          <Section title="Thông tin liên hệ">
             <InfoRow label="Email" value={user?.email} />
             <InfoRow label="Số điện thoại" value={user?.phone} />
-          </View>
+          </Section>
 
-          {/* Section: Residence Info (REAL DATA) */}
-          <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-            <Text style={styles.sectionTitle}>Thông tin cư trú</Text>
-          </View>
-          <View style={styles.infoContainer}>
-            <InfoRow 
-                label="Tòa nhà" 
-                value={buildingInfo?.name} 
+          {/* Residence Info */}
+          <Section title="Thông tin cư trú">
+            <InfoRow label="Tòa nhà" value={roomInfo?.building_name} />
+            <InfoRow label="Địa chỉ" value={roomInfo?.building_address} />
+            <InfoRow
+              label="Phòng"
+              value={roomInfo?.room_number ? `P.${roomInfo.room_number}` : null}
             />
-            <InfoRow 
-                label="Địa chỉ" 
-                value={buildingInfo?.address} 
+            <InfoRow
+              label="Tầng"
+              value={
+                roomInfo?.floor !== undefined ? `Tầng ${roomInfo.floor}` : null
+              }
             />
-            <InfoRow 
-                label="Phòng" 
-                value={roomInfo?.room_number ? `P.${roomInfo.room_number}` : null} 
+            <InfoRow
+              label="Diện tích"
+              value={roomInfo?.size ? `${roomInfo.size} m²` : null}
             />
-             <InfoRow 
-                label="Tầng" 
-                value={roomInfo?.floor ? `Tầng ${roomInfo.floor}` : null} 
+            <InfoRow
+              label="Trạng thái"
+              value={mapRoomStatus(roomInfo?.status)}
             />
-          </View>
+          </Section>
 
-          {/* Buttons */}
+          {/* Actions */}
           <View style={styles.buttonRow}>
             <Button
               title="Đổi mật khẩu"
@@ -172,14 +205,25 @@ export default function ProfileScreen() {
               style={styles.filledBtn}
             />
           </View>
-
         </View>
       </ScrollView>
     </View>
   );
 }
 
-// --- SUB COMPONENTS ---
+/* =====================
+ * Components
+ * ===================== */
+function Section({ title, children }) {
+  return (
+    <>
+      <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      <View style={styles.infoContainer}>{children}</View>
+    </>
+  );
+}
 
 function InfoRow({ label, value }) {
   return (
@@ -190,18 +234,20 @@ function InfoRow({ label, value }) {
   );
 }
 
-// --- STYLES ---
+/* =====================
+ * Styles
+ * ===================== */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.brand, // Blue Background
+    backgroundColor: colors.brand,
   },
   contentContainer: {
     flexGrow: 1,
-    backgroundColor: "#F3F4F6", // Gray Sheet
-    marginTop: -24, // Overlap Header
+    backgroundColor: "#F3F4F6",
+    marginTop: -24,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 24, // Clear Header
+    paddingTop: spacing.xl + 24,
     paddingBottom: 40,
   },
   centerBox: {
@@ -273,14 +319,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: "#6B7280",
-    flex: 1
+    flex: 1,
   },
   value: {
     fontSize: 14,
     fontWeight: "600",
     color: "#1F2937",
     flex: 1.5,
-    textAlign: 'right'
+    textAlign: "right",
   },
   buttonRow: {
     flexDirection: "row",
