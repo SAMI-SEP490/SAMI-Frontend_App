@@ -4,7 +4,7 @@
     "slug": "SAMI",
     "scheme": "sami",
     "extra": {
-      "apiUrl": "https://sami-backend-production.eastasia.cloudapp.azure.com/api"
+      "apiUrl": ""
     },
     "version": "1.0.0",
     "orientation": "portrait",
