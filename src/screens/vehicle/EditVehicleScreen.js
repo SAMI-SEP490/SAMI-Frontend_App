@@ -26,13 +26,9 @@ import {
 } from "../../service/api/vehicle";
 
 const VEHICLE_TYPES = [
-  { label: "Ô tô", value: "car" },
-  { label: "Xe máy", value: "motorcycle" },
-  { label: "Xe tải", value: "truck" },
-  { label: "Xe van", value: "van" },
-  { label: "Khác", value: "other" },
+  { label: "Xe 2 bánh", value: "two_wheeler" },
+  { label: "Xe 4 bánh", value: "four_wheeler" }
 ];
-
 // --- HELPER ---
 const formatDateDisplay = (dateString) => {
   if (!dateString) return "";
@@ -47,7 +43,7 @@ const EditVehicleScreen = () => {
   const today = new Date().toISOString().split("T")[0];
 
   const [form, setForm] = useState({
-    type: "",
+    vehicle_type: "",
     license_plate: "",
     brand: "",
     color: "",
@@ -55,11 +51,11 @@ const EditVehicleScreen = () => {
     end_date: null,
     note: "",
   });
-
+console.log("EditVehicleScreen vehicleId:", vehicleId);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [cancelling, setCancelling] = useState(false); 
+  const [cancelling, setCancelling] = useState(false);
 
   const handleChange = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -69,12 +65,12 @@ const EditVehicleScreen = () => {
     if (!selectedDate) return;
 
     const startDateObj = new Date(form.start_date);
-    startDateObj.setHours(0,0,0,0);
-    selectedDate.setHours(0,0,0,0);
+    startDateObj.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
 
     if (selectedDate <= startDateObj) {
-        Alert.alert("Lỗi ngày", "Ngày kết thúc phải sau ngày bắt đầu.");
-        return;
+      Alert.alert("Lỗi ngày", "Ngày kết thúc phải sau ngày bắt đầu.");
+      return;
     }
     handleChange("end_date", selectedDate.toISOString().split("T")[0]);
   };
@@ -82,39 +78,37 @@ const EditVehicleScreen = () => {
   const clearEndDate = () => handleChange("end_date", null);
 
   const fetchVehicle = async () => {
-    try {
-      setLoading(true);
-      const res = await getVehicleRegistrationById(vehicleId);
-      const data = res?.data?.registration || res?.registration || res;
+  try {
+    setLoading(true);
 
-      let details = {};
-      try {
-        if (data.reason && typeof data.reason === 'string') {
-            if (data.reason.trim().startsWith('{')) {
-                details = JSON.parse(data.reason);
-            }
-        }
-      } catch (err) {
-        console.log("Error parsing vehicle JSON:", err);
-      }
+    const res = await getVehicleRegistrationById(vehicleId);
+    const data = res?.data?.registration || res?.registration || res;
 
-      setForm({
-        type: details.type || "motorcycle",
-        license_plate: details.license_plate || "",
-        brand: details.brand || "",
-        color: details.color || "",
-        start_date: data.start_date ? data.start_date.split("T")[0] : today,
-        end_date: data.end_date ? data.end_date.split("T")[0] : null,
-        note: data.note || "",
-      });
-
-    } catch (err) {
-      Alert.alert("Lỗi", "Không thể tải thông tin xe.");
-      navigation.goBack();
-    } finally {
-      setLoading(false);
+    if (!data) {
+      throw new Error("No registration data");
     }
-  };
+
+    setForm({
+      vehicle_type: data.vehicle_type || "",
+      license_plate: data.license_plate || "",
+      brand: data.brand || "",
+      color: data.color || "",
+      start_date: data.start_date
+        ? data.start_date.split("T")[0]
+        : today,
+      end_date: data.end_date
+        ? data.end_date.split("T")[0]
+        : null,
+      note: data.note || "",
+    });
+  } catch (err) {
+    console.log("❌ fetchVehicle error:", err);
+    Alert.alert("Lỗi", "Không thể tải thông tin xe.");
+    navigation.goBack();
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     if (vehicleId) fetchVehicle();
@@ -122,13 +116,16 @@ const EditVehicleScreen = () => {
 
   // --- SAVE HANDLER ---
   const handleSubmit = async () => {
-    if (!form.type || !form.license_plate) {
-      return Alert.alert("Thiếu thông tin", "Vui lòng nhập loại xe và biển số.");
-    }
+    if (!form.vehicle_type || !form.license_plate) {
+  return Alert.alert(
+    "Thiếu thông tin",
+    "Vui lòng chọn loại xe và nhập biển số."
+  );
+}
     setSubmitting(true);
     try {
       const payload = {
-        type: form.type,
+        vehicle_type: form.vehicle_type,
         license_plate: form.license_plate,
         brand: form.brand,
         color: form.color,
@@ -136,7 +133,6 @@ const EditVehicleScreen = () => {
         end_date: form.end_date,
         note: form.note,
       };
-      
       await updateVehicleRegistration(vehicleId, payload);
       Alert.alert("Thành công", "Cập nhật thông tin xe thành công!", [
         { text: "OK", onPress: () => navigation.goBack() },
@@ -181,8 +177,8 @@ const EditVehicleScreen = () => {
     return (
       <View style={styles.container}>
         <Header title="Chỉnh sửa" isHome={false} />
-        <View style={[styles.contentContainer, {alignItems: 'center', justifyContent: 'center'}]}>
-             <ActivityIndicator size="large" color={colors.brand} />
+        <View style={[styles.contentContainer, { alignItems: 'center', justifyContent: 'center' }]}>
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       </View>
     );
@@ -197,21 +193,21 @@ const EditVehicleScreen = () => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-          
+
           <View style={styles.card}>
             {/* Loại xe */}
             <Text style={styles.label}>Loại phương tiện</Text>
             <View style={styles.pickerWrapper}>
               <Picker
-                selectedValue={form.type}
-                onValueChange={(val) => handleChange("type", val)}
+                selectedValue={form.vehicle_type}
+                onValueChange={(val) => handleChange("vehicle_type", val)}
                 dropdownIconColor="#111827"
                 style={{ color: '#111827', backgroundColor: 'white', height: Platform.OS === 'ios' ? 200 : 50 }}
                 itemStyle={{ color: '#111827', fontSize: 14, height: 120 }}
               >
-                <Picker.Item label="Chọn loại phương tiện..." value="" color="#9CA3AF" style={{fontSize: 14}} />
+                <Picker.Item label="Chọn loại phương tiện..." value="" color="#9CA3AF" style={{ fontSize: 14 }} />
                 {VEHICLE_TYPES.map((t) => (
-                  <Picker.Item key={t.value} label={t.label} value={t.value} color="#111827" style={{fontSize: 14, backgroundColor: 'white'}} />
+                  <Picker.Item key={t.value} label={t.label} value={t.value} color="#111827" style={{ fontSize: 14, backgroundColor: 'white' }} />
                 ))}
               </Picker>
             </View>
@@ -226,58 +222,58 @@ const EditVehicleScreen = () => {
               onChangeText={(text) => handleChange("license_plate", text)}
             />
 
-            <View style={{flexDirection: 'row', gap: 10}}>
-                <View style={{flex: 1}}>
-                    <Text style={styles.label}>Thương hiệu</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={form.brand}
-                        placeholder="Honda"
-                        placeholderTextColor="#9CA3AF"
-                        onChangeText={(text) => handleChange("brand", text)}
-                    />
-                </View>
-                <View style={{flex: 1}}>
-                    <Text style={styles.label}>Màu xe</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={form.color}
-                        placeholder="Đen"
-                        placeholderTextColor="#9CA3AF"
-                        onChangeText={(text) => handleChange("color", text)}
-                    />
-                </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Thương hiệu</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.brand}
+                  placeholder="Honda"
+                  placeholderTextColor="#9CA3AF"
+                  onChangeText={(text) => handleChange("brand", text)}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Màu xe</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.color}
+                  placeholder="Đen"
+                  placeholderTextColor="#9CA3AF"
+                  onChangeText={(text) => handleChange("color", text)}
+                />
+              </View>
             </View>
 
             {/* Ngày bắt đầu */}
             <Text style={styles.label}>Ngày bắt đầu</Text>
             <View style={[styles.input, { backgroundColor: "#F3F4F6", justifyContent: 'center' }]}>
-                {/* FIX: Use helper function */}
-                <Text style={{color: '#6B7280'}}>{formatDateDisplay(form.start_date)}</Text>
+              {/* FIX: Use helper function */}
+              <Text style={{ color: '#6B7280' }}>{formatDateDisplay(form.start_date)}</Text>
             </View>
 
             <Text style={styles.label}>Ngày kết thúc</Text>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.input, {flex: 1}]}>
-                    <Text style={{color: form.end_date ? '#111827' : '#9CA3AF'}}>
-                        {/* FIX: Use helper function */}
-                        {form.end_date ? formatDateDisplay(form.end_date) : "Chọn ngày"}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={{position: 'absolute', right: 10, top: 12}} />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.input, { flex: 1 }]}>
+                <Text style={{ color: form.end_date ? '#111827' : '#9CA3AF' }}>
+                  {/* FIX: Use helper function */}
+                  {form.end_date ? formatDateDisplay(form.end_date) : "Chọn ngày"}
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={{ position: 'absolute', right: 10, top: 12 }} />
+              </TouchableOpacity>
+              {form.end_date && (
+                <TouchableOpacity onPress={clearEndDate} style={{ marginLeft: 8, padding: 4 }}>
+                  <Ionicons name="close-circle" size={24} color="#EF4444" />
                 </TouchableOpacity>
-                {form.end_date && (
-                    <TouchableOpacity onPress={clearEndDate} style={{marginLeft: 8, padding: 4}}>
-                        <Ionicons name="close-circle" size={24} color="#EF4444" />
-                    </TouchableOpacity>
-                )}
+              )}
             </View>
             {showDatePicker && (
-                <DateTimePicker 
-                    value={form.end_date ? new Date(form.end_date) : new Date(new Date().getTime() + 86400000)} 
-                    mode="date" 
-                    minimumDate={new Date(new Date().getTime() + 86400000)} 
-                    onChange={handleDateChange} 
-                />
+              <DateTimePicker
+                value={form.end_date ? new Date(form.end_date) : new Date(new Date().getTime() + 86400000)}
+                mode="date"
+                minimumDate={new Date(new Date().getTime() + 86400000)}
+                onChange={handleDateChange}
+              />
             )}
 
             {/* Ghi chú */}
@@ -295,29 +291,29 @@ const EditVehicleScreen = () => {
 
           {/* Action Buttons */}
           <View style={{ gap: 12 }}>
-            <TouchableOpacity 
-                style={[styles.submitButton, (submitting || cancelling) && {opacity: 0.7}]} 
-                onPress={handleSubmit}
-                disabled={submitting || cancelling}
+            <TouchableOpacity
+              style={[styles.submitButton, (submitting || cancelling) && { opacity: 0.7 }]}
+              onPress={handleSubmit}
+              disabled={submitting || cancelling}
             >
-                {submitting ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <Text style={styles.submitText}>Lưu thay đổi</Text>
-                )}
+              {submitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.submitText}>Lưu thay đổi</Text>
+              )}
             </TouchableOpacity>
 
             {/* Cancel Button */}
-            <TouchableOpacity 
-                style={[styles.cancelButton, (submitting || cancelling) && {opacity: 0.7}]} 
-                onPress={handleCancel}
-                disabled={submitting || cancelling}
+            <TouchableOpacity
+              style={[styles.cancelButton, (submitting || cancelling) && { opacity: 0.7 }]}
+              onPress={handleCancel}
+              disabled={submitting || cancelling}
             >
-                {cancelling ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <Text style={styles.cancelButtonText}>Hủy đơn này</Text>
-                )}
+              {cancelling ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.cancelButtonText}>Hủy đơn này</Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -336,7 +332,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 24, 
+    paddingTop: spacing.xl + 24,
   },
   card: {
     backgroundColor: "white",
@@ -375,7 +371,7 @@ const styles = StyleSheet.create({
     elevation: 2
   },
   submitText: { color: "white", fontSize: 16, fontWeight: "700" },
-  
+
   // Cancel Button (Red)
   cancelButton: {
     backgroundColor: "#EF4444", // Red

@@ -18,11 +18,8 @@ import { spacing } from "../../theme/spacing";
 import { getVehicleRegistrations } from "../../service/api/vehicle";
 
 const VEHICLE_TYPE_VN = {
-  car: "Ô tô",
-  motorcycle: "Xe máy",
-  truck: "Xe tải",
-  van: "Xe van",
-  other: "Khác",
+  two_wheeler: "Xe 2 bánh",
+  four_wheeler: "Xe 4 bánh",
 };
 
 const STATUS_VN = {
@@ -48,42 +45,16 @@ const VehicleListScreen = () => {
       const res = await getVehicleRegistrations();
       const registrations = res?.data?.registrations ?? [];
 
-      const parsed = registrations.map((item) => {
-        let reason = {};
-        
-        // --- FIX: Handle non-JSON strings properly ---
-        try {
-          if (item.reason && item.reason.trim().startsWith("{")) {
-             reason = JSON.parse(item.reason);
-          } else {
-             // It's a bot message or plain text, treat as empty details
-             reason = {}; 
-          }
-        } catch (e) {
-          // Silent fail: If parse fails, just assume empty details
-          reason = {};
-        }
-        // ---------------------------------------------
-
-        return {
-          ...item,
-          vehicle_type: reason.type || null,
-          license_plate: reason.license_plate || null,
-          brand: reason.brand || null,
-          color: reason.color || null,
-        };
-      });
-      setVehicleData(parsed);
-      setFilteredData(parsed);
+      setVehicleData(registrations);
+      setFilteredData(registrations);
     } catch (err) {
-      console.error("Error fetching vehicles:", err);
+      console.error(err);
       setVehicleData([]);
       setFilteredData([]);
     } finally {
       setLoading(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       fetchVehicles();
@@ -101,35 +72,41 @@ const VehicleListScreen = () => {
     setFilteredData(data);
   }, [vehicleData, filterType, filterStatus]);
 
-  const renderVehicleItem = ({ item }) => {
+  const renderVehicleItem = ({ item }) => { 
     const statusColor =
       item.status === "approved"
         ? "#DCFCE7"
         : item.status === "rejected" || item.status === "cancelled"
-        ? "#FEE2E2"
-        : "#FEF3C7";
-    
-    const statusTextColor = 
+          ? "#FEE2E2"
+          : "#FEF3C7";
+
+    const statusTextColor =
       item.status === "approved"
         ? "#16A34A"
         : item.status === "rejected" || item.status === "cancelled"
-        ? "#EF4444"
-        : "#D97706";
+          ? "#EF4444"
+          : "#D97706";
 
     return (
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.9}
         onPress={() => {
-           if(item.status === 'requested') {
-               navigation.navigate("EditVehicleScreen", { vehicleId: item.assignment_id })
-           }
+          if (item.status === 'requested') {
+            navigation.navigate("EditVehicleScreen", {
+              vehicleId: item.registration_id
+            });
+          }
         }}
       >
         <View style={styles.cardHeader}>
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={styles.iconBox}>
-                <Ionicons name={item.vehicle_type === 'car' ? 'car-outline' : 'bicycle-outline'} size={20} color={colors.brand} />
+              <Ionicons
+                name={item.vehicle_type === 'four_wheeler' ? 'car-outline' : 'bicycle-outline'}
+                size={20}
+                color={colors.brand}
+              />
             </View>
             <Text style={styles.plateNumber}>{item.license_plate || "N/A"}</Text>
           </View>
@@ -151,15 +128,29 @@ const VehicleListScreen = () => {
         <View style={styles.row}>
           <Text style={styles.label}>Thông tin:</Text>
           <Text style={styles.value}>
-             {item.brand ? item.brand : '---'} - {item.color ? item.color : '---'}
+            {item.brand ? item.brand : '---'} - {item.color ? item.color : '---'}
           </Text>
         </View>
-        
+
         {item.status === 'requested' && (
-            <View style={{marginTop: 8, alignSelf: 'flex-end'}}>
-                <Text style={{fontSize: 12, color: colors.brand, fontWeight: '600'}}>Chạm để chỉnh sửa</Text>
-            </View>
+          <View style={{ marginTop: 8, alignSelf: 'flex-end' }}>
+            <Text style={{ fontSize: 12, color: colors.brand, fontWeight: '600' }}>Chạm để chỉnh sửa</Text>
+          </View>
         )}
+          {item.status === 'approved' && (
+  <View style={styles.row}>
+    <Text style={styles.label}>Vị trí đỗ:</Text>
+    <Text style={styles.value}>
+      {item.vehicle?.slot
+        ? `${item.vehicle.slot.slot_number}${
+            item.vehicle.slot.building?.name
+              ? ` · ${item.vehicle.slot.building.name}`
+              : ''
+          }`
+        : 'Chưa cấp chỗ'}
+    </Text>
+  </View>
+)}
       </TouchableOpacity>
     );
   };
@@ -210,22 +201,22 @@ const VehicleListScreen = () => {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, {backgroundColor: '#F3F4F6'}]} 
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#F3F4F6' }]}
                 onPress={() => {
-                    setFilterType(null);
-                    setFilterStatus(null);
-                    setFilterModalVisible(false);
+                  setFilterType(null);
+                  setFilterStatus(null);
+                  setFilterModalVisible(false);
                 }}
               >
-                <Text style={{color: '#374151', fontWeight: '600'}}>Xóa lọc</Text>
+                <Text style={{ color: '#374151', fontWeight: '600' }}>Xóa lọc</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalBtn, {backgroundColor: colors.brand}]} 
+
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.brand }]}
                 onPress={() => setFilterModalVisible(false)}
               >
-                <Text style={{color: 'white', fontWeight: '600'}}>Áp dụng</Text>
+                <Text style={{ color: 'white', fontWeight: '600' }}>Áp dụng</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -260,17 +251,17 @@ const VehicleListScreen = () => {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="large" color={colors.brand} style={{marginTop: 40}} />
+          <ActivityIndicator size="large" color={colors.brand} style={{ marginTop: 40 }} />
         ) : (
           <FlatList
             data={filteredData}
             renderItem={renderVehicleItem}
-            keyExtractor={(item) => item.assignment_id.toString()}
+            keyExtractor={(item) => item.registration_id.toString()}
             contentContainerStyle={{ paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 40}}>
-                 <Text style={{color: colors.muted}}>Chưa có phương tiện nào.</Text>
+              <View style={{ alignItems: 'center', marginTop: 40 }}>
+                <Text style={{ color: colors.muted }}>Chưa có phương tiện nào.</Text>
               </View>
             }
           />
@@ -289,7 +280,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 24, 
+    paddingTop: spacing.xl + 24,
   },
   topRow: {
     flexDirection: "row",
@@ -334,7 +325,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   iconBox: {
-      width: 32, height: 32, borderRadius: 8, backgroundColor: "#E0F2FE", alignItems: 'center', justifyContent: 'center'
+    width: 32, height: 32, borderRadius: 8, backgroundColor: "#E0F2FE", alignItems: 'center', justifyContent: 'center'
   },
   plateNumber: { fontSize: 16, fontWeight: "700", color: "#111827" },
   statusBadge: {
@@ -347,7 +338,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   label: { fontSize: 13, color: "#6B7280" },
   value: { fontSize: 13, color: "#111827", fontWeight: "500" },
-  
+
   // Modal Styles
   modalOverlay: {
     flex: 1,
