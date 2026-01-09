@@ -37,24 +37,3 @@ export function getTenantAgeDistribution() {
 export function getExpiringContracts() {
   return unwrap(http.get("/tenants/analytics/expiring"));
 }
-
-/**
- * 💰 Lấy DANH SÁCH HÓA ĐƠN CHƯA THANH TOÁN của tenant (mobile)
- *
- * ⚠️ BE route /tenant/bills đang lỗi Prisma (do status notIn: ['master', ...]),
- * nên ở mobile ta dùng tạm route /tenant/bills-unpaid để tránh lỗi.
- *
- * Backend: GET /api/tenant/bills-unpaid  (tenant.routes -> '/bills-unpaid')
- */
-export function getAllUnpaidTenantBills() {
-  // http đã có baseURL = '.../api' nên chỉ cần '/bill/list/unpaid'
-  return unwrap(http.get("/bill/list/unpaid"));
-}
-
-/**
- * 🧾 (Tuỳ chọn) Lấy tất cả hóa đơn của tenant (kể cả đã thanh toán)
- * Backend: GET /api/bill/list
- */
-export function getAllTenantBills() {
-  return unwrap(http.get("/bill/list"));
-}

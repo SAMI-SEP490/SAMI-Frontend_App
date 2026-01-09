@@ -1,80 +1,72 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  ScrollView,
-  StatusBar,
+  FlatList,
+  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  StatusBar,
+  ScrollView,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+
 import Header from "../../components/Header";
-import { spacing } from "../../theme/spacing";
 import { colors } from "../../theme/colors";
-import { getAllTenantBills } from "../../service/api/tenant";
+import { spacing } from "../../theme/spacing";
+import { getMyBills } from "../../service/api/bill";
 
-// Helper to format date cleanly (DD/MM/YYYY)
-const formatDate = (dateString) => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("vi-VN");
+// --- CONFIG MAPPING ---
+const STATUS_CONFIG = {
+  issued: { label: "Chờ thanh toán", color: "#D97706", bg: "#FEF3C7" },
+  partially_paid: { label: "Thanh toán 1 phần", color: "#2563EB", bg: "#EFF6FF" },
+  paid: { label: "Đã thanh toán", color: "#16A34A", bg: "#DCFCE7" },
+  overdue: { label: "Quá hạn", color: "#DC2626", bg: "#FEE2E2" },
+  cancelled: { label: "Đã hủy", color: "#6B7280", bg: "#F3F4F6" },
+  draft: { label: "Nháp", color: "#9CA3AF", bg: "#F3F4F6" },
 };
 
-// Helper to format currency (1.000.000 đ)
-const VND = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-});
-
-const formatCurrency = (amount) => {
-  if (amount === undefined || amount === null) return "0 đ";
-  return VND.format(amount);
+const TYPE_CONFIG = {
+  monthly_rent: { label: "Tiền thuê", icon: "home" },
+  utilities: { label: "Điện nước", icon: "flash" },
+  maintenance: { label: "Bảo trì", icon: "construct" },
+  penalty: { label: "Phạt", icon: "warning" },
+  deposit: { label: "Đặt cọc", icon: "wallet" },
+  other: { label: "Khác", icon: "document-text" },
 };
 
-// Filter Definitions
+// --- STATUS FILTER ---
 const FILTER_OPTIONS = [
   { key: 'all', label: 'Tất cả' },
-  { key: 'issued', label: 'Chưa thanh toán' },
-  { key: 'overdue', label: 'Quá hạn' },
+  { key: 'unpaid', label: 'Cần thanh toán' },
   { key: 'paid', label: 'Đã thanh toán' },
   { key: 'cancelled', label: 'Đã hủy' },
 ];
 
-function BillListScreen() {
+export default function BillListScreen() {
   const navigation = useNavigation();
+
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   
-  // NEW: Filter State
-  const [filterStatus, setFilterStatus] = useState('all');
+  // Filters
+  const [filterKey, setFilterKey] = useState('all');
+  const [selectedRoom, setSelectedRoom] = useState('all');
 
   const fetchBills = async () => {
     try {
       if (!refreshing) setLoading(true);
-      setError("");
-      const res = await getAllTenantBills();
+      const res = await getMyBills();
       const list = res?.data || [];
-      
-      // Sort: Actionable (Pending/Overdue) first, then History (Paid/Cancelled)
-      list.sort((a, b) => {
-        const isHistoryA = a.status === 'paid' || a.status === 'cancelled';
-        const isHistoryB = b.status === 'paid' || b.status === 'cancelled';
-
-        if (isHistoryA && !isHistoryB) return 1; 
-        if (!isHistoryA && isHistoryB) return -1; 
-        
-        return new Date(b.created_at) - new Date(a.created_at);
-      });
-      
+      // Sort by newest billing period
+      list.sort((a, b) => new Date(b.billing_period_start) - new Date(a.billing_period_start));
       setBills(list);
-    } catch (err) {
-      console.log("Error fetch bills:", err);
-      setError("Không thể tải danh sách hóa đơn.");
+    } catch (error) {
+      console.error("Bill fetch error:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -84,6 +76,7 @@ function BillListScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchBills();
+      setSelectedIds([]);
     }, [])
   );
 
@@ -92,45 +85,166 @@ function BillListScreen() {
     fetchBills();
   };
 
-  const toggleSelect = (billId) => {
+  // --- LOGIC: PERMISSION ---
+  // Now simpler! We rely on 'is_payer' from backend.
+  const canSelect = (bill) => {
+    return bill.is_payer && ["issued", "overdue", "partially_paid"].includes(bill.status);
+  };
+
+  const toggleSelection = (bill) => {
+    if (!canSelect(bill)) return;
+
     setSelectedIds((prev) =>
-      prev.includes(billId)
-        ? prev.filter((id) => id !== billId)
-        : [...prev, billId]
+      prev.includes(bill.bill_id) 
+        ? prev.filter((id) => id !== bill.bill_id) 
+        : [...prev, bill.bill_id]
     );
   };
 
-  // NEW: Filter Logic
-  const filteredBills = useMemo(() => {
-    if (filterStatus === 'all') return bills;
-    return bills.filter((b) => b.status === filterStatus);
-  }, [bills, filterStatus]);
+  // --- EXTRACT ROOMS FOR FILTER ---
+  const uniqueRooms = useMemo(() => {
+    const rooms = new Set();
+    bills.forEach(b => {
+        // Backend now returns 'room_number' directly
+        if (b.room_number) rooms.add(b.room_number);
+    });
+    return Array.from(rooms);
+  }, [bills]);
 
-  // Calculate Total from Selected (Available in Filtered View)
-  const totalAmount = useMemo(() => {
-    // We only sum up selected bills that are currently visible
+  // --- FILTER LOGIC ---
+  const filteredBills = useMemo(() => {
+    return bills.filter(b => {
+        // 1. Status Filter
+        let statusMatch = true;
+        if (filterKey === 'unpaid') {
+            statusMatch = ["issued", "overdue", "partially_paid"].includes(b.status);
+        } else if (filterKey !== 'all') {
+            statusMatch = b.status === filterKey;
+        }
+
+        // 2. Room Filter
+        let roomMatch = true;
+        if (selectedRoom !== 'all') {
+            roomMatch = b.room_number === selectedRoom;
+        }
+
+        return statusMatch && roomMatch;
+    });
+  }, [bills, filterKey, selectedRoom]);
+
+  const totalSelectedAmount = useMemo(() => {
     return filteredBills
       .filter((b) => selectedIds.includes(b.bill_id))
-      .reduce((sum, b) => sum + Number(b.total_amount || 0), 0); 
+      .reduce((sum, b) => {
+        const total = Number(b.total_amount || 0) + Number(b.penalty_amount || 0);
+        const paid = Number(b.paid_amount || 0);
+        return sum + (total - paid);
+      }, 0);
   }, [filteredBills, selectedIds]);
 
-  const handleGoToPayment = () => {
-    const selectedBills = bills.filter((b) => selectedIds.includes(b.bill_id));
-    if (!selectedBills.length) return;
+  const handlePayNow = () => {
+    if (selectedIds.length === 0) return;
+    const selectedBills = bills.filter(b => selectedIds.includes(b.bill_id));
     navigation.navigate("OnlinePaymentScreen", { bills: selectedBills });
   };
 
-  const getStatusInfo = (status) => {
-      switch (status) {
-          case 'paid': 
-              return { label: 'Đã thanh toán', bg: '#DCFCE7', text: '#16A34A' };
-          case 'overdue':
-              return { label: 'Quá hạn', bg: '#FEE2E2', text: '#EF4444' };
-          case 'cancelled':
-              return { label: 'Đã hủy', bg: '#F3F4F6', text: '#6B7280' };
-          default:
-              return { label: 'Chưa thanh toán', bg: '#FEF3C7', text: '#D97706' };
-      }
+  const renderItem = ({ item }) => {
+    const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.draft;
+    const typeCfg = TYPE_CONFIG[item.bill_type] || TYPE_CONFIG.other;
+    const isSelected = selectedIds.includes(item.bill_id);
+    
+    // Logic using new backend flags
+    const assignedToMe = item.is_payer;
+    const selectable = canSelect(item);
+    
+    // Amounts
+    const totalDue = Number(item.total_amount) + Number(item.penalty_amount || 0);
+    const paid = Number(item.paid_amount || 0);
+    const remaining = totalDue - paid;
+
+    return (
+      <TouchableOpacity
+        style={[
+            styles.card, 
+            isSelected && styles.cardSelected,
+            !assignedToMe && styles.cardDisabled // Darken if not assigned
+        ]}
+        activeOpacity={selectable ? 0.8 : 1}
+        onPress={() => toggleSelection(item)}
+        // Allow click even if not payer to potentially view details (if you add detail screen later)
+        disabled={false} 
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.typeRow}>
+            
+            {/* Checkbox: Only for Payer + Actionable Status */}
+            {selectable ? (
+                <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                    {isSelected && <Ionicons name="checkmark" size={14} color="white" />}
+                </View>
+            ) : (
+                // Indication for Non-Payer or Completed
+                <View style={styles.iconBox}>
+                    <Ionicons name={typeCfg.icon} size={18} color={colors.brand} />
+                </View>
+            )}
+
+            <View>
+                <Text style={[styles.billNumber, !assignedToMe && {color: '#4B5563'}]}>
+                    {typeCfg.label}
+                </Text>
+                {/* Room Info Tag */}
+                <View style={styles.roomTag}>
+                    <Ionicons name="business-outline" size={10} color="#6B7280" />
+                    <Text style={styles.roomText}>P.{item.room_number}</Text>
+                </View>
+            </View>
+          </View>
+          
+          <View style={{alignItems: 'flex-end', gap: 4}}>
+            <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
+                <Text style={[styles.statusText, { color: statusCfg.color }]}>
+                {statusCfg.label}
+                </Text>
+            </View>
+            {/* Not Assigned Indicator */}
+            {!assignedToMe && (
+                <Text style={styles.readOnlyText}>
+                    <Ionicons name="lock-closed" size={10} /> Chỉ xem
+                </Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+            <Text style={styles.label}>Kỳ thanh toán:</Text>
+            <Text style={styles.value}>
+                {new Date(item.billing_period_start).toLocaleDateString('vi-VN')}
+            </Text>
+        </View>
+
+        <View style={styles.row}>
+            <Text style={styles.label}>Hạn chót:</Text>
+            <Text style={[styles.value, item.status === 'overdue' && {color: '#DC2626', fontWeight: '700'}]}>
+                {new Date(item.due_date).toLocaleDateString('vi-VN')}
+            </Text>
+        </View>
+
+        <View style={styles.row}>
+            <Text style={styles.label}>Tổng tiền:</Text>
+            <Text style={styles.value}>{totalDue.toLocaleString('vi-VN')} đ</Text>
+        </View>
+
+        {remaining > 0 && remaining !== totalDue && (
+             <View style={styles.row}>
+                <Text style={styles.label}>Còn lại:</Text>
+                <Text style={[styles.value, {color: colors.brand}]}>{remaining.toLocaleString('vi-VN')} đ</Text>
+            </View>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -139,7 +253,8 @@ function BillListScreen() {
       <Header title="Hóa đơn" isHome={false} />
 
       <View style={styles.contentContainer}>
-        {/* Top Info Row */}
+        
+        {/* Top Info */}
         <View style={styles.topRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Danh sách hóa đơn</Text>
@@ -153,15 +268,15 @@ function BillListScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* NEW: Filter Chips */}
+        {/* 1. Status Filter */}
         <View style={styles.filterContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
             {FILTER_OPTIONS.map((option) => {
-              const isActive = filterStatus === option.key;
+              const isActive = filterKey === option.key;
               return (
                 <TouchableOpacity
                   key={option.key}
-                  onPress={() => setFilterStatus(option.key)}
+                  onPress={() => setFilterKey(option.key)}
                   style={[styles.filterChip, isActive && styles.filterChipActive]}
                 >
                   <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
@@ -173,113 +288,62 @@ function BillListScreen() {
           </ScrollView>
         </View>
 
-        {loading && !refreshing ? (
-          <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color={colors.brand} />
-          </View>
-        ) : (
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingBottom: 100 }}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.brand]} />
-            }
-          >
-            {!loading && !error && filteredBills.length === 0 && (
-                <View style={styles.centerBox}>
-                    <Text style={{ color: colors.muted, marginTop: 40 }}>Không có hóa đơn nào.</Text>
-                </View>
-            )}
-
-            {filteredBills.map((bill) => {
-              const isSelected = selectedIds.includes(bill.bill_id);
-              const isPaid = bill.status === "paid";
-              const isCancelled = bill.status === "cancelled";
-              
-              const statusInfo = getStatusInfo(bill.status);
-              const isDisabled = isPaid || isCancelled;
-
-              return (
-                <TouchableOpacity
-                  key={bill.bill_id}
-                  style={[
-                    styles.billCard,
-                    isSelected && styles.billCardSelected,
-                    isDisabled && { opacity: 0.6 }
-                  ]}
-                  onPress={() => toggleSelect(bill.bill_id)}
-                  activeOpacity={0.8}
-                  disabled={isDisabled}
-                >
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.billTitle}>
-                      #{bill.bill_number || bill.bill_id}
-                    </Text>
-                    <View
-                        style={[
-                            styles.statusBadge,
-                            { backgroundColor: statusInfo.bg }
-                        ]}
+        {/* 2. Room Filter (Only show if > 1 room found) */}
+        {uniqueRooms.length > 1 && (
+            <View style={styles.roomFilterContainer}>
+                <Text style={styles.roomFilterLabel}>Phòng:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <TouchableOpacity 
+                        style={[styles.roomChip, selectedRoom === 'all' && styles.roomChipActive]}
+                        onPress={() => setSelectedRoom('all')}
                     >
-                        <Text style={[
-                            styles.statusText,
-                            { color: statusInfo.text }
-                        ]}>
-                            {statusInfo.label}
-                        </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.divider} />
-
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Kỳ thanh toán:</Text>
-                    <Text style={styles.value}>
-                       {formatDate(bill.billing_period_start)} - {formatDate(bill.billing_period_end)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.descriptionBlock}>
-                    <Text style={styles.label}>Nội dung:</Text>
-                    <Text style={styles.descriptionText}>
-                       {bill.description || ""}
-                    </Text>
-                  </View>
-                  
-                  <View style={[styles.row, { marginTop: 4 }]}>
-                    <Text style={styles.label}>Số tiền:</Text>
-                    <Text style={[styles.amountText, { color: colors.brand }]}>
-                      {formatCurrency(bill.total_amount)}
-                    </Text>
-                  </View>
-
-                  {isSelected && (
-                    <Text style={styles.selectedLabel}>✓ Đã chọn</Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                        <Text style={[styles.roomChipText, selectedRoom === 'all' && styles.roomChipTextActive]}>Tất cả</Text>
+                    </TouchableOpacity>
+                    {uniqueRooms.map(room => (
+                        <TouchableOpacity 
+                            key={room}
+                            style={[styles.roomChip, selectedRoom === room && styles.roomChipActive]}
+                            onPress={() => setSelectedRoom(room)}
+                        >
+                            <Text style={[styles.roomChipText, selectedRoom === room && styles.roomChipTextActive]}>P.{room}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
         )}
 
-        <View style={styles.bottomBar}>
-          <View>
-            <Text style={styles.totalLabel}>Tổng tiền:</Text>
-            <Text style={styles.totalValue}>{formatCurrency(totalAmount)}</Text>
-          </View>
-          <TouchableOpacity
-            style={[
-              styles.payButton,
-              (!selectedIds.length) && styles.payButtonDisabled,
-            ]}
-            disabled={!selectedIds.length}
-            onPress={handleGoToPayment}
-          >
-            <Text style={styles.payButtonText}>Thanh toán ({selectedIds.length})</Text>
-          </TouchableOpacity>
-        </View>
+        {/* List */}
+        {loading && !refreshing ? (
+          <ActivityIndicator size="large" color={colors.brand} style={{ marginTop: 40 }} />
+        ) : (
+          <FlatList
+            data={filteredBills}
+            keyExtractor={(item) => item.bill_id.toString()}
+            renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            ListEmptyComponent={
+                <View style={{alignItems: 'center', marginTop: 50}}>
+                    <Text style={{color: colors.muted}}>Không có hóa đơn nào.</Text>
+                </View>
+            }
+          />
+        )}
       </View>
+
+      {/* FAB */}
+      {selectedIds.length > 0 && (
+        <View style={styles.fabContainer}>
+            <View style={styles.totalInfo}>
+                <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
+                <Text style={styles.totalValue}>{totalSelectedAmount.toLocaleString('vi-VN')} đ</Text>
+            </View>
+            <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
+                <Text style={styles.payButtonText}>Thanh toán ({selectedIds.length})</Text>
+                <Ionicons name="arrow-forward" size={20} color="white" />
+            </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -294,110 +358,63 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xl + 24, 
-    overflow: "hidden"
   },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
+  
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
   title: { fontSize: 18, fontWeight: "700", color: "#111827" },
   subtitle: { fontSize: 13, color: "#6B7280", marginTop: 2 },
-  historyBadge: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
+  historyBadge: { backgroundColor: "white", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: "#E5E7EB" },
   historyText: { fontSize: 12, color: colors.brand, fontWeight: "600" },
+
+  // Status Filter
+  filterContainer: { marginBottom: 12, height: 36 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: "white", marginRight: 8, borderWidth: 1, borderColor: "#E5E7EB", justifyContent: 'center' },
+  filterChipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  filterText: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
+  filterTextActive: { color: "white" },
+
+  // Room Filter
+  roomFilterContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  roomFilterLabel: { fontSize: 12, color: '#6B7280', marginRight: 8 },
+  roomChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: '#E5E7EB', marginRight: 6 },
+  roomChipActive: { backgroundColor: '#374151' },
+  roomChipText: { fontSize: 11, color: '#4B5563', fontWeight: '600' },
+  roomChipTextActive: { color: 'white' },
+
+  // Cards
+  card: { backgroundColor: "white", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'transparent', shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
+  cardSelected: { borderColor: colors.brand, backgroundColor: '#EFF6FF' },
   
-  // FILTER STYLES
-  filterContainer: {
-    marginBottom: 16,
-    height: 40,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "white",
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    justifyContent: 'center'
-  },
-  filterChipActive: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand,
-  },
-  filterText: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "600"
-  },
-  filterTextActive: {
-    color: "white"
+  // Disabled State (For Secondary Tenants)
+  cardDisabled: { 
+      backgroundColor: '#F9FAFB', 
+      borderColor: '#E5E7EB',
+      opacity: 0.9 
   },
 
-  centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  billCard: {
-    backgroundColor: "white",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  billCardSelected: { borderColor: colors.brand, backgroundColor: "#EFF6FF" },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  billTitle: { fontSize: 16, fontWeight: "700", color: "#111827" },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
-  divider: { height: 1, backgroundColor: "#F3F4F6", marginBottom: 8 },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
+  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white' },
+  checkboxChecked: { backgroundColor: colors.brand, borderColor: colors.brand },
+  iconBox: { width: 28, height: 28, borderRadius: 8, backgroundColor: "#E0F2FE", alignItems: 'center', justifyContent: 'center' },
+  
+  billNumber: { fontSize: 15, fontWeight: "700", color: "#111827" },
+  roomTag: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 },
+  roomText: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
+
+  statusBadge: { paddingHorizontal: 6, paddingVertical: 4, borderRadius: 6 },
+  statusText: { fontSize: 11, fontWeight: "700" },
+  readOnlyText: { fontSize: 10, color: '#6B7280', fontStyle: 'italic' },
+
+  divider: { height: 1, backgroundColor: "#E5E7EB", marginVertical: 8 },
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-  label: { fontSize: 13, color: "#6B7280", flex: 1 },
-  value: { fontSize: 13, color: "#111827", fontWeight: "500", flex: 2, textAlign: 'right' },
+  label: { fontSize: 13, color: "#6B7280" },
+  value: { fontSize: 13, fontWeight: "500", color: "#111827" },
   
-  descriptionBlock: {
-      marginBottom: 6,
-  },
-  descriptionText: {
-      fontSize: 13,
-      color: "#374151",
-      marginTop: 2,
-      lineHeight: 18
-  },
-
-  amountText: { fontSize: 15, fontWeight: "700", textAlign: 'right', flex: 2 },
-  selectedLabel: { marginTop: 8, fontSize: 12, color: colors.brand, fontWeight: "700", textAlign: 'right' },
-  bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: "white",
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: 30,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  totalLabel: { fontSize: 12, color: "#6B7280" },
-  totalValue: { fontSize: 18, fontWeight: "800", color: colors.brand },
-  payButton: { backgroundColor: colors.brand, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
-  payButtonDisabled: { backgroundColor: "#9CA3AF" },
-  payButtonText: { color: "white", fontWeight: "700", fontSize: 15 },
+  fabContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: "white", paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 30, borderTopLeftRadius: 24, borderTopRightRadius: 24, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10, elevation: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  totalInfo: { flex: 1 },
+  totalLabel: { fontSize: 12, color: '#6B7280' },
+  totalValue: { fontSize: 18, fontWeight: '700', color: colors.brand },
+  payButton: { backgroundColor: colors.brand, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12 },
+  payButtonText: { color: 'white', fontWeight: '700', fontSize: 15 }
 });
-
-export default BillListScreen;
