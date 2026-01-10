@@ -3,13 +3,27 @@ import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { Alert } from "react-native";
 import { logout } from "../auth/store";
+import * as Device from 'expo-device';
 
 export const baseURL = Constants.expoConfig.extra.apiUrl.replace(/\/+$/, "");
+const getUserAgent = () => {
+    try {
+        if (Platform.OS === 'web') return navigator.userAgent;
 
+        const deviceName = Device.modelName || 'Unknown Device';
+        const osName = Platform.OS === 'ios' ? 'iOS' : 'Android';
+        const osVersion = Platform.Version;
+
+        return `SAMI-App (${osName}; ${deviceName}; ${osName} ${osVersion})`;
+    } catch (e) {
+        return 'SAMI-App (Mobile)';
+    }
+};
 export const http = axios.create({
   baseURL,
   timeout: 15000,
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json" ,
+       'X-Device-Info': getUserAgent()}
 });
 
 // ====== GẮN TOKEN TỰ ĐỘNG ======

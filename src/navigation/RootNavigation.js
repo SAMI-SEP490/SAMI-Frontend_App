@@ -51,6 +51,7 @@ import RegulationListScreen from "../screens/regulation/RegulationListScreen";
 import FloorPlanViewScreen from "../screens/floorplan/FloorPlanViewScreen";
 import ContractScreen from "../screens/contract/ContractScreen";
 import ContractDetailScreen from "../screens/contract/ContractDetailScreen";
+import ContractActionScreen from "../screens/contract/ContractActionScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -185,6 +186,13 @@ export default function RootNavigation() {
             name="RegulationListScreen"
             component={RegulationListScreen}
           />
+
+          <Stack.Screen
+              name="ContractActionScreen"
+              component={ContractActionScreen}
+              options={{ title: "Xử lý hợp đồng", headerShown: false }}
+          />
+
           {/* Contract  */}
           <Stack.Screen name="ContractScreen" component={ContractScreen} />
           <Stack.Screen name="ContractDetailScreen" component={ContractDetailScreen} />
