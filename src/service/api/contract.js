@@ -1,123 +1,158 @@
 // src/services/api/contract.js
 import { http, unwrap } from "../http";
-// Using Legacy API for stability (works with current build)
-import * as FileSystem from 'expo-file-system/legacy'; 
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Platform, Alert } from "react-native";
 
 const { StorageAccessFramework } = FileSystem;
 
 // ==========================================
-// 📌 CONTRACT API SERVICE
+// 📌 CONTRACT API SERVICE (TENANT VERSION)
 // ==========================================
 
 /**
- * Lấy danh sách hợp đồng (tenant, owner, manager)
- * @param {Object} params - query params nếu cần lọc/pagination (page, limit, status...)
- * @returns {Promise<Object>}
+ * Lấy danh sách hợp đồng của Tenant
  */
 export function getContracts(params = {}) {
   return unwrap(http.get("/contract", { params }));
 }
 
 /**
- * Lấy chi tiết hợp đồng theo ID
- * @param {number} contractId 
- * @returns {Promise<Object>}
+ * Lấy chi tiết hợp đồng
  */
 export function getContractDetail(contractId) {
   return unwrap(http.get(`/contract/${contractId}`));
 }
 
+// ==========================================
+// 📌 TENANT ACTIONS (BỔ SUNG)
+// ==========================================
+
 /**
- * 1. Internal: Tải file về thư mục Cache tạm thời
- * @param {number} contractId 
- * @param {string} fileName 
- * @returns {Promise<string>} URI của file trong cache
+ * Tenant chấp thuận/từ chối hợp đồng
+ * @param {number} contractId
+ * @param {string} action - 'accept' | 'reject' (QUAN TRỌNG: Cần thêm tham số này)
+ * @param {string} reason - Lý do nếu từ chối
  */
-export async function downloadContractToCache(contractId, fileName = "contract.pdf") {
+export function approveContract(contractId, action, reason = null) {
+  // Backend cần body: { action: "accept", reason: ... }
+  return unwrap(http.post(`/contract/${contractId}/approve`, {
+    action: action,
+    reason: reason
+  }));
+}
+
+/**
+ * Tenant phản hồi yêu cầu chấm dứt hợp đồng
+ * @param {number} contractId
+ * @param {string} action - 'approve' | 'reject' (Lưu ý: Backend đợi biến tên là 'action', không phải 'decision')
+ * @param {string} note - Ghi chú thêm
+ */
+export function respondToTermination(contractId, action, note = "") {
+  // Controller: const { action } = req.body; -> Cần gửi key là "action"
+  return unwrap(http.post(`/contract/${contractId}/respond-termination`, {
+    action: action,
+    reason: note // Backend controller logic Termination có thể dùng 'reason' hoặc 'note', nên gửi cả 2 cho chắc hoặc check lại controller
+  }));
+}
+/**
+ * Kiểm tra xem Tenant có hợp đồng nào cần xử lý gấp không
+ * @returns {Promise<Object|null>} Trả về object hợp đồng hoặc null
+ */
+export function checkPendingAction() {
+  return unwrap(http.get('/contract/pending-action'));
+}
+// ==========================================
+// 📌 DOWNLOAD & FILE HANDLING
+// ==========================================
+
+/**
+ * Helper: Lấy đuôi file từ MIME type hoặc tên file (để tránh lỗi lưu ảnh thành pdf)
+ */
+const getExtension = (filename, mimeType) => {
+  if (filename && filename.includes('.')) return ''; // Đã có đuôi
+  if (mimeType === 'application/pdf') return '.pdf';
+  if (mimeType === 'image/jpeg') return '.jpg';
+  if (mimeType === 'image/png') return '.png';
+  return '.pdf'; // Default fallback
+};
+
+/**
+ * 1. Tải file về Cache
+ * @param {number} contractId
+ * @param {string} serverFileName - Tên file gốc từ server (nếu có)
+ */
+export async function downloadContractToCache(contractId, serverFileName = null) {
   try {
-    console.log(`[ContractAPI] Fetching URL for ID: ${contractId}...`);
-    
-    // 1. Get presigned URL from Backend
+    console.log(`[ContractAPI] Getting link for ID: ${contractId}...`);
+
+    // Gọi API lấy link download
     const res = await unwrap(http.get(`/contract/${contractId}/download`));
     const downloadUrl = res?.download_url || res?.data?.download_url;
 
-    if (!downloadUrl) throw new Error("Link tải không tồn tại.");
+    // Lấy thông tin file để đặt tên đúng đuôi
+    const mimeType = res?.mime_type || 'application/pdf'; // Backend nên trả về field này
+    const extension = getExtension(serverFileName, mimeType);
 
-    // 2. Define local path in Cache
-    const fileUri = FileSystem.cacheDirectory + fileName;
+    // Tạo tên file an toàn: contract_123.pdf hoặc contract_123.jpg
+    const safeFileName = serverFileName || `contract_${contractId}${extension}`;
+    const fileUri = FileSystem.cacheDirectory + safeFileName;
 
-    console.log("[ContractAPI] Downloading to cache:", fileUri);
-    
-    // 3. Download
+    if (!downloadUrl) throw new Error("Không tìm thấy link tải.");
+
     const downloadRes = await FileSystem.downloadAsync(downloadUrl, fileUri);
 
     if (downloadRes.status !== 200) {
-        throw new Error("Tải file thất bại.");
+      throw new Error("Tải file thất bại.");
     }
 
-    return downloadRes.uri;
+    return {
+      uri: downloadRes.uri,
+      name: safeFileName,
+      mimeType: mimeType
+    };
+
   } catch (error) {
-    console.error("[ContractAPI] Error:", error);
+    console.error("[ContractAPI] Download Error:", error);
     throw error;
   }
 }
 
 /**
- * 2. Option A: Lưu file vào bộ nhớ máy (Persistent)
- * - Android: Sử dụng Storage Access Framework để chọn thư mục
- * - iOS: Mở Share Sheet (người dùng chọn "Save to Files")
- * @param {string} fileUri - URI file trong cache
- * @param {string} fileName 
+ * 2. Lưu file vào máy (Android/iOS)
+ * @param {Object} fileInfo - { uri, name, mimeType } lấy từ hàm downloadContractToCache
  */
-export async function saveContractToDevice(fileUri, fileName) {
+export async function saveContractToDevice(fileInfo) {
+  const { uri, name, mimeType } = fileInfo;
+
   if (Platform.OS === 'android') {
     try {
-      // 1. Request permission to access a directory
       const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync();
-      
-      if (!permissions.granted) {
-        return; // User cancelled
-      }
+      if (!permissions.granted) return;
 
-      // 2. Read file from cache as Base64
-      const fileData = await FileSystem.readAsStringAsync(fileUri, {
+      const fileData = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64
       });
 
-      // 3. Create file in selected directory
+      // Tạo file với đúng mimeType (ảnh hoặc pdf)
       const newFileUri = await StorageAccessFramework.createFileAsync(
-        permissions.directoryUri,
-        fileName,
-        'application/pdf'
+          permissions.directoryUri,
+          name,
+          mimeType
       );
 
-      // 4. Write data
       await FileSystem.writeAsStringAsync(newFileUri, fileData, {
         encoding: FileSystem.EncodingType.Base64
       });
 
-      Alert.alert("Thành công", "Đã lưu file vào thư mục bạn chọn.");
+      Alert.alert("Thành công", "Đã lưu hợp đồng về máy.");
 
     } catch (e) {
       console.error(e);
-      Alert.alert("Lỗi", "Không thể lưu file.");
+      Alert.alert("Lỗi", "Không thể lưu file. Vui lòng thử lại.");
     }
   } else {
-    // iOS doesn't allow direct saving without user interaction via Share Sheet
-    await Sharing.shareAsync(fileUri);
-  }
-}
-
-/**
- * 3. Option B: Chia sẻ file (Share Sheet)
- * @param {string} fileUri - URI file trong cache
- */
-export async function shareContractFile(fileUri) {
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(fileUri);
-  } else {
-    Alert.alert("Lỗi", "Thiết bị không hỗ trợ chia sẻ.");
+    // iOS
+    await Sharing.shareAsync(uri);
   }
 }
