@@ -67,6 +67,12 @@ const FEATURES = [
         bg: "#EFFFF7",
     },
     {
+        key: "contact",
+        label: "Liên hệ quản lý",
+        icon: (p) => <Ionicons name="call-outline" size={26} color={p} />,
+        bg: "#FFF9C4",
+    },
+    {
         key: "chatbot",
         label: "SAMI bot",
         icon: (p) => <Ionicons name="chatbubbles-outline" size={26} color={p} />,
@@ -187,6 +193,7 @@ export default function DashboardScreen() {
                                             rules: "RegulationListScreen",
                                             map: "FloorPlanViewScreen",
                                             contract: "ContractScreen",
+                                            contact: "BuildingContactScreen",
                                         };
                                         if (screens[item.key]) navigation.navigate(screens[item.key]);
                                     }}

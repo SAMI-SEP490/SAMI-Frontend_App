@@ -24,3 +24,11 @@ export function getBuildingById(id) {
 export function getMyBuildingDetails() {
   return unwrap(http.get("/building/tenant/my-info"));
 }
+
+/**
+ * Lấy danh sách liên hệ (Manager + Owner) của các tòa nhà tenant đang thuê
+ * Backend: GET /building/tenant/contacts
+ */
+export function getBuildingContacts() {
+  return unwrap(http.get("/building/tenant/contacts"));
+}

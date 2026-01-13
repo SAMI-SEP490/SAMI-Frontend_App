@@ -53,6 +53,9 @@ import ContractScreen from "../screens/contract/ContractScreen";
 import ContractDetailScreen from "../screens/contract/ContractDetailScreen";
 import ContractActionScreen from "../screens/contract/ContractActionScreen";
 
+//Building
+import BuildingContactScreen from "../screens/building/BuildingContactScreen";
+
 const Stack = createNativeStackNavigator();
 
 const roleIsTenant = (u) =>
@@ -185,6 +188,12 @@ export default function RootNavigation() {
           <Stack.Screen
             name="RegulationListScreen"
             component={RegulationListScreen}
+          />
+
+          <Stack.Screen
+            name="BuildingContactScreen"
+            component={BuildingContactScreen}
+            options={{ headerShown: false }}
           />
 
           <Stack.Screen
