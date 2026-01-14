@@ -43,7 +43,7 @@ export default function OnlinePaymentScreen() {
 
       if (!checkoutUrl) throw new Error("Không lấy được link thanh toán.");
 
-      await WebBrowser.openBrowserAsync(checkoutUrl);
+      await WebBrowser.openBrowserAsync(checkoutUrl, { createTask: false });
       
       Alert.alert(
           "Kết quả giao dịch", 
@@ -73,7 +73,7 @@ export default function OnlinePaymentScreen() {
                 {bills.map((bill) => (
                     <View key={bill.bill_id} style={styles.itemRow}>
                         <Text style={styles.itemLabel}>
-                            {bill.bill_type === 'monthly_rent' ? 'Tiền thuê' : 'Điện nước'} - {bill.bill_number.slice(-4)}
+                            {bill.bill_type === 'monthly_rent' ? 'Tiền thuê' : 'Điện nước'}: {bill.bill_number}
                         </Text>
                         <Text style={styles.itemValue}>
                             {(Number(bill.total_amount) + Number(bill.penalty_amount||0) - Number(bill.paid_amount||0)).toLocaleString('vi-VN')} đ

@@ -16,3 +16,19 @@ export function getBuildings(params = {}) {
 export function getBuildingById(id) {
   return unwrap(http.get(`/building/${id}`));
 }
+
+/**
+ * Lấy thông tin chi tiết (giá điện, nước...) của các tòa nhà mà tenant đang thuê
+ * Backend: GET /building/tenant/my-info
+ */
+export function getMyBuildingDetails() {
+  return unwrap(http.get("/building/tenant/my-info"));
+}
+
+/**
+ * Lấy danh sách liên hệ (Manager + Owner) của các tòa nhà tenant đang thuê
+ * Backend: GET /building/tenant/contacts
+ */
+export function getBuildingContacts() {
+  return unwrap(http.get("/building/tenant/contacts"));
+}
