@@ -5,7 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-
+import { logout } from '../../auth';
 // Import API
 import {
     getContractDetail,
@@ -15,13 +15,7 @@ import {
 } from '../../service/api/contract';
 import { getActiveConsentVersion } from '../../service/api/consent';
 
-// ... (Giữ nguyên các helper formatCurrency, formatDate, performLogout) ...
-const performLogout = (navigation) => {
-    navigation.reset({
-        index: 0,
-        routes: [{ name: 'LoginScreen' }],
-    });
-};
+
 const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return '0';
     return amount.toLocaleString('vi-VN');
@@ -176,8 +170,15 @@ export default function ContractActionScreen() {
             Alert.alert("Cảnh báo quan trọng", "Từ chối ký hợp đồng đồng nghĩa với việc bạn hủy bỏ thuê phòng.", [
                 { text: "Xem lại", style: "cancel" },
                 { text: "Xác nhận Từ chối", style: "destructive", onPress: async () => {
-                        try { setSubmitting(true); await approveContract(contractId, 'reject', 'User rejected manually'); performLogout(navigation); }
-                        catch (e) { Alert.alert("Lỗi", e.message); } finally { setSubmitting(false); }
+                        try {
+                            setSubmitting(true);
+                            await approveContract(contractId, 'reject', 'User rejected manually');
+
+                            await logout();
+
+                        }
+                        catch (e) { Alert.alert("Lỗi", e.message); }
+                        finally { setSubmitting(false); }
                     }}
             ]);
         } else if (isTerminationRequest) {
