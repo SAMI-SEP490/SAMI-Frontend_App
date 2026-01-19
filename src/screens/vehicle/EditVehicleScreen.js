@@ -51,12 +51,13 @@ const EditVehicleScreen = () => {
     end_date: null,
     note: "",
   });
-console.log("EditVehicleScreen vehicleId:", vehicleId);
+  console.log("EditVehicleScreen vehicleId:", vehicleId);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
   const handleChange = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -74,41 +75,72 @@ console.log("EditVehicleScreen vehicleId:", vehicleId);
     }
     handleChange("end_date", selectedDate.toISOString().split("T")[0]);
   };
+  const handleStartDateChange = (event, selectedDate) => {
+    setShowStartPicker(false);
+    if (!selectedDate) return;
 
+    const todayObj = new Date();
+    todayObj.setHours(0, 0, 0, 0);
+
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < todayObj) {
+      Alert.alert("Lỗi ngày", "Ngày bắt đầu phải từ hôm nay trở đi.");
+      return;
+    }
+
+    handleChange("start_date", selectedDate.toISOString().split("T")[0]);
+    handleChange("end_date", null);
+  };
+  const handleEndDateChange = (event, selectedDate) => {
+    setShowEndPicker(false);
+    if (!selectedDate) return;
+
+    const startDateObj = new Date(form.start_date);
+    startDateObj.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate <= startDateObj) {
+      Alert.alert("Lỗi ngày", "Ngày kết thúc phải sau ngày bắt đầu.");
+      return;
+    }
+
+    handleChange("end_date", selectedDate.toISOString().split("T")[0]);
+  };
   const clearEndDate = () => handleChange("end_date", null);
 
   const fetchVehicle = async () => {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const res = await getVehicleRegistrationById(vehicleId);
-    const data = res?.data?.registration || res?.registration || res;
+      const res = await getVehicleRegistrationById(vehicleId);
+      const data = res?.data?.registration || res?.registration || res;
 
-    if (!data) {
-      throw new Error("No registration data");
+      if (!data) {
+        throw new Error("No registration data");
+      }
+
+      setForm({
+        vehicle_type: data.vehicle_type || "",
+        license_plate: data.license_plate || "",
+        brand: data.brand || "",
+        color: data.color || "",
+        start_date: data.start_date
+          ? data.start_date.split("T")[0]
+          : today,
+        end_date: data.end_date
+          ? data.end_date.split("T")[0]
+          : null,
+        note: data.note || "",
+      });
+    } catch (err) {
+      console.log("❌ fetchVehicle error:", err);
+      Alert.alert("Lỗi", "Không thể tải thông tin xe.");
+      navigation.goBack();
+    } finally {
+      setLoading(false);
     }
-
-    setForm({
-      vehicle_type: data.vehicle_type || "",
-      license_plate: data.license_plate || "",
-      brand: data.brand || "",
-      color: data.color || "",
-      start_date: data.start_date
-        ? data.start_date.split("T")[0]
-        : today,
-      end_date: data.end_date
-        ? data.end_date.split("T")[0]
-        : null,
-      note: data.note || "",
-    });
-  } catch (err) {
-    console.log("❌ fetchVehicle error:", err);
-    Alert.alert("Lỗi", "Không thể tải thông tin xe.");
-    navigation.goBack();
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     if (vehicleId) fetchVehicle();
@@ -117,11 +149,11 @@ console.log("EditVehicleScreen vehicleId:", vehicleId);
   // --- SAVE HANDLER ---
   const handleSubmit = async () => {
     if (!form.vehicle_type || !form.license_plate) {
-  return Alert.alert(
-    "Thiếu thông tin",
-    "Vui lòng chọn loại xe và nhập biển số."
-  );
-}
+      return Alert.alert(
+        "Thiếu thông tin",
+        "Vui lòng chọn loại xe và nhập biển số."
+      );
+    }
     setSubmitting(true);
     try {
       const payload = {
@@ -196,7 +228,7 @@ console.log("EditVehicleScreen vehicleId:", vehicleId);
 
           <View style={styles.card}>
             {/* Loại xe */}
-            <Text style={styles.label}>Loại phương tiện</Text>
+            <Text style={styles.label}>Loại phương tiện <Text style={{ color: 'red' }}>*</Text></Text>
             <View style={styles.pickerWrapper}>
               <Picker
                 selectedValue={form.vehicle_type}
@@ -213,7 +245,7 @@ console.log("EditVehicleScreen vehicleId:", vehicleId);
             </View>
 
             {/* Biển số */}
-            <Text style={styles.label}>Biển số xe</Text>
+            <Text style={styles.label}>Biển số xe <Text style={{ color: 'red' }}>*</Text></Text>
             <TextInput
               style={styles.input}
               value={form.license_plate}
@@ -246,15 +278,34 @@ console.log("EditVehicleScreen vehicleId:", vehicleId);
             </View>
 
             {/* Ngày bắt đầu */}
-            <Text style={styles.label}>Ngày bắt đầu</Text>
-            <View style={[styles.input, { backgroundColor: "#F3F4F6", justifyContent: 'center' }]}>
-              {/* FIX: Use helper function */}
-              <Text style={{ color: '#6B7280' }}>{formatDateDisplay(form.start_date)}</Text>
-            </View>
+            <Text style={styles.label}>Ngày bắt đầu <Text style={{ color: 'red' }}>*</Text></Text>
+            <TouchableOpacity
+              onPress={() => setShowStartPicker(true)}
+              style={[styles.input, { justifyContent: "center" }]}
+            >
+              <Text style={{ color: "#111827" }}>
+                {formatDateDisplay(form.start_date)}
+              </Text>
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color="#9CA3AF"
+                style={{ position: "absolute", right: 10, top: 12 }}
+              />
+            </TouchableOpacity>
 
-            <Text style={styles.label}>Ngày kết thúc</Text>
+            <Text style={styles.label}>Ngày kết thúc <Text style={{ color: 'red' }}>*</Text></Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.input, { flex: 1 }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!form.start_date) {
+                    Alert.alert("Chưa chọn ngày bắt đầu", "Vui lòng chọn ngày bắt đầu trước.");
+                    return;
+                  }
+                  setShowEndPicker(true);
+                }}
+                style={[styles.input, { flex: 1 }]}
+              >
                 <Text style={{ color: form.end_date ? '#111827' : '#9CA3AF' }}>
                   {/* FIX: Use helper function */}
                   {form.end_date ? formatDateDisplay(form.end_date) : "Chọn ngày"}
@@ -267,12 +318,27 @@ console.log("EditVehicleScreen vehicleId:", vehicleId);
                 </TouchableOpacity>
               )}
             </View>
-            {showDatePicker && (
+            {showStartPicker && (
               <DateTimePicker
-                value={form.end_date ? new Date(form.end_date) : new Date(new Date().getTime() + 86400000)}
+                value={new Date(form.start_date)}
                 mode="date"
-                minimumDate={new Date(new Date().getTime() + 86400000)}
-                onChange={handleDateChange}
+                display="default"
+                minimumDate={new Date()}
+                onChange={handleStartDateChange}
+              />
+            )}
+
+            {showEndPicker && (
+              <DateTimePicker
+                value={
+                  form.end_date
+                    ? new Date(form.end_date)
+                    : new Date(new Date(form.start_date).getTime() + 86400000)
+                }
+                mode="date"
+                display="default"
+                minimumDate={new Date(new Date(form.start_date).getTime() + 86400000)}
+                onChange={handleEndDateChange}
               />
             )}
 

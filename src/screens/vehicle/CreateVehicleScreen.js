@@ -34,26 +34,45 @@ const formatDateDisplay = (dateString) => {
 
 const CreateVehicleScreen = () => {
   const navigation = useNavigation();
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date();
 
   const [form, setForm] = useState({
     vehicle_type: "",
     license_plate: "",
     brand: "",
     color: "",
-    start_date: today,
+    start_date: null,
     end_date: null,
     note: "",
   });
-
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+  const handleStartDateChange = (event, selectedDate) => {
+    setShowStartPicker(false);
+    if (!selectedDate) return;
 
+    selectedDate.setHours(0, 0, 0, 0);
+
+    const todayObj = new Date();
+    todayObj.setHours(0, 0, 0, 0);
+
+    if (selectedDate < todayObj) {
+      Alert.alert("Lỗi ngày", "Ngày bắt đầu phải từ hôm nay trở đi.");
+      return;
+    }
+
+    handleChange("start_date", selectedDate.toISOString().split("T")[0]);
+
+    // 🔥 Reset end_date khi đổi start_date
+    handleChange("end_date", null);
+  };
   const handleEndDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
+    setShowEndPicker(false);
     if (!selectedDate) return;
 
     const startDateObj = new Date(form.start_date);
@@ -72,35 +91,35 @@ const CreateVehicleScreen = () => {
     handleChange("end_date", null);
   }
 
-const handleSubmit = async () => {
-  if (!form.vehicle_type) {
-    return Alert.alert("Thiếu thông tin", "Vui lòng chọn loại phương tiện.");
-  }
-  if (!form.license_plate) {
-    return Alert.alert("Thiếu thông tin", "Vui lòng nhập biển số xe.");
-  }
+  const handleSubmit = async () => {
+    if (!form.vehicle_type) {
+      return Alert.alert("Thiếu thông tin", "Vui lòng chọn loại phương tiện.");
+    }
+    if (!form.license_plate) {
+      return Alert.alert("Thiếu thông tin", "Vui lòng nhập biển số xe.");
+    }
 
-  setLoading(true);
-  try {
-    await createVehicleRegistration({
-      vehicle_type: form.vehicle_type,
-      license_plate: form.license_plate,
-      brand: form.brand,
-      color: form.color,
-      start_date: form.start_date,
-      end_date: form.end_date,
-      note: form.note,
-    });
+    setLoading(true);
+    try {
+      await createVehicleRegistration({
+        vehicle_type: form.vehicle_type,
+        license_plate: form.license_plate,
+        brand: form.brand,
+        color: form.color,
+        start_date: form.start_date,
+        end_date: form.end_date,
+        note: form.note,
+      });
 
-    Alert.alert("Thành công", "Gửi yêu cầu đăng ký xe thành công!", [
-      { text: "OK", onPress: () => navigation.goBack() },
-    ]);
-  } catch (err) {
-    Alert.alert("Lỗi", err?.message || "Không thể gửi yêu cầu.");
-  } finally {
-    setLoading(false);
-  }
-};
+      Alert.alert("Thành công", "Gửi yêu cầu đăng ký xe thành công!", [
+        { text: "OK", onPress: () => navigation.goBack() },
+      ]);
+    } catch (err) {
+      Alert.alert("Lỗi", err?.message || "Không thể gửi yêu cầu.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -177,31 +196,77 @@ const handleSubmit = async () => {
               </View>
             </View>
 
-            <Text style={styles.label}>Ngày bắt đầu</Text>
-            <View style={[styles.input, { backgroundColor: "#F3F4F6", justifyContent: 'center' }]}>
-              {/* FIX: Use helper function */}
-              <Text style={{ color: '#6B7280' }}>{formatDateDisplay(form.start_date)}</Text>
-            </View>
+            <Text style={styles.label}>Ngày bắt đầu <Text style={{ color: 'red' }}>*</Text></Text>
+            <TouchableOpacity
+              onPress={() => setShowStartPicker(true)}
+              style={[styles.input, { justifyContent: "center" }]}
+            >
+              <Text style={{ color: form.start_date ? "#111827" : "#9CA3AF" }}>
+                {form.start_date ? formatDateDisplay(form.start_date) : "Chọn ngày bắt đầu"}
+              </Text>
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color="#9CA3AF"
+                style={{ position: "absolute", right: 10, top: 12 }}
+              />
+            </TouchableOpacity>
 
-            <Text style={styles.label}>Ngày kết thúc (Tùy chọn)</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {showStartPicker && (
+              <DateTimePicker
+                value={form.start_date ? new Date(form.start_date) : today}
+                mode="date"
+                display="default"
+                minimumDate={today}
+                onChange={handleStartDateChange}
+              />
+            )}
+
+            <Text style={styles.label}>Ngày kết thúc <Text style={{ color: 'red' }}>*</Text></Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
-                style={[styles.input, { flex: 1 }]}
+                disabled={!form.start_date}
+                onPress={() => setShowEndPicker(true)}
+                style={[
+                  styles.input,
+                  { flex: 1, backgroundColor: form.start_date ? "white" : "#F3F4F6" }
+                ]}
               >
-                <Text style={{ color: form.end_date ? '#111827' : '#9CA3AF' }}>
-                  {/* FIX: Use helper function */}
-                  {form.end_date ? formatDateDisplay(form.end_date) : "Chọn ngày kết thúc"}
+                <Text style={{ color: form.end_date ? "#111827" : "#9CA3AF" }}>
+                  {form.end_date
+                    ? formatDateDisplay(form.end_date)
+                    : form.start_date
+                      ? "Chọn ngày kết thúc"
+                      : "Chọn ngày bắt đầu trước"}
                 </Text>
-                <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={{ position: 'absolute', right: 10, top: 12 }} />
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color="#9CA3AF"
+                  style={{ position: "absolute", right: 10, top: 12 }}
+                />
               </TouchableOpacity>
 
               {form.end_date && (
-                <TouchableOpacity onPress={clearEndDate} style={{ marginLeft: 8, padding: 4 }}>
+                <TouchableOpacity onPress={clearEndDate} style={{ marginLeft: 8 }}>
                   <Ionicons name="close-circle" size={24} color="#EF4444" />
                 </TouchableOpacity>
               )}
             </View>
+
+            {showEndPicker && form.start_date && (
+              <DateTimePicker
+                value={
+                  form.end_date
+                    ? new Date(form.end_date)
+                    : new Date(new Date(form.start_date).getTime() + 86400000)
+                }
+                mode="date"
+                display="default"
+                minimumDate={new Date(new Date(form.start_date).getTime() + 86400000)}
+                onChange={handleEndDateChange}
+              />
+            )}
 
             {showDatePicker && (
               <DateTimePicker
