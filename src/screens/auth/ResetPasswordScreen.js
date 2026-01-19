@@ -48,7 +48,7 @@ export default function ResetPasswordScreen({ navigation }) {
       });
 
     } catch (error) {
-      const msg = error?.response?.data?.message || "Không thể gửi yêu cầu.";
+      const msg = error?.message || "Không thể gửi yêu cầu.";
       Alert.alert("Lỗi", msg);
     } finally {
       setLoading(false);

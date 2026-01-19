@@ -161,7 +161,7 @@ export default function UpdateGuestRegistrationScreen() {
           { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      Alert.alert("Lỗi", error.response?.data?.message || "Không thể cập nhật.");
+      Alert.alert("Lỗi", error?.message || "Không thể cập nhật.");
     } finally {
       setSubmitting(false);
     }
@@ -173,7 +173,7 @@ export default function UpdateGuestRegistrationScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Chỉnh sửa đơn" isHome={false} />
+      <Header title="Chi tiết báo cáo" isHome={false} />
 
       <KeyboardAvoidingView 
         style={styles.contentContainer}
@@ -188,27 +188,25 @@ export default function UpdateGuestRegistrationScreen() {
             <View style={{flexDirection: 'row', gap: 12}}>
                 <View style={{flex: 1}}>
                     <Text style={styles.label}>Ngày đến</Text>
-                    <TouchableOpacity style={styles.input} onPress={() => setShowArrivalPicker(true)}>
+                    <TouchableOpacity style={styles.input} disabled>
                         <Text style={{color: '#111827'}}>{formatDateDisplay(arrivalDate)}</Text>
                         <Ionicons name="calendar-outline" size={18} color="#9CA3AF" style={{position: 'absolute', right: 10}}/>
                     </TouchableOpacity>
                 </View>
                 <View style={{flex: 1}}>
                     <Text style={styles.label}>Ngày đi</Text>
-                    <TouchableOpacity style={styles.input} onPress={() => setShowDeparturePicker(true)}>
+                    <TouchableOpacity style={styles.input} disabled>
                         <Text style={{color: '#111827'}}>{formatDateDisplay(departureDate)}</Text>
                         <Ionicons name="calendar-outline" size={18} color="#9CA3AF" style={{position: 'absolute', right: 10}}/>
                     </TouchableOpacity>
                 </View>
             </View>
-            {showArrivalPicker && <DateTimePicker value={arrivalDate} mode="date" onChange={handleArrivalChange} />}
-            {showDeparturePicker && <DateTimePicker value={departureDate} mode="date" minimumDate={new Date(arrivalDate.getTime() + 86400000)} onChange={handleDepartureChange} />}
             
             <Text style={styles.label}>Ghi chú</Text>
             <TextInput
               style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
               value={note}
-              onChangeText={setNote}
+              editable={false}
               multiline
               placeholderTextColor="#9CA3AF"
             />
@@ -217,21 +215,11 @@ export default function UpdateGuestRegistrationScreen() {
           {/* Section 2: Guests */}
           <View style={styles.guestHeaderRow}>
              <Text style={styles.sectionTitle}>Danh sách khách</Text>
-             <TouchableOpacity onPress={addGuest} style={{flexDirection: 'row', alignItems: 'center'}}>
-                 <Ionicons name="add-circle" size={20} color={colors.brand} />
-                 <Text style={{color: colors.brand, fontWeight: '600', marginLeft: 4}}>Thêm</Text>
-             </TouchableOpacity>
           </View>
-
           {guestDetails.map((guest, index) => (
             <View key={index} style={styles.guestCard}>
               <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
                   <Text style={styles.guestIndex}>Khách #{index + 1}</Text>
-                  {guestDetails.length > 1 && (
-                      <TouchableOpacity onPress={() => removeGuest(index)}>
-                          <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                      </TouchableOpacity>
-                  )}
               </View>
 
               <Text style={styles.label}>Họ và tên</Text>
@@ -240,7 +228,7 @@ export default function UpdateGuestRegistrationScreen() {
                 value={guest.full_name}
                 placeholder="Nguyễn Văn A"
                 placeholderTextColor="#9CA3AF"
-                onChangeText={(text) => updateGuestField(index, "full_name", text)}
+                editable={false}
               />
               
               <Text style={styles.label}>Số CCCD/CMND</Text>
@@ -250,15 +238,10 @@ export default function UpdateGuestRegistrationScreen() {
                 keyboardType="numeric"
                 placeholder="00109..."
                 placeholderTextColor="#9CA3AF"
-                onChangeText={(text) => updateGuestField(index, "id_number", text)}
+                editable={false}
               />
             </View>
           ))}
-
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={submitting}>
-             {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.submitText}>Lưu thay đổi</Text>}
-          </TouchableOpacity>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
