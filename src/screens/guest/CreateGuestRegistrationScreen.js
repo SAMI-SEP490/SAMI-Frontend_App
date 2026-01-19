@@ -171,7 +171,7 @@ export default function CreateGuestRegistrationScreen() {
           { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-        const msg = error.response?.data?.message || "Không thể tạo đơn đăng ký.";
+        const msg = error?.message || "Không thể tạo đơn đăng ký.";
         Alert.alert("Lỗi", msg);
     } finally {
       setLoading(false);
