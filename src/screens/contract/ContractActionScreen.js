@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Alert, Modal, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Checkbox from 'expo-checkbox';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as Sharing from 'expo-sharing';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 
@@ -9,24 +10,22 @@ import { spacing } from '../../theme/spacing';
 import {
     getContractDetail,
     approveContract,
-    respondToTermination
+    respondToTermination,
+    downloadContractToCache
 } from '../../service/api/contract';
 import { getActiveConsentVersion } from '../../service/api/consent';
 
+// ... (Giữ nguyên các helper formatCurrency, formatDate, performLogout) ...
 const performLogout = (navigation) => {
     navigation.reset({
         index: 0,
         routes: [{ name: 'LoginScreen' }],
     });
 };
-
-// Helper format tiền tệ an toàn
 const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return '0';
     return amount.toLocaleString('vi-VN');
 };
-
-// Helper format ngày an toàn
 const formatDate = (dateString) => {
     if (!dateString) return 'Chưa xác định';
     const date = new Date(dateString);
@@ -45,6 +44,7 @@ export default function ContractActionScreen() {
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [downloading, setDownloading] = useState(false); // <--- [MỚI] State loading cho nút PDF
     const [error, setError] = useState(null);
     const [isTermsChecked, setIsTermsChecked] = useState(false);
     const [isPrivacyChecked, setIsPrivacyChecked] = useState(false);
@@ -52,6 +52,7 @@ export default function ContractActionScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [modalContent, setModalContent] = useState({ title: '', content: '' });
 
+    // ... (Giữ nguyên useEffect và loadData) ...
     useEffect(() => {
         if (!contractId) {
             setError("Không tìm thấy ID hợp đồng.");
@@ -65,39 +66,27 @@ export default function ContractActionScreen() {
         try {
             setLoading(true);
             setError(null);
-
-            // 1. Lấy chi tiết hợp đồng
             const response = await getContractDetail(contractId);
-
-            // [FIX] Kiểm tra cấu trúc response để lấy đúng object data
-            // Nếu response là { success: true, data: {...} } thì lấy response.data
-            // Nếu response là {...} (object contract luôn) thì lấy response
             const contractData = response.data || response;
 
             if (!contractData || !contractData.contract_id) {
                 throw new Error("Dữ liệu hợp đồng không hợp lệ.");
             }
-
-            console.log("Contract Data Loaded:", contractData); // Debug log
+            console.log("Contract Data Loaded:", contractData);
             setContract(contractData);
 
-            // 2. Lấy Consent nếu là hợp đồng mới
             if (contractData.status === 'pending') {
                 try {
                     const [termsRes, privacyRes] = await Promise.all([
                         getActiveConsentVersion('TERM_OF_SERVICE'),
                         getActiveConsentVersion('PRIVACY_POLICY')
                     ]);
-                    const termsData = termsRes?.data || termsRes;
-                    const privacyData = privacyRes?.data || privacyRes;
-
-                    setTermsContent(termsData);
-                    setPrivacyContent(privacyData);
+                    setTermsContent(termsRes?.data || termsRes);
+                    setPrivacyContent(privacyRes?.data || privacyRes);
                 } catch (consentErr) {
                     console.warn("Lỗi tải điều khoản:", consentErr);
                 }
             }
-
         } catch (error) {
             console.error("Lỗi tải trang hợp đồng:", error);
             setError("Không thể tải thông tin hợp đồng: " + (error.message || "Lỗi mạng"));
@@ -124,13 +113,42 @@ export default function ContractActionScreen() {
         setModalVisible(true);
     };
 
+    // --- [MỚI] Hàm xử lý xem PDF ---
+    const handleViewPdf = async () => {
+        if (!contract) return;
+        try {
+            setDownloading(true);
+            // Tạo tên file gợi nhớ
+            const fileName = `HopDong_${contract.contract_number || contractId}.pdf`;
+
+            // 1. Tải về cache
+            const fileInfo = await downloadContractToCache(contractId, fileName);
+
+            // 2. Mở bằng trình xem mặc định của máy (Share sheet)
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileInfo.uri, {
+                    mimeType: fileInfo.mimeType || 'application/pdf',
+                    dialogTitle: 'Xem hợp đồng'
+                });
+            } else {
+                Alert.alert("Lỗi", "Thiết bị không hỗ trợ tính năng chia sẻ/xem file.");
+            }
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Lỗi tải file", "Không thể tải hợp đồng: " + error.message);
+        } finally {
+            setDownloading(false);
+        }
+    };
+    // -------------------------------
+
+    // ... (Giữ nguyên handleConfirm và handleReject) ...
     const handleConfirm = async () => {
         if (!contract) return;
         if (isNewContract && (!isTermsChecked || !isPrivacyChecked)) {
             Alert.alert("Yêu cầu", "Vui lòng đọc và đồng ý với các điều khoản trước khi ký.");
             return;
         }
-
         try {
             setSubmitting(true);
             if (isNewContract) {
@@ -152,52 +170,24 @@ export default function ContractActionScreen() {
     };
 
     const handleReject = () => {
+        // ... giữ nguyên nội dung hàm reject cũ của bạn ...
         if (!contract) return;
         if (isNewContract) {
-            Alert.alert(
-                "Cảnh báo quan trọng",
-                "Từ chối ký hợp đồng đồng nghĩa với việc bạn hủy bỏ thuê phòng.",
-                [
-                    { text: "Xem lại", style: "cancel" },
-                    {
-                        text: "Xác nhận Từ chối",
-                        style: "destructive",
-                        onPress: async () => {
-                            try {
-                                setSubmitting(true);
-                                await approveContract(contractId, 'reject', 'User rejected manually');
-                                performLogout(navigation);
-                            } catch (e) {
-                                Alert.alert("Lỗi", e.message);
-                            } finally {
-                                setSubmitting(false);
-                            }
-                        }
-                    }
-                ]
-            );
+            Alert.alert("Cảnh báo quan trọng", "Từ chối ký hợp đồng đồng nghĩa với việc bạn hủy bỏ thuê phòng.", [
+                { text: "Xem lại", style: "cancel" },
+                { text: "Xác nhận Từ chối", style: "destructive", onPress: async () => {
+                        try { setSubmitting(true); await approveContract(contractId, 'reject', 'User rejected manually'); performLogout(navigation); }
+                        catch (e) { Alert.alert("Lỗi", e.message); } finally { setSubmitting(false); }
+                    }}
+            ]);
         } else if (isTerminationRequest) {
-            Alert.alert(
-                "Xác nhận",
-                "Bạn muốn TỪ CHỐI chấm dứt? Hợp đồng sẽ tiếp tục.",
-                [
-                    { text: "Hủy", style: "cancel" },
-                    {
-                        text: "Từ chối chấm dứt",
-                        onPress: async () => {
-                            try {
-                                setSubmitting(true);
-                                await respondToTermination(contractId, 'reject');
-                                navigation.goBack();
-                            } catch (error) {
-                                Alert.alert("Lỗi", error.message);
-                            } finally {
-                                setSubmitting(false);
-                            }
-                        }
-                    }
-                ]
-            );
+            Alert.alert("Xác nhận", "Bạn muốn TỪ CHỐI chấm dứt? Hợp đồng sẽ tiếp tục.", [
+                { text: "Hủy", style: "cancel" },
+                { text: "Từ chối chấm dứt", onPress: async () => {
+                        try { setSubmitting(true); await respondToTermination(contractId, 'reject'); navigation.goBack(); }
+                        catch (error) { Alert.alert("Lỗi", error.message); } finally { setSubmitting(false); }
+                    }}
+            ]);
         }
     };
 
@@ -211,6 +201,7 @@ export default function ContractActionScreen() {
     }
 
     if (error || !contract) {
+        // ... giữ nguyên ...
         return (
             <View style={styles.center}>
                 <Text style={{color: 'red', marginBottom: 10}}>{error || "Không có dữ liệu."}</Text>
@@ -235,43 +226,42 @@ export default function ContractActionScreen() {
                         <Text style={styles.label}>Số hợp đồng:</Text>
                         <Text style={styles.value}>{contract.contract_number || '---'}</Text>
                     </View>
-
                     <View style={styles.divider} />
-
                     <View style={styles.row}>
                         <Text style={styles.label}>Phòng / Tòa nhà:</Text>
-                        <Text style={styles.value}>
-                            {contract.room_number} - {contract.building_name}
-                        </Text>
+                        <Text style={styles.value}>{contract.room_number} - {contract.building_name}</Text>
                     </View>
-
                     <View style={styles.divider} />
-
                     <View style={styles.row}>
                         <Text style={styles.label}>Thời hạn thuê:</Text>
-                        <Text style={styles.value}>
-                            {contract.duration_months ? `${contract.duration_months} tháng` : '---'}
-                        </Text>
+                        <Text style={styles.value}>{contract.duration_months ? `${contract.duration_months} tháng` : '---'}</Text>
                     </View>
-                    <Text style={styles.dateText}>
-                        ({formatDate(contract.start_date)} - {formatDate(contract.end_date)})
-                    </Text>
-
+                    <Text style={styles.dateText}>({formatDate(contract.start_date)} - {formatDate(contract.end_date)})</Text>
                     <View style={styles.divider} />
-
                     <View style={styles.row}>
                         <Text style={styles.label}>Tiền thuê:</Text>
-                        <Text style={[styles.value, {color: colors.primary || '#0066CC'}]}>
-                            {formatCurrency(contract.rent_amount)} đ/tháng
-                        </Text>
+                        <Text style={[styles.value, {color: colors.primary || '#0066CC'}]}>{formatCurrency(contract.rent_amount)} đ/tháng</Text>
                     </View>
-
                     <View style={styles.row}>
                         <Text style={styles.label}>Tiền cọc:</Text>
-                        <Text style={styles.value}>
-                            {formatCurrency(contract.deposit_amount)} đ
-                        </Text>
+                        <Text style={styles.value}>{formatCurrency(contract.deposit_amount)} đ</Text>
                     </View>
+
+                    {/* --- [MỚI] Nút Xem PDF --- */}
+                    <View style={styles.divider} />
+                    <TouchableOpacity
+                        style={styles.pdfButton}
+                        onPress={handleViewPdf}
+                        disabled={downloading}
+                    >
+                        {downloading ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                            <Text style={styles.pdfButtonText}>📄 Xem chi tiết Hợp đồng (PDF)</Text>
+                        )}
+                    </TouchableOpacity>
+                    {/* ------------------------- */}
+
                 </View>
 
                 {/* --- NOTE --- */}
@@ -282,7 +272,7 @@ export default function ContractActionScreen() {
                     </View>
                 )}
 
-                {/* --- CONSENT --- */}
+                {/* ... (Phần Consent và Warning giữ nguyên) ... */}
                 {isNewContract && (
                     <View style={styles.consentContainer}>
                         <Text style={styles.consentHeader}>Điều khoản & Cam kết</Text>
@@ -292,7 +282,6 @@ export default function ContractActionScreen() {
                                 Tôi đồng ý với <Text style={styles.linkText} onPress={() => openDoc('Điều khoản', termsContent)}>Điều khoản sử dụng</Text>
                             </Text>
                         </TouchableOpacity>
-
                         <TouchableOpacity style={styles.checkboxRow} onPress={() => setIsPrivacyChecked(!isPrivacyChecked)}>
                             <Checkbox style={styles.checkbox} value={isPrivacyChecked} onValueChange={setIsPrivacyChecked} color={isPrivacyChecked ? colors.primary : undefined} />
                             <Text style={styles.consentText}>
@@ -302,7 +291,6 @@ export default function ContractActionScreen() {
                     </View>
                 )}
 
-                {/* --- WARNING --- */}
                 {isTerminationRequest && (
                     <View style={styles.warningBox}>
                         <Text style={styles.warningTitle}>⚠️ Yêu cầu chấm dứt</Text>
@@ -326,7 +314,7 @@ export default function ContractActionScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* MODAL (Giữ nguyên style của bạn) */}
+            {/* MODAL (Giữ nguyên) */}
             <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
@@ -341,6 +329,7 @@ export default function ContractActionScreen() {
 }
 
 const styles = StyleSheet.create({
+    // ... (Giữ nguyên các styles cũ) ...
     container: { flex: 1, backgroundColor: '#F3F4F6' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     scrollContent: { padding: spacing.md, paddingBottom: 100 },
@@ -372,5 +361,22 @@ const styles = StyleSheet.create({
     modalContent: { backgroundColor: 'white', borderRadius: 12, padding: 20, maxHeight: '80%' },
     modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
     modalScroll: { marginBottom: 15 },
-    closeBtn: { backgroundColor: '#374151', padding: 12, borderRadius: 8, alignItems: 'center' }
+    closeBtn: { backgroundColor: '#374151', padding: 12, borderRadius: 8, alignItems: 'center' },
+
+
+    pdfButton: {
+        marginTop: 4,
+        paddingVertical: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.primary || '#0066CC',
+        borderStyle: 'dashed',
+        alignItems: 'center',
+        backgroundColor: '#F0F9FF',
+    },
+    pdfButtonText: {
+        color: colors.primary || '#0066CC',
+        fontWeight: '600',
+        fontSize: 14
+    }
 });
