@@ -28,7 +28,17 @@ const STATUS_VN = {
   rejected: "Từ chối",
   cancelled: "Đã hủy",
 };
-
+const STATUS_ORDER = {
+  requested: 1,
+  approved: 2,
+  rejected: 3,
+  cancelled: 4,
+};
+const formatDate = (date) => {
+  if (!date) return "---";
+  const d = new Date(date);
+  return d.toLocaleDateString("vi-VN");
+};
 const VehicleListScreen = () => {
   const navigation = useNavigation();
 
@@ -62,17 +72,30 @@ const VehicleListScreen = () => {
   );
 
   useEffect(() => {
-    let data = vehicleData;
+    let data = [...vehicleData];
+
     if (filterType) {
       data = data.filter((i) => i.vehicle_type === filterType);
     }
+
     if (filterStatus) {
       data = data.filter((i) => i.status === filterStatus);
     }
+
+    data.sort((a, b) => {
+      const orderA = STATUS_ORDER[a.status] ?? 99;
+      const orderB = STATUS_ORDER[b.status] ?? 99;
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
     setFilteredData(data);
   }, [vehicleData, filterType, filterStatus]);
-
-  const renderVehicleItem = ({ item }) => { 
+  const renderVehicleItem = ({ item }) => {
     const statusColor =
       item.status === "approved"
         ? "#DCFCE7"
@@ -131,26 +154,30 @@ const VehicleListScreen = () => {
             {item.brand ? item.brand : '---'} - {item.color ? item.color : '---'}
           </Text>
         </View>
-
+        <View style={styles.row}>
+          <Text style={styles.label}>Thời gian:</Text>
+          <Text style={styles.value}>
+            {formatDate(item.start_date)} → {formatDate(item.end_date)}
+          </Text>
+        </View>
         {item.status === 'requested' && (
           <View style={{ marginTop: 8, alignSelf: 'flex-end' }}>
             <Text style={{ fontSize: 12, color: colors.brand, fontWeight: '600' }}>Chạm để chỉnh sửa</Text>
           </View>
         )}
-          {item.status === 'approved' && (
-  <View style={styles.row}>
-    <Text style={styles.label}>Vị trí đỗ:</Text>
-    <Text style={styles.value}>
-      {item.vehicle?.slot
-        ? `${item.vehicle.slot.slot_number}${
-            item.vehicle.slot.building?.name
-              ? ` · ${item.vehicle.slot.building.name}`
-              : ''
-          }`
-        : 'Chưa cấp chỗ'}
-    </Text>
-  </View>
-)}
+        {item.status === 'approved' && (
+          <View style={styles.row}>
+            <Text style={styles.label}>Vị trí đỗ:</Text>
+            <Text style={styles.value}>
+              {item.vehicle?.slot
+                ? `${item.vehicle.slot.slot_number}${item.vehicle.slot.building?.name
+                  ? ` · ${item.vehicle.slot.building.name}`
+                  : ''
+                }`
+                : 'Chưa cấp chỗ'}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };

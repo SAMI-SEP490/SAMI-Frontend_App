@@ -40,7 +40,7 @@ export default function VerifyCodeScreen({ navigation, route }) {
       });
 
     } catch (error) {
-      const msg = error?.response?.data?.message || "Mã xác thực không đúng.";
+      const msg = error?.message || "Mã xác thực không đúng.";
       Alert.alert("Lỗi", msg);
     } finally {
       setLoading(false);

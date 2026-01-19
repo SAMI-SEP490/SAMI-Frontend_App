@@ -60,21 +60,8 @@ const EditVehicleScreen = () => {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const handleChange = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
-
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (!selectedDate) return;
-
-    const startDateObj = new Date(form.start_date);
-    startDateObj.setHours(0, 0, 0, 0);
-    selectedDate.setHours(0, 0, 0, 0);
-
-    if (selectedDate <= startDateObj) {
-      Alert.alert("Lỗi ngày", "Ngày kết thúc phải sau ngày bắt đầu.");
-      return;
-    }
-    handleChange("end_date", selectedDate.toISOString().split("T")[0]);
-  };
+const LICENSE_PLATE_REGEX =
+  /^(?=.{1,10}$)(?=\d{2})(?=.*[A-Z])[0-9A-Z.-]+$/;
   const handleStartDateChange = (event, selectedDate) => {
     setShowStartPicker(false);
     if (!selectedDate) return;
@@ -154,6 +141,9 @@ const EditVehicleScreen = () => {
         "Vui lòng chọn loại xe và nhập biển số."
       );
     }
+    if (!LICENSE_PLATE_REGEX.test(form.license_plate.toUpperCase())) {
+  return Alert.alert("Biển số xe không đúng định dạng (VD: 30A-123.45)");
+}
     setSubmitting(true);
     try {
       const payload = {

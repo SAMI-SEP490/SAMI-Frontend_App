@@ -21,7 +21,7 @@ import { getGuestRegistrations, cancelGuestRegistration } from "../../service/ap
 
 // Status Mapping
 const STATUS_CONFIG = {
-  approved: { label: "Đã duyệt", color: "#16A34A", bg: "#DCFCE7" },
+  approved: { label: "Đã gửi", color: "#16A34A", bg: "#DCFCE7" },
   rejected: { label: "Từ chối", color: "#EF4444", bg: "#FEE2E2" },
   pending: { label: "Chờ duyệt", color: "#D97706", bg: "#FEF3C7" },
   cancelled: { label: "Đã hủy", color: "#6B7280", bg: "#F3F4F6" },
@@ -29,11 +29,11 @@ const STATUS_CONFIG = {
 
 export default function GuestRegistrationListScreen() {
   const navigation = useNavigation();
-  
+
   // Data State
   const [guestRegistrations, setGuestRegistrations] = useState([]);
-  const [filteredData, setFilteredData] = useState([]); 
-  
+  const [filteredData, setFilteredData] = useState([]);
+
   // Filter State
   const [filterStatus, setFilterStatus] = useState(null);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -46,7 +46,7 @@ export default function GuestRegistrationListScreen() {
       if (!refreshing) setLoading(true);
       const res = await getGuestRegistrations({ page: 1, limit: 50 });
       const registrations = res?.data?.registrations || [];
-      
+
       setGuestRegistrations(registrations);
       setFilteredData(registrations);
     } catch (error) {
@@ -80,8 +80,8 @@ export default function GuestRegistrationListScreen() {
   // --- NEW: Cancel Handler ---
   const handleCancel = (item) => {
     Alert.alert(
-      "Hủy đăng ký",
-      "Bạn có chắc chắn muốn hủy đơn đăng ký này không?",
+      "Hủy báo cáo",
+      "Bạn có chắc chắn muốn hủy báo cáo này không?",
       [
         { text: "Không", style: "cancel" },
         {
@@ -92,15 +92,15 @@ export default function GuestRegistrationListScreen() {
               setLoading(true);
               // Backend expects { cancellation_reason }
               await cancelGuestRegistration(item.registration_id, {
-                  cancellation_reason: "Đơn hủy qua app."
+                cancellation_reason: "Báo cáo hủy qua app."
               });
-              
+
               // Refresh list after success
               fetchGuestRegistrations();
-              
+
             } catch (error) {
               setLoading(false);
-              const msg = error?.response?.data?.message || "Không thể hủy đơn.";
+              const msg = error?.message || "Không thể hủy báo cáo.";
               Alert.alert("Lỗi", msg);
             }
           }
@@ -137,21 +137,21 @@ export default function GuestRegistrationListScreen() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, {backgroundColor: '#F3F4F6'}]} 
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#F3F4F6' }]}
                 onPress={() => {
-                    setFilterStatus(null);
-                    setFilterModalVisible(false);
+                  setFilterStatus(null);
+                  setFilterModalVisible(false);
                 }}
               >
-                <Text style={{color: '#374151', fontWeight: '600'}}>Xóa lọc</Text>
+                <Text style={{ color: '#374151', fontWeight: '600' }}>Xóa lọc</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalBtn, {backgroundColor: colors.brand}]} 
+
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.brand }]}
                 onPress={() => setFilterModalVisible(false)}
               >
-                <Text style={{color: 'white', fontWeight: '600'}}>Áp dụng</Text>
+                <Text style={{ color: 'white', fontWeight: '600' }}>Áp dụng</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -162,11 +162,11 @@ export default function GuestRegistrationListScreen() {
 
   const renderItem = ({ item, index }) => {
     const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
-    
+
     // Format Date: YYYY-MM-DD -> DD/MM/YYYY
     const formatDate = (dateStr) => {
-        if(!dateStr) return "N/A";
-        return new Date(dateStr).toLocaleDateString('vi-VN');
+      if (!dateStr) return "N/A";
+      return new Date(dateStr).toLocaleDateString('vi-VN');
     }
 
     return (
@@ -174,11 +174,10 @@ export default function GuestRegistrationListScreen() {
         style={styles.card}
         activeOpacity={0.9}
         onPress={() => {
-            if(item.status === 'pending'){
-                navigation.navigate("UpdateGuestRegistrationScreen", {
-                    registrationId: item.registration_id,
-                })
-            }
+          navigation.navigate("UpdateGuestRegistrationScreen", {
+            registrationId: item.registration_id,
+          })
+
         }}
       >
         {/* Header: Title + Status */}
@@ -187,7 +186,7 @@ export default function GuestRegistrationListScreen() {
             <View style={styles.iconBox}>
               <Ionicons name="people" size={20} color={colors.brand} />
             </View>
-            <Text style={styles.cardTitle}>Đơn #{index + 1}</Text>
+            <Text style={styles.cardTitle}>Báo cáo #{index + 1}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
             <Text style={[styles.statusText, { color: status.color }]}>
@@ -212,31 +211,33 @@ export default function GuestRegistrationListScreen() {
         </View>
 
         {item.guest_details?.length > 0 && (
-            <View style={styles.guestPreview}>
-                <Text numberOfLines={1} style={{color: colors.muted, fontSize: 13}}>
-                    Khách: {item.guest_details.map(g => g.full_name).join(", ")}
-                </Text>
-            </View>
+          <View style={styles.guestPreview}>
+            <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 13 }}>
+              Khách: {item.guest_details.map(g => g.full_name).join(", ")}
+            </Text>
+          </View>
         )}
 
         {/* Action Row for Pending Items */}
-        {item.status === 'pending' && (
-            <View style={styles.actionRow}>
-                {/* Cancel Button */}
-                <TouchableOpacity 
-                    style={styles.cancelButton}
-                    onPress={() => handleCancel(item)}
-                >
-                    <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
-                    <Text style={styles.cancelText}>Hủy đơn</Text>
-                </TouchableOpacity>
+        <View style={styles.actionRow}>
 
-                {/* Edit Text (Right Aligned) */}
-                <View style={{flex: 1, alignItems: 'flex-end'}}>
-                    <Text style={styles.editText}>Chạm để chỉnh sửa</Text>
-                </View>
-            </View>
-        )}
+          {/* Cancel Button */}
+          {item.status !== 'cancelled' && (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => handleCancel(item)}
+            >
+              <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
+              <Text style={styles.cancelText}>Hủy báo cáo</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Edit Text (Right Aligned) */}
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <Text style={styles.editText}>Chạm để xem</Text>
+          </View>
+
+        </View>
       </TouchableOpacity>
     );
   };
@@ -244,7 +245,7 @@ export default function GuestRegistrationListScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <Header title="Đăng ký khách" isHome={false} />
+      <Header title="Báo cáo khách tạm trú" isHome={false} />
       <FilterModal />
 
       <View style={styles.contentContainer}>
@@ -255,7 +256,7 @@ export default function GuestRegistrationListScreen() {
             onPress={() => navigation.navigate("CreateGuestRegistrationScreen")}
           >
             <Ionicons name="add-circle" size={20} color="white" />
-            <Text style={styles.addButtonText}>Tạo đơn mới</Text>
+            <Text style={styles.addButtonText}>Tạo báo cáo mới</Text>
           </TouchableOpacity>
 
           {/* Filter Button */}
@@ -281,7 +282,7 @@ export default function GuestRegistrationListScreen() {
             ListEmptyComponent={
               <View style={{ alignItems: "center", marginTop: 40 }}>
                 <Text style={{ color: colors.muted }}>
-                   {guestRegistrations.length === 0 ? "Chưa có đăng ký khách nào." : "Không tìm thấy kết quả phù hợp."}
+                  {guestRegistrations.length === 0 ? "Chưa có đăng ký khách nào." : "Không tìm thấy kết quả phù hợp."}
                 </Text>
               </View>
             }
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 24, 
+    paddingTop: spacing.xl + 24,
   },
   topRow: {
     flexDirection: "row",
@@ -365,40 +366,40 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, color: "#6B7280" },
   value: { fontSize: 13, color: "#111827", fontWeight: "500" },
   guestPreview: {
-      marginTop: 6,
-      backgroundColor: '#F9FAFB',
-      padding: 8,
-      borderRadius: 6
+    marginTop: 6,
+    backgroundColor: '#F9FAFB',
+    padding: 8,
+    borderRadius: 6
   },
-  
+
   // NEW: Action Row Styles
   actionRow: {
-      marginTop: 12,
-      borderTopWidth: 1,
-      borderTopColor: '#F3F4F6',
-      paddingTop: 8,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between'
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   },
   cancelButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 4,
-      paddingRight: 10
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingRight: 10
   },
   cancelText: {
-      color: '#EF4444',
-      fontSize: 12,
-      fontWeight: '600',
-      marginLeft: 4
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4
   },
   editText: {
-      fontSize: 12,
-      color: colors.brand,
-      fontWeight: "600",
+    fontSize: 12,
+    color: colors.brand,
+    fontWeight: "600",
   },
-  
+
   // Modal Styles
   modalOverlay: {
     flex: 1,

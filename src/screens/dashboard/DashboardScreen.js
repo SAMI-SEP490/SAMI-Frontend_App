@@ -30,13 +30,13 @@ const FEATURES = [
     },
     {
         key: "vehicle",
-        label: "Đăng ký gửi xe",
+        label: "Phương tiện cá nhân",
         icon: (p) => <Ionicons name="car-outline" size={26} color={p} />,
         bg: "#E9FBE7",
     },
     {
         key: "residence",
-        label: "Đăng ký khách",
+        label: "Báo cáo khách đến",
         icon: (p) => <Ionicons name="people-outline" size={26} color={p} />,
         bg: "#F9EEFF",
     },
@@ -74,7 +74,7 @@ const FEATURES = [
     },
     {
         key: "chatbot",
-        label: "SAMI bot",
+        label: "SAMI Bot",
         icon: (p) => <Ionicons name="chatbubbles-outline" size={26} color={p} />,
         bg: "#E9F7FF",
     },

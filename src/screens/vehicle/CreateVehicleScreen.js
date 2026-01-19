@@ -49,7 +49,8 @@ const CreateVehicleScreen = () => {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
-
+const LICENSE_PLATE_REGEX =
+  /^(?=.{1,10}$)(?=\d{2})(?=.*[A-Z])[0-9A-Z.-]+$/;
   const handleChange = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
   const handleStartDateChange = (event, selectedDate) => {
@@ -98,7 +99,9 @@ const CreateVehicleScreen = () => {
     if (!form.license_plate) {
       return Alert.alert("Thiếu thông tin", "Vui lòng nhập biển số xe.");
     }
-
+if (!LICENSE_PLATE_REGEX.test(form.license_plate.toUpperCase())) {
+  return Alert.alert("Biển số xe không đúng định dạng (VD: 30A-123.45)");
+}
     setLoading(true);
     try {
       await createVehicleRegistration({
