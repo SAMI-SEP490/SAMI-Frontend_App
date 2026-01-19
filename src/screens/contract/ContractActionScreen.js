@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Alert, Modal, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Checkbox from 'expo-checkbox';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import * as Sharing from 'expo-sharing'; // <--- [MỚI] Import Sharing để mở file
+import * as Sharing from 'expo-sharing';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 
@@ -11,7 +11,7 @@ import {
     getContractDetail,
     approveContract,
     respondToTermination,
-    downloadContractToCache // <--- [MỚI] Import hàm download
+    downloadContractToCache
 } from '../../service/api/contract';
 import { getActiveConsentVersion } from '../../service/api/consent';
 
@@ -363,14 +363,14 @@ const styles = StyleSheet.create({
     modalScroll: { marginBottom: 15 },
     closeBtn: { backgroundColor: '#374151', padding: 12, borderRadius: 8, alignItems: 'center' },
 
-    // --- [MỚI] Style cho nút PDF ---
+
     pdfButton: {
         marginTop: 4,
         paddingVertical: 10,
         borderRadius: 8,
         borderWidth: 1,
         borderColor: colors.primary || '#0066CC',
-        borderStyle: 'dashed', // Tạo viền nét đứt để phân biệt
+        borderStyle: 'dashed',
         alignItems: 'center',
         backgroundColor: '#F0F9FF',
     },
@@ -379,5 +379,4 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 14
     }
-    // -------------------------------
 });
