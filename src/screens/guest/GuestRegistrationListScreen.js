@@ -25,6 +25,7 @@ const STATUS_CONFIG = {
   rejected: { label: "Từ chối", color: "#EF4444", bg: "#FEE2E2" },
   pending: { label: "Chờ duyệt", color: "#D97706", bg: "#FEF3C7" },
   cancelled: { label: "Đã hủy", color: "#6B7280", bg: "#F3F4F6" },
+  expired: { label: "Hết hạn", color: "#6B7280", bg: "#F3F4F6" },
 };
 
 export default function GuestRegistrationListScreen() {

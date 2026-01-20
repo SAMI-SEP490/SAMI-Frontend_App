@@ -123,11 +123,6 @@ export default function BuildingContactScreen() {
     Linking.openURL(`tel:${phone}`);
   };
 
-  const handleEmail = (email) => {
-    if (!email) return;
-    Linking.openURL(`mailto:${email}`);
-  };
-
   const renderItem = ({ item }) => {
     const genderColor = getGenderColor(item.gender);
     const roleInfo = ROLE_CONFIG[item.role] || { label: item.role, bg: "#F3F4F6", text: "#374151" };
@@ -159,20 +154,6 @@ export default function BuildingContactScreen() {
                     <Ionicons name="call" size={18} color={colors.brand} />
                 </View>
                 <Text style={styles.actionText}>{item.phone || "---"}</Text>
-            </TouchableOpacity>
-
-            {/* Email */}
-            <TouchableOpacity 
-                style={styles.actionButton} 
-                onPress={() => handleEmail(item.email)}
-                disabled={!item.email}
-            >
-                <View style={[styles.iconCircle, { backgroundColor: '#FCE7F3' }]}>
-                    <MaterialCommunityIcons name="email" size={18} color="#BE185D" />
-                </View>
-                <Text style={styles.actionText} numberOfLines={1} ellipsizeMode="tail">
-                    {item.email || "---"}
-                </Text>
             </TouchableOpacity>
         </View>
       </View>

@@ -54,7 +54,7 @@ export default function ContractDetailScreen() {
     }
   };
 
-const handleDownloadPress = async () => {
+  const handleDownloadPress = async () => {
     Alert.alert(
       "Tải Hợp Đồng",
       "Bạn muốn làm gì với file này?",
@@ -78,13 +78,13 @@ const handleDownloadPress = async () => {
   const processDownload = async (action) => {
     if (downloading) return;
     setDownloading(true);
-    
+
     try {
       const fileName = contract.file_name || `hop-dong-${contractId}.pdf`;
-      
+
       // 1. Always download to cache first
       const uri = await downloadContractToCache(contractId, fileName);
-      
+
       // 2. Perform requested action
       if (action === "save") {
         await saveContractToDevice(uri, fileName);
@@ -121,33 +121,33 @@ const handleDownloadPress = async () => {
       <Header title={`Hợp đồng #${contractId}`} isHome={false} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        
+
         {/* Status Card */}
         <View style={styles.card}>
-            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-                <View>
-                    <Text style={styles.label}>Trạng thái</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: status.bg, marginTop: 4 }]}>
-                        <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
-                    </View>
-                </View>
-                {contract.has_file && (
-                    <TouchableOpacity 
-                        style={styles.downloadBtn} 
-                        onPress={handleDownloadPress}
-                        disabled={downloading}
-                    >
-                        {downloading ? (
-                            <ActivityIndicator color="white" size="small" />
-                        ) : (
-                            <>
-                                <Ionicons name="cloud-download-outline" size={20} color="white" />
-                                <Text style={styles.downloadText}>Tải PDF</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-                )}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={styles.label}>Trạng thái</Text>
+              <View style={[styles.statusBadge, { backgroundColor: status.bg, marginTop: 4 }]}>
+                <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+              </View>
             </View>
+            {contract.has_file && (
+              <TouchableOpacity
+                style={styles.downloadBtn}
+                onPress={handleDownloadPress}
+                disabled={downloading}
+              >
+                {downloading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="cloud-download-outline" size={20} color="white" />
+                    <Text style={styles.downloadText}>Tải PDF</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Main Info */}
@@ -199,29 +199,29 @@ const handleDownloadPress = async () => {
 
         {/* Addendums List */}
         {contract.contract_addendums && contract.contract_addendums.length > 0 && (
-            <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Phụ lục hợp đồng ({contract.contract_addendums.length})</Text>
-                
-                {contract.contract_addendums.map((addendum, index) => (
-                    <View key={addendum.addendum_id} style={[styles.addendumItem, index !== 0 && {borderTopWidth: 1, borderTopColor: '#F3F4F6'}]}>
-                        <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.addendumTitle}>
-                                Phụ lục #{addendum.addendum_id} ({addendum.type})
-                            </Text>
-                            <Text style={styles.addendumDate}>{formatDate(addendum.created_at)}</Text>
-                        </View>
-                        <Text style={styles.addendumSummary}>{addendum.summary || "Không có mô tả"}</Text>
-                    </View>
-                ))}
-            </View>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Phụ lục hợp đồng ({contract.contract_addendums.length})</Text>
+
+            {contract.contract_addendums.map((addendum, index) => (
+              <View key={addendum.addendum_id} style={[styles.addendumItem, index !== 0 && { borderTopWidth: 1, borderTopColor: '#F3F4F6' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={styles.addendumTitle}>
+                    Phụ lục #{addendum.addendum_id} ({addendum.type})
+                  </Text>
+                  <Text style={styles.addendumDate}>{formatDate(addendum.created_at)}</Text>
+                </View>
+                <Text style={styles.addendumSummary}>{addendum.summary || "Không có mô tả"}</Text>
+              </View>
+            ))}
+          </View>
         )}
 
         {/* Note */}
         {contract.note && (
-            <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Ghi chú</Text>
-                <Text style={styles.noteText}>{contract.note}</Text>
-            </View>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Ghi chú</Text>
+            <Text style={styles.noteText}>{contract.note}</Text>
+          </View>
         )}
 
       </ScrollView>
@@ -230,10 +230,10 @@ const handleDownloadPress = async () => {
 }
 
 const InfoRow = ({ label, value, highlight }) => (
-    <View style={styles.row}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={[styles.value, highlight && {color: colors.brand, fontWeight: '700'}]}>{value}</Text>
-    </View>
+  <View style={styles.row}>
+    <Text style={styles.label}>{label}</Text>
+    <Text style={[styles.value, highlight && { color: colors.brand, fontWeight: '700' }]}>{value}</Text>
+  </View>
 );
 
 const styles = StyleSheet.create({
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
   },
   sectionTitle: {
-      fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12
+    fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12
   },
   statusBadge: {
     alignSelf: 'flex-start',
@@ -270,13 +270,13 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 13, fontWeight: "700" },
   downloadBtn: {
-      flexDirection: 'row',
-      backgroundColor: colors.brand,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: 10,
-      alignItems: 'center',
-      gap: 6
+    flexDirection: 'row',
+    backgroundColor: colors.brand,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    gap: 6
   },
   downloadText: { color: 'white', fontWeight: '600', fontSize: 14 },
   row: {
