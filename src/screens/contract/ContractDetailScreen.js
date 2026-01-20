@@ -14,21 +14,25 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
 import { colors } from "../../theme/colors";
-import {
-  getContractDetail,
-  downloadContractToCache,
-  saveContractToDevice,
-  shareContractFile
+import { 
+  getContractDetail, 
+  downloadContractToCache, 
+  saveContractToDevice, 
 } from "../../service/api/contract";
 
 const STATUS_CONFIG = {
-  active: { label: "Đang hiệu lực", color: "#16A34A", bg: "#DCFCE7" },
-  expired: { label: "Hết hạn", color: "#DC2626", bg: "#FEE2E2" },
-  pending: { label: "Chờ kích hoạt", color: "#D97706", bg: "#FEF3C7" },
-  cancelled: { label: "Đã hủy", color: "#6B7280", bg: "#F3F4F6" },
-  terminated: { label: "Đã chấm dứt", color: "#EF4444", bg: "#FEE2E2" },
-};
+    // --- Nhóm Active/Cần xử lý (Màu nổi) ---
+    active: { label: "Đang hiệu lực", color: "#16A34A", bg: "#DCFCE7" }, // Xanh lá
+    pending: { label: "Chờ ký", color: "#D97706", bg: "#FEF3C7" }, // Cam
+    pending_transaction: { label: "Chờ thanh toán", color: "#EAB308", bg: "#FEF9C3" }, // Vàng
+    requested_termination: { label: "Yêu cầu hủy", color: "#C026D3", bg: "#FAE8FF" }, // Tím
 
+    // --- Nhóm Lịch sử/Inactive (Màu chìm/Cảnh báo) ---
+    rejected: { label: "Đã từ chối", color: "#EF4444", bg: "#FEE2E2" }, // Đỏ nhạt
+    expired: { label: "Hết hạn", color: "#4B5563", bg: "#E5E7EB" }, // Xám đậm
+    terminated: { label: "Đã chấm dứt", color: "#4B5563", bg: "#E5E7EB" }, // Xám đậm
+    cancelled: { label: "Đã hủy", color: "#9CA3AF", bg: "#F3F4F6" }, // Xám nhạt
+};
 export default function ContractDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
@@ -113,10 +117,10 @@ export default function ContractDetailScreen() {
 
   if (!contract) return null;
 
-  const status = STATUS_CONFIG[contract.status] || STATUS_CONFIG.active;
+  const status = STATUS_CONFIG[contract.status] || STATUS_CONFIG.cancelled;
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("vi-VN") : "---";
   const formatMoney = (v) => Number(v || 0).toLocaleString("vi-VN") + " đ";
-
+    console.log("Contract Note:", contract?.note);
   return (
     <View style={styles.container}>
       <Header title={`Hợp đồng #${contractId}`} isHome={false} />
@@ -153,19 +157,49 @@ export default function ContractDetailScreen() {
 
         {/* Main Info */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Thông tin chính</Text>
+            <Text style={styles.sectionTitle}>Thông tin chính</Text>
+            
+            <InfoRow label="Phòng" value={contract.room_number || `ID: ${contract.room_id}`} />
+            <InfoRow label="Tòa nhà" value={contract.rooms?.buildings?.name} />
+            <View style={styles.divider} />
+            <InfoRow label="Ngày bắt đầu" value={formatDate(contract.start_date)} />
+            <InfoRow label="Ngày kết thúc" value={formatDate(contract.end_date)} />
+            <View style={styles.divider} />
+            <InfoRow label="Tiền thuê" value={formatMoney(contract.rent_amount)} highlight />
+            <InfoRow label="Tiền cọc" value={formatMoney(contract.deposit_amount)} />
+            <View style={styles.divider} />
 
-          <InfoRow label="Phòng" value={contract.room_number || `ID: ${contract.room_id}`} />
-          <InfoRow
-            label="Tòa nhà"
-            value={contract.building_name || "—"}
-          />
-          <View style={styles.divider} />
-          <InfoRow label="Ngày bắt đầu" value={formatDate(contract.start_date)} />
-          <InfoRow label="Ngày kết thúc" value={formatDate(contract.end_date)} />
-          <View style={styles.divider} />
-          <InfoRow label="Tiền thuê" value={formatMoney(contract.rent_amount)} highlight />
-          <InfoRow label="Tiền cọc" value={formatMoney(contract.deposit_amount)} />
+            {/* --- BỔ SUNG 1: CHU KỲ THANH TOÁN --- */}
+            <View style={styles.row}>
+                <Text style={styles.label}>Chu kỳ thanh toán:</Text>
+                <Text style={styles.value}>
+                    {contract.payment_cycle_months
+                        ? `${contract.payment_cycle_months} tháng/lần`
+                        : '1 tháng/lần'}
+                </Text>
+            </View>
+
+            {/* --- BỔ SUNG 2: THÔNG TIN PHẠT & LÃI SUẤT --- */}
+            {contract.penalty_rate > 0 && (
+                <View style={styles.row}>
+                    <Text style={styles.label}>Phạt chậm trả:</Text>
+                    <Text style={[styles.value, { color: '#DC2626', fontSize: 14 }]}>
+                        {contract.penalty_rate}% / ngày
+                    </Text>
+                </View>
+            )}
+
+            {/* --- BỔ SUNG 3: THÔNG TIN NGƯỜI THUÊ (Xác thực) --- */}
+            <View style={styles.divider} />
+            <Text style={{fontSize: 14, fontWeight: 'bold', marginBottom: 8, color: '#4B5563'}}>Người đứng tên:</Text>
+            <View style={styles.row}>
+                <Text style={styles.label}>Họ tên:</Text>
+                <Text style={styles.value}>{contract.tenant_name || contract.tenant?.user?.full_name}</Text>
+            </View>
+            <View style={styles.row}>
+                <Text style={styles.label}>CMND/CCCD:</Text>
+                <Text style={styles.value}>{contract.id_number || contract.tenant?.id_number || '---'}</Text>
+            </View>
         </View>
 
         {/* Addendums List */}
@@ -188,12 +222,15 @@ export default function ContractDetailScreen() {
         )}
 
         {/* Note */}
-        {contract.note && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Ghi chú</Text>
-            <Text style={styles.noteText}>{contract.note}</Text>
-          </View>
-        )}
+          {contract.note && (
+              <>
+                  <View style={styles.divider} />
+                  <Text style={{fontSize: 14, fontWeight: 'bold', marginBottom: 8, color: '#D97706'}}>Ghi chú:</Text>
+                  <Text style={{fontSize: 14, color: '#111827', fontStyle: 'italic', lineHeight: 20}}>
+                      {contract.note}
+                  </Text>
+              </>
+          )}
 
       </ScrollView>
     </View>

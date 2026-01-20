@@ -381,82 +381,83 @@ const InfoItem = ({ icon, color, label, value, iconLib }) => (
 );
 
 const styles = StyleSheet.create({
-  cardContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: spacing.lg,
-    marginHorizontal: spacing.xl,
-    marginTop: -50, // Chỉ dùng cho cái feature đầu tiên, cái sau sẽ bị override style inline
-    zIndex: 1, // Đặt thấp hơn feature card
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#6B7280",
-    marginBottom: 4,
-    textTransform: "uppercase",
-    fontSize: 12,
-  },
-  buildingName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1F2937",
-  },
-  switchButton: {
-    flexDirection: "row",
-    backgroundColor: colors.brand || "#0066CC",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignItems: "center",
-  },
-  iconBox: {
-    width: 56,
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-  },
-  iconLabel: {
-    textAlign: "center",
-    fontSize: 12,
-    color: "#374151",
-  },
-
-  // Style cho phần Info Building
-  infoGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 8,
-  },
-  infoItem: {
-    flexBasis: "50%", // chia 2 cột
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    marginBottom: 12, // khoảng cách hàng
-  },
-  infoIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  infoLabel: {
-    fontSize: 11,
-    color: "#6B7280",
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#374151",
-  },
+    cardContainer: {
+        backgroundColor: "#ffffff",
+        borderRadius: 16,
+        padding: spacing.lg,
+        marginHorizontal: spacing.xl,
+        marginTop: -50, // Chỉ dùng cho cái feature đầu tiên, cái sau sẽ bị override style inline
+        zIndex: 1, // Đặt thấp hơn feature card
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    sectionTitle: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: "#6B7280",
+        marginBottom: 4,
+        textTransform: 'uppercase',
+     },
+    buildingName: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#1F2937",
+    },
+    switchButton: {
+        flexDirection: 'row',
+        backgroundColor: colors.brand || '#0066CC',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        alignItems: 'center'
+    },
+    iconBox: {
+        width: 56,
+        height: 56,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 16,
+    },
+    iconLabel: {
+        textAlign: "center",
+        fontSize: 12,
+        color: "#374151",
+    },
+    
+    // Style cho phần Info Building
+    infoGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginTop: 8,
+        gap: 12
+    },
+    infoItem: {
+        width: '48%', // 2 cột
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        padding: 10,
+        borderRadius: 12,
+        gap: 10
+    },
+    infoIconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    infoLabel: {
+        fontSize: 11,
+        color: '#6B7280',
+        marginBottom: 2
+    },
+    infoValue: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#374151'
+    }
 });
