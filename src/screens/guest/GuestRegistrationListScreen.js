@@ -22,8 +22,6 @@ import { getGuestRegistrations, cancelGuestRegistration } from "../../service/ap
 // Status Mapping
 const STATUS_CONFIG = {
   approved: { label: "Đã gửi", color: "#16A34A", bg: "#DCFCE7" },
-  rejected: { label: "Từ chối", color: "#EF4444", bg: "#FEE2E2" },
-  pending: { label: "Chờ duyệt", color: "#D97706", bg: "#FEF3C7" },
   cancelled: { label: "Đã hủy", color: "#6B7280", bg: "#F3F4F6" },
   expired: { label: "Hết hạn", color: "#6B7280", bg: "#F3F4F6" },
 };
