@@ -274,6 +274,9 @@ export default function FloorPlanViewScreen() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState(null);
 
+  const selectedBuilding = buildings.find(
+    (b) => b.building_id === selectedBuildingId,
+  );
   // Lấy danh sách tòa nhà
   useEffect(() => {
     const fetchBuildings = async () => {
@@ -516,7 +519,12 @@ export default function FloorPlanViewScreen() {
             marginBottom: spacing.sm,
           }}
         >
-          Xem sơ đồ tòa nhà
+          Xem sơ đồ tòa nhà{" "}
+          {selectedBuilding?.name
+            ? selectedBuilding.name
+            : selectedBuildingId
+              ? `#${selectedBuildingId}`
+              : ""}
         </Text>
 
         {error && (
@@ -531,17 +539,6 @@ export default function FloorPlanViewScreen() {
             <Text style={{ color: "#B91C1C" }}>{error}</Text>
           </View>
         )}
-
-        <Text
-          style={{
-            marginTop: spacing.md,
-            fontWeight: "600",
-            color: colors.text,
-          }}
-        >
-          Chọn tòa nhà
-        </Text>
-        {renderBuildingChips()}
 
         <Text
           style={{
