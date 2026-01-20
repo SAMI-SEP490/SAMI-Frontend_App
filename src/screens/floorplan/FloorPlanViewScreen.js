@@ -10,7 +10,7 @@ import {
 import Header from "../../components/Header"; // Using our smart header
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { getBuildings } from "../../service/api/building";
+import { getMyBuildingDetails } from "../../service/api/building";
 import {
   getFloorPlansByBuilding,
   getFloorPlanById,
@@ -263,7 +263,7 @@ function FloorPlanCanvas({ layout }) {
 export default function FloorPlanViewScreen() {
   const [buildings, setBuildings] = useState([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState(null);
-
+  const [lockedBuildingId, setLockedBuildingId] = useState(null);
   const [floorPlans, setFloorPlans] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
 
@@ -280,11 +280,13 @@ export default function FloorPlanViewScreen() {
       try {
         setLoadingBuildings(true);
         setError(null);
-        const res = await getBuildings({ is_active: true });
+        const res = await getMyBuildingDetails();
         const list = res?.data || [];
         setBuildings(list);
         if (list.length > 0) {
-          setSelectedBuildingId(list[0].building_id);
+          const id = list[0].building_id;
+          setSelectedBuildingId(id);
+          setLockedBuildingId(id);
         }
       } catch (e) {
         console.log("loadBuildings ERROR >>>", e);
@@ -295,6 +297,14 @@ export default function FloorPlanViewScreen() {
     };
     fetchBuildings();
   }, []);
+
+  // Guard: nếu ai đó set lệch selectedBuildingId thì ép về lockedBuildingId
+  useEffect(() => {
+    if (!lockedBuildingId) return;
+    if (selectedBuildingId !== lockedBuildingId) {
+      setSelectedBuildingId(lockedBuildingId);
+    }
+  }, [selectedBuildingId, lockedBuildingId]);
 
   // Khi đổi tòa nhà -> lấy list floor plan của tòa đó
   useEffect(() => {
@@ -403,7 +413,13 @@ export default function FloorPlanViewScreen() {
           return (
             <Pressable
               key={b.building_id}
-              onPress={() => setSelectedBuildingId(b.building_id)}
+              onPress={() => {
+                if (lockedBuildingId) {
+                  setSelectedBuildingId(lockedBuildingId); // ép về tòa đã lock
+                  return;
+                }
+                setSelectedBuildingId(b.building_id);
+              }}
               style={{
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
