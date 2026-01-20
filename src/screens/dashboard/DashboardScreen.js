@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 12,
         fontWeight: "700",
         color: "#6B7280",
         marginBottom: 4,
