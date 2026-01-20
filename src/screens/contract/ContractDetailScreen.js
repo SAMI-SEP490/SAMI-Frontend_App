@@ -115,7 +115,7 @@ export default function ContractDetailScreen() {
   const status = STATUS_CONFIG[contract.status] || STATUS_CONFIG.active;
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("vi-VN") : "---";
   const formatMoney = (v) => Number(v || 0).toLocaleString("vi-VN") + " đ";
-
+    console.log("Contract Note:", contract?.note);
   return (
     <View style={styles.container}>
       <Header title={`Hợp đồng #${contractId}`} isHome={false} />
@@ -217,12 +217,15 @@ export default function ContractDetailScreen() {
         )}
 
         {/* Note */}
-        {contract.note && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Ghi chú</Text>
-            <Text style={styles.noteText}>{contract.note}</Text>
-          </View>
-        )}
+          {contract.note && (
+              <>
+                  <View style={styles.divider} />
+                  <Text style={{fontSize: 14, fontWeight: 'bold', marginBottom: 8, color: '#D97706'}}>Ghi chú:</Text>
+                  <Text style={{fontSize: 14, color: '#111827', fontStyle: 'italic', lineHeight: 20}}>
+                      {contract.note}
+                  </Text>
+              </>
+          )}
 
       </ScrollView>
     </View>

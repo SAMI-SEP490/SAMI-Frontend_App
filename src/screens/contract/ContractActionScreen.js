@@ -250,7 +250,7 @@ export default function ContractActionScreen() {
             </View>
         );
     }
-
+    console.log("Contract Note:", contract?.note);
     return (
         <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -334,9 +334,9 @@ export default function ContractActionScreen() {
 
                 {/* --- NOTE --- */}
                 {contract.note && (
-                    <View style={[styles.card, { backgroundColor: '#FFFBEB', borderColor: '#FCD34D', borderWidth: 1 }]}>
-                        <Text style={[styles.label, {color: '#D97706', marginBottom: 4}]}>Ghi chú:</Text>
-                        <Text style={{color: '#92400E'}}>{contract.note}</Text>
+                    <View style={{ marginTop: 12, backgroundColor: '#FFFBEB', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#FCD34D' }}>
+                        <Text style={{color: '#D97706', fontWeight: 'bold', fontSize: 13, marginBottom: 4}}>Ghi chú/Lý do:</Text>
+                        <Text style={{color: '#92400E', fontSize: 14}}>{contract.note}</Text>
                     </View>
                 )}
 

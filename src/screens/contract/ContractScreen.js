@@ -21,11 +21,18 @@ import { getContracts } from "../../service/api/contract";
 
 // ===== STATUS MAPPING (tiếng Việt + màu sắc) =====
 const STATUS_CONFIG = {
-  active: { label: "Đang hiệu lực", color: "#16A34A", bg: "#DCFCE7" },
-  expired: { label: "Hết hạn", color: "#DC2626", bg: "#FEE2E2" },
-  pending: { label: "Chờ kích hoạt", color: "#D97706", bg: "#FEF3C7" },
-  cancelled: { label: "Đã hủy", color: "#6B7280", bg: "#F3F4F6" },
-};
+  // --- Nhóm Active/Cần xử lý (Màu nổi) ---
+  active: { label: "Đang hiệu lực", color: "#16A34A", bg: "#DCFCE7" }, // Xanh lá
+  pending: { label: "Chờ ký", color: "#D97706", bg: "#FEF3C7" }, // Cam
+  pending_transaction: { label: "Chờ thanh toán", color: "#EAB308", bg: "#FEF9C3" }, // Vàng
+  requested_termination: { label: "Yêu cầu hủy", color: "#C026D3", bg: "#FAE8FF" }, // Tím
+
+  // --- Nhóm Lịch sử/Inactive (Màu chìm/Cảnh báo) ---
+  rejected: { label: "Đã từ chối", color: "#EF4444", bg: "#FEE2E2" }, // Đỏ nhạt
+  expired: { label: "Hết hạn", color: "#4B5563", bg: "#E5E7EB" }, // Xám đậm
+  terminated: { label: "Đã chấm dứt", color: "#4B5563", bg: "#E5E7EB" }, // Xám đậm
+  cancelled: { label: "Đã hủy", color: "#9CA3AF", bg: "#F3F4F6" }, // Xám nhạt
+};;
 
 export default function ContractScreen() {
   const navigation = useNavigation();
@@ -37,8 +44,30 @@ export default function ContractScreen() {
     try {
       if (!refreshing) setLoading(true);
       const res = await getContracts();
+      const rawData = res?.data ?? [];
 
-      setContracts(res?.data ?? []);
+      // Định nghĩa độ ưu tiên (Số càng nhỏ càng ưu tiên hiển thị lên đầu)
+      const priority = {
+        pending: 1,
+        active: 2,
+        pending_transaction: 3,
+        requested_termination: 4,
+        expired: 10,
+        terminated: 11,
+        rejected: 12,
+        cancelled: 13
+      };
+
+      // Sắp xếp: Ưu tiên theo Status trước, sau đó đến ngày tạo mới nhất
+      const sortedData = rawData.sort((a, b) => {
+        const pA = priority[a.status] || 99;
+        const pB = priority[b.status] || 99;
+
+        if (pA !== pB) return pA - pB; // Khác nhóm -> Xếp theo nhóm
+        return new Date(b.created_at) - new Date(a.created_at); // Cùng nhóm -> Mới nhất lên đầu
+      });
+
+      setContracts(sortedData);
     } catch (err) {
       console.log("Lỗi getContracts:", err);
     } finally {
@@ -63,30 +92,51 @@ export default function ContractScreen() {
     d ? new Date(d).toLocaleDateString("vi-VN") : "Không rõ";
 
   // ===== RENDER CARD =====
-  const renderItem = ({ item, index }) => {
-    const s = STATUS_CONFIG[item.status] || STATUS_CONFIG.active;
+  const renderItem = ({ item }) => {
+    // Lấy config màu, nếu không có thì fallback về cancelled
+    const s = STATUS_CONFIG[item.status] || STATUS_CONFIG.cancelled;
+
+    // Kiểm tra xem đây có phải là trạng thái "Inactive" không để làm mờ
+    const isInactive = ['rejected', 'terminated', 'expired', 'cancelled'].includes(item.status);
 
     return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.9}
-        onPress={() => navigation.navigate("ContractDetailScreen", { contractId: item.contract_id })}
-      >
-        {/* HEADER */}
-        <View style={styles.cardHeader}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={styles.iconBox}>
-              <Ionicons name="document-text" size={20} color={colors.brand} />
+        <TouchableOpacity
+            style={[
+              styles.card,
+              // Nếu inactive thì làm mờ và đổi nền xám nhẹ
+              isInactive && { opacity: 0.6, backgroundColor: '#F9FAFB' }
+            ]}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate("ContractDetailScreen", { contractId: item.contract_id })}
+        >
+          {/* HEADER */}
+          <View style={styles.cardHeader}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={[
+                styles.iconBox,
+                // Icon cũng đổi màu xám nếu inactive
+                isInactive && { backgroundColor: '#E5E7EB' }
+              ]}>
+                <Ionicons
+                    name="document-text"
+                    size={20}
+                    color={isInactive ? "#6B7280" : colors.brand}
+                />
+              </View>
+              <Text style={[
+                styles.cardTitle,
+                isInactive && { color: '#4B5563', textDecorationLine: item.status === 'rejected' ? 'line-through' : 'none' }
+              ]}>
+                Hợp đồng #{item.contract_number || item.contract_id}
+              </Text>
             </View>
-            <Text style={styles.cardTitle}>Hợp đồng #{item.contract_id}</Text>
-          </View>
 
-          <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
-            <Text style={[styles.statusText, { color: s.color }]}>
-              {s.label}
-            </Text>
+            <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
+              <Text style={[styles.statusText, { color: s.color }]}>
+                {s.label}
+              </Text>
+            </View>
           </View>
-        </View>
 
         <View style={styles.divider} />
 
