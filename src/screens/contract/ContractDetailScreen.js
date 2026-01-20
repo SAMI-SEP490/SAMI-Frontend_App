@@ -14,11 +14,10 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
 import { spacing } from "../../theme/spacing";
 import { colors } from "../../theme/colors";
-import {
-  getContractDetail,
-  downloadContractToCache,
-  saveContractToDevice,
-  shareContractFile
+import { 
+  getContractDetail, 
+  downloadContractToCache, 
+  saveContractToDevice, 
 } from "../../service/api/contract";
 
 const STATUS_CONFIG = {
@@ -153,19 +152,49 @@ export default function ContractDetailScreen() {
 
         {/* Main Info */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Thông tin chính</Text>
+            <Text style={styles.sectionTitle}>Thông tin chính</Text>
+            
+            <InfoRow label="Phòng" value={contract.room_number || `ID: ${contract.room_id}`} />
+            <InfoRow label="Tòa nhà" value={contract.rooms?.buildings?.name} />
+            <View style={styles.divider} />
+            <InfoRow label="Ngày bắt đầu" value={formatDate(contract.start_date)} />
+            <InfoRow label="Ngày kết thúc" value={formatDate(contract.end_date)} />
+            <View style={styles.divider} />
+            <InfoRow label="Tiền thuê" value={formatMoney(contract.rent_amount)} highlight />
+            <InfoRow label="Tiền cọc" value={formatMoney(contract.deposit_amount)} />
+            <View style={styles.divider} />
 
-          <InfoRow label="Phòng" value={contract.room_number || `ID: ${contract.room_id}`} />
-          <InfoRow
-            label="Tòa nhà"
-            value={contract.building_name || "—"}
-          />
-          <View style={styles.divider} />
-          <InfoRow label="Ngày bắt đầu" value={formatDate(contract.start_date)} />
-          <InfoRow label="Ngày kết thúc" value={formatDate(contract.end_date)} />
-          <View style={styles.divider} />
-          <InfoRow label="Tiền thuê" value={formatMoney(contract.rent_amount)} highlight />
-          <InfoRow label="Tiền cọc" value={formatMoney(contract.deposit_amount)} />
+            {/* --- BỔ SUNG 1: CHU KỲ THANH TOÁN --- */}
+            <View style={styles.row}>
+                <Text style={styles.label}>Chu kỳ thanh toán:</Text>
+                <Text style={styles.value}>
+                    {contract.payment_cycle_months
+                        ? `${contract.payment_cycle_months} tháng/lần`
+                        : '1 tháng/lần'}
+                </Text>
+            </View>
+
+            {/* --- BỔ SUNG 2: THÔNG TIN PHẠT & LÃI SUẤT --- */}
+            {contract.penalty_rate > 0 && (
+                <View style={styles.row}>
+                    <Text style={styles.label}>Phạt chậm trả:</Text>
+                    <Text style={[styles.value, { color: '#DC2626', fontSize: 14 }]}>
+                        {contract.penalty_rate}% / ngày
+                    </Text>
+                </View>
+            )}
+
+            {/* --- BỔ SUNG 3: THÔNG TIN NGƯỜI THUÊ (Xác thực) --- */}
+            <View style={styles.divider} />
+            <Text style={{fontSize: 14, fontWeight: 'bold', marginBottom: 8, color: '#4B5563'}}>Người đứng tên:</Text>
+            <View style={styles.row}>
+                <Text style={styles.label}>Họ tên:</Text>
+                <Text style={styles.value}>{contract.tenant_name || contract.tenant?.user?.full_name}</Text>
+            </View>
+            <View style={styles.row}>
+                <Text style={styles.label}>CMND/CCCD:</Text>
+                <Text style={styles.value}>{contract.id_number || contract.tenant?.id_number || '---'}</Text>
+            </View>
         </View>
 
         {/* Addendums List */}
