@@ -94,7 +94,7 @@ export default function ContractActionScreen() {
 
     const getHeaderTitle = () => {
         if (!contract) return "Đang tải...";
-        if (isNewContract) return "Ký Hợp Đồng Thuê";
+        if (isNewContract) return "Chấp nhận Hợp Đồng Thuê";
         if (isTerminationRequest) return "Xác Nhận Chấm Dứt";
         return "Thông Tin Hợp Đồng";
     };
@@ -140,14 +140,14 @@ export default function ContractActionScreen() {
     const handleConfirm = async () => {
         if (!contract) return;
         if (isNewContract && (!isTermsChecked || !isPrivacyChecked)) {
-            Alert.alert("Yêu cầu", "Vui lòng đọc và đồng ý với các điều khoản trước khi ký.");
+            Alert.alert("Yêu cầu", "Vui lòng đọc và đồng ý với các điều khoản trước khi chấp nhận.");
             return;
         }
         try {
             setSubmitting(true);
             if (isNewContract) {
                 await approveContract(contractId, 'accept');
-                Alert.alert("Thành công", "Bạn đã ký hợp đồng điện tử thành công!", [
+                Alert.alert("Thành công", "Bạn đã chấp nhận hợp đồng thành công!", [
                     { text: "Về trang chủ", onPress: () => navigation.navigate("DashboardScreen") }
                 ]);
             } else if (isTerminationRequest) {
@@ -167,7 +167,7 @@ export default function ContractActionScreen() {
         // ... giữ nguyên nội dung hàm reject cũ của bạn ...
         if (!contract) return;
         if (isNewContract) {
-            Alert.alert("Cảnh báo quan trọng", "Từ chối ký hợp đồng đồng nghĩa với việc bạn hủy bỏ thuê phòng.", [
+            Alert.alert("Cảnh báo quan trọng", "Từ chối chấp nhận hợp đồng đồng nghĩa với việc bạn hủy bỏ thuê phòng.", [
                 { text: "Xem lại", style: "cancel" },
                 { text: "Xác nhận Từ chối", style: "destructive", onPress: async () => {
                         try {
@@ -311,7 +311,7 @@ export default function ContractActionScreen() {
                     onPress={handleConfirm}
                     disabled={(isNewContract && (!isTermsChecked || !isPrivacyChecked)) || submitting}
                 >
-                    {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.btnTextConfirm}>{isNewContract ? "Ký hợp đồng" : "Đồng ý hủy"}</Text>}
+                    {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.btnTextConfirm}>{isNewContract ? "Chấp nhận hợp đồng" : "Đồng ý hủy"}</Text>}
                 </TouchableOpacity>
             </View>
 
