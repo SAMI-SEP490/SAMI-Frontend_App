@@ -274,7 +274,7 @@ export default function DashboardScreen() {
                                 icon="calendar" 
                                 color="#FF5722" 
                                 label="Ngày chốt sổ" 
-                                value={`Ngày ${currentBuilding.bill_due_day} hàng tháng`} 
+                                value={`Ngày ${currentBuilding.bill_closing_day} hàng tháng`} 
                             />
                         </View>
                     </View>
