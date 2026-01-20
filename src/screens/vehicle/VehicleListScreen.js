@@ -26,7 +26,7 @@ const STATUS_VN = {
   requested: "Đang chờ",
   approved: "Đã duyệt",
   rejected: "Từ chối",
-  cancelled: "Đã hủy",
+  cancelled: "Ngừng hoạt động",
 };
 const STATUS_ORDER = {
   requested: 1,
