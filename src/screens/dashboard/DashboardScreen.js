@@ -347,8 +347,7 @@ const styles = StyleSheet.create({
         color: "#6B7280",
         marginBottom: 4,
         textTransform: 'uppercase',
-        fontSize: 12
-    },
+     },
     buildingName: {
         fontSize: 18,
         fontWeight: "bold",
