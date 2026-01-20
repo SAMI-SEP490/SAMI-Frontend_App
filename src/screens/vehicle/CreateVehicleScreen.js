@@ -31,7 +31,12 @@ const formatDateDisplay = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN"); // DD/MM/YYYY
 };
-
+const toLocalDateString = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 const CreateVehicleScreen = () => {
   const navigation = useNavigation();
   const today = new Date();
@@ -50,7 +55,7 @@ const CreateVehicleScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 const LICENSE_PLATE_REGEX =
-  /^(?=.{1,10}$)(?=\d{2})(?=.*[A-Z])[0-9A-Z.-]+$/;
+    /^(?=.{1,10}$)\d{2}[A-Z]\d?-[0-9.]+$/;
   const handleChange = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
   const handleStartDateChange = (event, selectedDate) => {
@@ -67,7 +72,7 @@ const LICENSE_PLATE_REGEX =
       return;
     }
 
-    handleChange("start_date", selectedDate.toISOString().split("T")[0]);
+handleChange("start_date", toLocalDateString(selectedDate));
 
     // 🔥 Reset end_date khi đổi start_date
     handleChange("end_date", null);
@@ -85,7 +90,7 @@ const LICENSE_PLATE_REGEX =
       return;
     }
 
-    handleChange("end_date", selectedDate.toISOString().split("T")[0]);
+    handleChange("end_date", toLocalDateString(selectedDate));
   };
 
   const clearEndDate = () => {
