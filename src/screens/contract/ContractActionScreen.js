@@ -11,7 +11,8 @@ import {
     getContractDetail,
     approveContract,
     respondToTermination,
-    downloadContractToCache
+    downloadContractToCache,
+    getContracts
 } from '../../service/api/contract';
 import { getActiveConsentVersion } from '../../service/api/consent';
 
@@ -164,23 +165,57 @@ export default function ContractActionScreen() {
     };
 
     const handleReject = () => {
-        // ... giữ nguyên nội dung hàm reject cũ của bạn ...
         if (!contract) return;
+
+        // --- LOGIC CHO HỢP ĐỒNG MỚI (PENDING) ---
         if (isNewContract) {
-            Alert.alert("Cảnh báo quan trọng", "Từ chối chấp nhận hợp đồng đồng nghĩa với việc bạn hủy bỏ thuê phòng.", [
-                { text: "Xem lại", style: "cancel" },
-                { text: "Xác nhận Từ chối", style: "destructive", onPress: async () => {
-                        try {
-                            setSubmitting(true);
-                            await approveContract(contractId, 'reject', 'User rejected manually');
+            Alert.alert(
+                "Cảnh báo",
+                "Bạn có chắc chắn muốn từ chối hợp đồng này không?",
+                [
+                    { text: "Xem lại", style: "cancel" },
+                    {
+                        text: "Xác nhận Từ chối",
+                        style: "destructive",
+                        onPress: async () => {
+                            try {
+                                setSubmitting(true);
+                                // 1. Gọi API từ chối
+                                await approveContract(contractId, 'reject', 'User rejected manually');
 
-                            await logout();
+                                // 2. [MỚI] Kiểm tra xem còn hợp đồng Active nào không
+                                // Gọi API lấy danh sách hợp đồng của user hiện tại
+                                const res = await getContracts({ status: 'active' });
+                                const activeContracts = res.data || res; // Tùy cấu trúc trả về của API getContracts
 
+                                // 3. Xử lý điều hướng dựa trên kết quả
+                                if (activeContracts && activeContracts.length > 0) {
+                                    // Vẫn còn hợp đồng Active khác -> Cho vào Dashboard
+                                    Alert.alert("Đã từ chối", "Bạn đã từ chối hợp đồng này. Hệ thống sẽ chuyển về trang chủ.", [
+                                        { text: "Về trang chủ", onPress: () => navigation.navigate("DashboardScreen") }
+                                    ]);
+                                } else {
+                                    // Không còn hợp đồng Active nào -> Logout
+                                    Alert.alert("Thông báo", "Bạn chưa có hợp đồng hiệu lực nào. Hệ thống sẽ đăng xuất.", [
+                                        {
+                                            text: "Đăng xuất",
+                                            onPress: async () => {
+                                                await logout();
+                                                // Đảm bảo navigation về màn hình Login nếu logout() không tự redirect
+                                                // navigation.replace("LoginScreen");
+                                            }
+                                        }
+                                    ]);
+                                }
+                            } catch (e) {
+                                Alert.alert("Lỗi", e.message || "Có lỗi xảy ra");
+                            } finally {
+                                setSubmitting(false);
+                            }
                         }
-                        catch (e) { Alert.alert("Lỗi", e.message); }
-                        finally { setSubmitting(false); }
-                    }}
-            ]);
+                    }
+                ]
+            );
         } else if (isTerminationRequest) {
             Alert.alert("Xác nhận", "Bạn muốn TỪ CHỐI chấm dứt? Hợp đồng sẽ tiếp tục.", [
                 { text: "Hủy", style: "cancel" },
