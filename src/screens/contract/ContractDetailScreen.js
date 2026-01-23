@@ -160,7 +160,7 @@ export default function ContractDetailScreen() {
             <Text style={styles.sectionTitle}>Thông tin chính</Text>
             
             <InfoRow label="Phòng" value={contract.room_number || `ID: ${contract.room_id}`} />
-            <InfoRow label="Tòa nhà" value={contract.rooms?.buildings?.name} />
+            <InfoRow label="Tòa nhà" value={contract.building_name || "---"} />
             <View style={styles.divider} />
             <InfoRow label="Ngày bắt đầu" value={formatDate(contract.start_date)} />
             <InfoRow label="Ngày kết thúc" value={formatDate(contract.end_date)} />
