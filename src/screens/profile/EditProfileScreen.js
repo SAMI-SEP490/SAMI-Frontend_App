@@ -119,44 +119,64 @@ export default function EditProfileScreen() {
       return;
     }
 
+    // 2️⃣ Validate Age (New Logic)
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+
+    // Nếu chưa đến tháng sinh hoặc cùng tháng nhưng chưa đến ngày sinh thì giảm 1 tuổi
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+
+    if (age < 18) {
+      Alert.alert("Tuổi không hợp lệ", "Bạn phải đủ 18 tuổi để cập nhật hồ sơ.");
+      return;
+    }
+
+    if (age > 150) {
+      Alert.alert("Tuổi không hợp lệ", "Năm sinh không hợp lệ (số tuổi quá lớn).");
+      return;
+    }
+
     setLoading(true);
     try {
-        // Create FormData
-        const formData = new FormData();
-        
-        // Append fields matches updateProfileSchema
-        formData.append("full_name", name.trim());
-        formData.append("birthday", dob.toISOString());
-        formData.append("gender", gender === "Nam" ? "Male" : gender === "Nữ" ? "Female" : "Other");
-        
-        // Append Avatar if changed
-        if (newAvatarAsset) {
-            // Get filename or generate one
-            let filename = newAvatarAsset.uri.split('/').pop();
-            
-            // Infer type from extension
-            let match = /\.(\w+)$/.exec(filename);
-            let type = match ? `image/${match[1]}` : `image`;
+      // Create FormData
+      const formData = new FormData();
 
-            formData.append("avatar", {
-                uri: newAvatarAsset.uri,
-                name: filename,
-                type: type,
-            });
-        }
+      // Append fields matches updateProfileSchema
+      formData.append("full_name", name.trim());
+      formData.append("birthday", dob.toISOString());
+      formData.append("gender", gender === "Nam" ? "Male" : gender === "Nữ" ? "Female" : "Other");
 
-        // Call the new API
-        await updateProfile(formData);
+      // Append Avatar if changed
+      if (newAvatarAsset) {
+        // Get filename or generate one
+        let filename = newAvatarAsset.uri.split('/').pop();
 
-        Alert.alert("Thành công", "Thông tin đã được cập nhật!", [
-            { text: "OK", onPress: () => navigation.goBack() }
-        ]);
+        // Infer type from extension
+        let match = /\.(\w+)$/.exec(filename);
+        let type = match ? `image/${match[1]}` : `image`;
+
+        formData.append("avatar", {
+          uri: newAvatarAsset.uri,
+          name: filename,
+          type: type,
+        });
+      }
+
+      // Call the new API
+      await updateProfile(formData);
+
+      Alert.alert("Thành công", "Thông tin đã được cập nhật!", [
+        { text: "OK", onPress: () => navigation.goBack() }
+      ]);
 
     } catch (err) {
-        console.error("Update Profile Error:", err);
-        Alert.alert("Lỗi", err.message || "Không thể cập nhật thông tin.");
+      console.error("Update Profile Error:", err);
+      Alert.alert("Lỗi", err.message || "Không thể cập nhật thông tin.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
