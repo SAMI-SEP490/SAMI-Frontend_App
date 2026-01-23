@@ -6,7 +6,7 @@ import {
   Pressable,
   ActivityIndicator,
   StyleSheet,
-  TouchableOpacity,
+  TouchableOpacity
 } from "react-native";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
@@ -14,7 +14,7 @@ import {
   Ionicons,
   MaterialCommunityIcons,
   MaterialIcons,
-  FontAwesome5, // Thêm icon cho đẹp
+  FontAwesome5 // Thêm icon cho đẹp
 } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import Header from "../../components/Header";
@@ -83,10 +83,7 @@ const FEATURES = [
 // Helper format tiền tệ
 const formatCurrency = (amount) => {
   if (!amount) return "0 đ";
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(amount);
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
 export default function DashboardScreen() {
@@ -99,36 +96,27 @@ export default function DashboardScreen() {
   const [loadingBuildings, setLoadingBuildings] = useState(false);
 
   // Thêm mục 'building_info' vào FlatList data
-  const DATA = [
-    { type: "header" },
-    { type: "features" },
-    { type: "building_info" },
-    { type: "info" },
-  ];
+  const DATA = [{ type: "header" }, { type: "features" }, { type: "building_info" }, { type: "info" }];
 
   useFocusEffect(
     useCallback(() => {
       performCheck();
       fetchMyBuildings(); // Gọi hàm lấy thông tin tòa nhà
-    }, []),
+    }, [])
   );
 
   const performCheck = async () => {
     try {
       const response = await checkPendingAction();
-      if (
-        response &&
-        response.has_pending_action &&
-        response.data?.contract_id
-      ) {
+      if (response && response.has_pending_action && response.data?.contract_id) {
         const { contract_id } = response.data;
         navigation.reset({
           index: 0,
           routes: [
             {
-              name: "ContractActionScreen",
-              params: { contractId: contract_id },
-            },
+              name: 'ContractActionScreen',
+              params: { contractId: contract_id }
+            }
           ],
         });
       } else {
@@ -150,9 +138,7 @@ export default function DashboardScreen() {
       const buildings = res.data || res || [];
 
       // Chuyển object values thành array nếu backend trả về Map dạng object
-      const buildingsArray = Array.isArray(buildings)
-        ? buildings
-        : Object.values(buildings);
+      const buildingsArray = Array.isArray(buildings) ? buildings : Object.values(buildings);
 
       setMyBuildings(buildingsArray);
     } catch (error) {
@@ -194,10 +180,7 @@ export default function DashboardScreen() {
               keyExtractor={(it) => it.key}
               numColumns={3}
               scrollEnabled={false}
-              columnWrapperStyle={{
-                justifyContent: "space-between",
-                marginBottom: spacing.lg,
-              }}
+              columnWrapperStyle={{ justifyContent: "space-between", marginBottom: spacing.lg }}
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => {
@@ -212,14 +195,13 @@ export default function DashboardScreen() {
                       contract: "ContractScreen",
                       contact: "BuildingContactScreen",
                     };
-                    if (screens[item.key])
-                      navigation.navigate(screens[item.key]);
+                    if (screens[item.key]) navigation.navigate(screens[item.key]);
                   }}
                   style={({ pressed }) => ({
                     width: "30%",
                     alignItems: "center",
                     gap: 8,
-                    opacity: pressed ? 0.7 : 1,
+                    opacity: pressed ? 0.7 : 1
                   })}
                 >
                   <View style={[styles.iconBox, { backgroundColor: item.bg }]}>
@@ -235,13 +217,7 @@ export default function DashboardScreen() {
       case "building_info":
         // Nếu đang load hoặc không có dữ liệu thì không hiện hoặc hiện loading nhỏ
         if (loadingBuildings && myBuildings.length === 0) {
-          return (
-            <ActivityIndicator
-              size="small"
-              color={colors.brand}
-              style={{ marginVertical: 20 }}
-            />
-          );
+          return <ActivityIndicator size="small" color={colors.brand} style={{ marginVertical: 20 }} />;
         }
 
         if (myBuildings.length === 0) return null;
@@ -251,18 +227,11 @@ export default function DashboardScreen() {
         return (
           <View style={[styles.cardContainer, { marginTop: 16 }]}>
             {/* Header của Card: Tên tòa nhà + Nút đổi */}
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sectionTitle}>Thông tin tòa nhà</Text>
                 <Text style={styles.buildingName} numberOfLines={1}>
-                  🏢 {currentBuilding.building_name}
+                  🏢 {currentBuilding.name}
                 </Text>
               </View>
 
@@ -273,14 +242,7 @@ export default function DashboardScreen() {
                   style={styles.switchButton}
                 >
                   <Ionicons name="swap-horizontal" size={16} color="white" />
-                  <Text
-                    style={{
-                      color: "white",
-                      fontSize: 12,
-                      fontWeight: "600",
-                      marginLeft: 4,
-                    }}
-                  >
+                  <Text style={{ color: 'white', fontSize: 12, fontWeight: '600', marginLeft: 4 }}>
                     Đổi tòa ({selectedBuildingIndex + 1}/{myBuildings.length})
                   </Text>
                 </TouchableOpacity>
@@ -326,23 +288,9 @@ export default function DashboardScreen() {
   // Hiển thị loading khi đang check API
   if (isCheckingAction) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: colors.brand || "#0066CC",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
+      <View style={{ flex: 1, backgroundColor: colors.brand || '#0066CC', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="white" />
-        <Text
-          style={{
-            color: "white",
-            marginTop: 12,
-            fontWeight: "600",
-            fontSize: 16,
-          }}
-        >
+        <Text style={{ color: 'white', marginTop: 12, fontWeight: '600', fontSize: 16 }}>
           Đang kiểm tra thông tin...
         </Text>
       </View>
@@ -367,7 +315,7 @@ const InfoItem = ({ icon, color, label, value, iconLib }) => (
   <View style={styles.infoItem}>
     <View style={[styles.infoIconBox, { backgroundColor: `${color}20` }]}>
       {/* color + 20 để tạo độ mờ (opacity hex) */}
-      {iconLib === "FontAwesome5" ? (
+      {iconLib === 'FontAwesome5' ? (
         <FontAwesome5 name={icon} size={20} color={color} />
       ) : (
         <Ionicons name={icon} size={20} color={color} />
@@ -381,83 +329,84 @@ const InfoItem = ({ icon, color, label, value, iconLib }) => (
 );
 
 const styles = StyleSheet.create({
-    cardContainer: {
-        backgroundColor: "#ffffff",
-        borderRadius: 16,
-        padding: spacing.lg,
-        marginHorizontal: spacing.xl,
-        marginTop: -50, // Chỉ dùng cho cái feature đầu tiên, cái sau sẽ bị override style inline
-        zIndex: 1, // Đặt thấp hơn feature card
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-    },
-    sectionTitle: {
-        fontSize: 12,
-        fontWeight: "700",
-        color: "#6B7280",
-        marginBottom: 4,
-        textTransform: 'uppercase',
-     },
-    buildingName: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#1F2937",
-    },
-    switchButton: {
-        flexDirection: 'row',
-        backgroundColor: colors.brand || '#0066CC',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        alignItems: 'center'
-    },
-    iconBox: {
-        width: 56,
-        height: 56,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 16,
-    },
-    iconLabel: {
-        textAlign: "center",
-        fontSize: 12,
-        color: "#374151",
-    },
-    
-    // Style cho phần Info Building
-    infoGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        marginTop: 8,
-        gap: 12
-    },
-    infoItem: {
-        width: '48%', // 2 cột
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F9FAFB',
-        padding: 10,
-        borderRadius: 12,
-        gap: 10
-    },
-    infoIconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    infoLabel: {
-        fontSize: 11,
-        color: '#6B7280',
-        marginBottom: 2
-    },
-    infoValue: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#374151'
-    }
+  cardContainer: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: spacing.lg,
+    marginHorizontal: spacing.xl,
+    marginTop: -50, // Chỉ dùng cho cái feature đầu tiên, cái sau sẽ bị override style inline
+    zIndex: 1, // Đặt thấp hơn feature card
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#6B7280",
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    fontSize: 12
+  },
+  buildingName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1F2937",
+  },
+  switchButton: {
+    flexDirection: 'row',
+    backgroundColor: colors.brand || '#0066CC',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignItems: 'center'
+  },
+  iconBox: {
+    width: 56,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+  },
+  iconLabel: {
+    textAlign: "center",
+    fontSize: 12,
+    color: "#374151",
+  },
+
+  // Style cho phần Info Building
+  infoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    gap: 12
+  },
+  infoItem: {
+    width: '48%', // 2 cột
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    padding: 10,
+    borderRadius: 12,
+    gap: 10
+  },
+  infoIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 2
+  },
+  infoValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151'
+  }
 });
