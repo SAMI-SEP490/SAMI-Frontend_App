@@ -229,6 +229,13 @@ export default function BillListScreen() {
             </Text>
           </View>
 
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Hạn thanh toán:</Text>
+            <Text style={[styles.detailValue, item.status === 'overdue' && { color: '#DC2626' }]}>
+              {new Date(item.due_date).toLocaleDateString('vi-VN')}
+            </Text>
+          </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Tổng tiền:</Text>
             <Text style={styles.value}>{totalDue.toLocaleString('vi-VN')} đ</Text>
@@ -258,12 +265,25 @@ export default function BillListScreen() {
               </View>
             )}
 
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Hạn thanh toán:</Text>
-              <Text style={[styles.detailValue, item.status === 'overdue' && { color: '#DC2626' }]}>
-                {new Date(item.due_date).toLocaleDateString('vi-VN')}
+            <View style={styles.row}>
+              <Text style={styles.label}>Ngày tạo:</Text>
+              <Text style={styles.value}>
+                {new Date(item.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </Text>
             </View>
+
+            {item.updated_at && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Ngày cập nhật:</Text>
+                <Text style={styles.detailValue}>
+                  {new Date(item.updated_at).toLocaleDateString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })}
+                </Text>
+              </View>
+            )}
 
             {/* Service Charges List */}
             {item.service_charges && item.service_charges.length > 0 && (
