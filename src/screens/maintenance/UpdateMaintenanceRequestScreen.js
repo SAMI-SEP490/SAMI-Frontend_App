@@ -140,6 +140,16 @@ const UpdateMaintenanceRequestScreen = () => {
       >
         <ScrollView contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
           
+          {/* Banner Thông tin phòng (Read-only) */}
+          <View style={styles.roomBanner}>
+             <Ionicons name="home" size={18} color={colors.brand} />
+             <Text style={styles.roomText}>
+                {requestData?.room_number 
+                  ? `Phòng ${requestData.room_number} - ${requestData.building_name || "Tòa nhà"}`
+                  : "Thông tin phòng không có sẵn"}
+             </Text>
+          </View>
+
           <View style={styles.card}>
             <Text style={styles.statusLabel}>
                 Trạng thái: <Text style={{fontWeight: 'bold', color: colors.brand}}>{statusLabel}</Text>
@@ -231,6 +241,21 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl + 24,
   },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  
+  // Room Banner Style (Copy từ Create Screen sang cho đồng bộ)
+  roomBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+  },
+  roomText: { fontSize: 14, color: "#1E40AF", fontWeight: "600" },
+
   card: {
     backgroundColor: "white",
     borderRadius: 16,
