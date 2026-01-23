@@ -198,6 +198,12 @@ export default function GuestRegistrationListScreen() {
 
         {/* Details */}
         <View style={styles.row}>
+          <Text style={styles.label}>Số phòng:</Text>
+          <Text style={styles.value}>
+            {item.room?.room_number || item.room_number || "N/A"}
+          </Text>
+        </View>
+        <View style={styles.row}>
           <Text style={styles.label}>Số lượng:</Text>
           <Text style={styles.value}>{item.guest_count} người</Text>
         </View>
