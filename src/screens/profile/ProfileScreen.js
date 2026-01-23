@@ -85,7 +85,13 @@ export default function ProfileScreen() {
         if (!data) return;
 
         setTenantInfo(data.tenant_info || null);
-        setRoomInfo(data.current_room || null);
+        if (Array.isArray(data.rooms)) {
+          setRooms(data.rooms);
+        } else if (data.current_room) {
+          setRooms([data.current_room]);
+        } else {
+          setRooms([]);
+        }
       }
     } catch (e) {
       console.log("Profile Fetch Error:", e);
@@ -165,30 +171,52 @@ export default function ProfileScreen() {
             <InfoRow label="Email" value={user?.email} />
             <InfoRow label="Số điện thoại" value={user?.phone} />
           </Section>
+          <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+            <Text style={styles.sectionTitle}>Thông tin cư trú ({rooms.length})</Text>
+          </View>
 
-          {/* Residence Info */}
-          <Section title="Thông tin cư trú">
-            <InfoRow label="Tòa nhà" value={roomInfo?.building_name} />
-            <InfoRow label="Địa chỉ" value={roomInfo?.building_address} />
-            <InfoRow
-              label="Phòng"
-              value={roomInfo?.room_number ? `P.${roomInfo.room_number}` : null}
-            />
-            <InfoRow
-              label="Tầng"
-              value={
-                roomInfo?.floor !== undefined ? `Tầng ${roomInfo.floor}` : null
-              }
-            />
-            <InfoRow
-              label="Diện tích"
-              value={roomInfo?.size ? `${roomInfo.size} m²` : null}
-            />
-            <InfoRow
-              label="Trạng thái"
-              value={mapRoomStatus(roomInfo?.status)}
-            />
-          </Section>
+          {rooms && rooms.length > 0 ? (
+              rooms.map((room, index) => (
+                  <View key={index} style={styles.roomContainer}>
+                    {/* Badge Vai trò */}
+                    <View style={styles.roomHeader}>
+                      <Text style={styles.roomTitle}>
+                        {room.building_name} - P.{room.room_number}
+                      </Text>
+                      <View style={[
+                        styles.residenceBadge,
+                        room.role === 'Primary' ? { backgroundColor: '#DCFCE7' } : { backgroundColor: '#DBEAFE' }
+                      ]}>
+                        <Text style={[
+                          styles.residenceText,
+                          room.role === 'Primary' ? { color: '#16A34A' } : { color: '#2563EB' }
+                        ]}>
+                          {room.role === 'Primary' ? 'Chủ HĐ' : 'Thành viên'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <InfoRow label="Địa chỉ" value={room.building_address} />
+                    <InfoRow
+                        label="Tầng"
+                        value={room.floor !== undefined ? `Tầng ${room.floor}` : null}
+                    />
+                    {/* Chỉ hiện diện tích nếu là Primary để tránh rối mắt, hoặc hiện cả 2 tùy bạn */}
+                    <InfoRow
+                        label="Diện tích"
+                        value={room.size ? `${room.size} m²` : null}
+                    />
+                    <InfoRow
+                        label="Ngày vào ở"
+                        value={formatDate(room.moved_in_at)}
+                    />
+                  </View>
+              ))
+          ) : (
+              <Text style={{textAlign: 'center', color: '#6B7280', marginVertical: 10, fontStyle: 'italic'}}>
+                Chưa có thông tin phòng
+              </Text>
+          )}
 
           {/* Actions */}
           <View style={styles.buttonRow}>
