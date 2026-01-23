@@ -144,7 +144,11 @@ export default function ContractActionScreen() {
                 { text: "Hủy", style: "cancel" },
                 {
                     text: "Từ chối", onPress: async () => {
-                        try { setSubmitting(true); await respondToTermination(contractId, 'reject'); navigation.goBack(); }
+                        try { setSubmitting(true); await respondToTermination(contractId, 'reject'); if (navigation.canGoBack()) {
+                            navigation.goBack();
+                        } else {
+                            navigation.navigate("DashboardScreen");
+                        } }
                         catch (error) { Alert.alert("Lỗi", error.message); } finally { setSubmitting(false); }
                     }
                 }
