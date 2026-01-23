@@ -42,8 +42,10 @@ const priorityLevels = [
 const CreateMaintenanceRequestScreen = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
+
+  // [UPDATE] State để quản lý danh sách phòng
+  const [myRooms, setMyRooms] = useState([]);
   const [roomId, setRoomId] = useState(null);
-  const [roomInfo, setRoomInfo] = useState({});
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -58,44 +60,56 @@ const CreateMaintenanceRequestScreen = () => {
       try {
         const userId = user?.id || user?.user_id;
         if (!userId) return;
-        console.log("User ID:", userId);
 
         const roomRes = await getRoomsByUserId(userId);
-        console.log("Room API Response:", roomRes);
 
-        // 🟢 Lấy phòng hiện tại từ current_room
-        let currentRoom = roomRes?.data?.current_room || null;
-        console.log("Current Room from API:", currentRoom);
+        // --- LOGIC MỚI: Lấy tất cả phòng active ---
+        // Backend `getRoomsByUserId` trả về: { current_room, contract_history, ... }
+        // Hoặc có thể backend đã update để trả về danh sách các phòng đang ở.
+        // Dựa vào code backend bạn gửi (room.service.js -> getRoomsByUserId), nó trả về `current_room` (object) 
+        // VÀ `contract_history` (array).
+        // Tuy nhiên, logic backend hiện tại `findFirst` ở `currentRoom` chỉ lấy 1 phòng.
+        // Để hỗ trợ nhiều phòng, backend cần sửa `findFirst` thành `findMany`.
+        // NHƯNG, giả sử backend VẪN CHỈ TRẢ VỀ `current_room` là 1 object, 
+        // ta tạm thời xử lý theo những gì API trả về.
 
-        // Fallback sang contract_history nếu current_room null
-        if (!currentRoom && roomRes?.data?.contract_history?.length > 0) {
-          // Flatten contract_history (nếu nó là mảng 2 chiều)
-          const allContracts = roomRes.data.contract_history.flat();
-          // Lấy contract active
-          const activeContract = allContracts.find(
-            (c) => c.status === "active"
-          );
-          currentRoom = activeContract?.room || null;
-          console.log(
-            "Fallback Current Room from contract_history:",
-            currentRoom
-          );
+        // Nếu bạn muốn hỗ trợ nhiều phòng, API backend `getRoomsByUserId` cần trả về `current_rooms` (array).
+        // Dựa trên code cũ bạn cung cấp, ta sẽ cố gắng lấy từ `current_room` và `contract_history` (lọc active).
+
+        let roomsList = [];
+
+        // 1. Phòng hiện tại (Primary)
+        if (roomRes?.data?.current_room) {
+          roomsList.push(roomRes.data.current_room);
         }
 
-        if (currentRoom) {
-          setRoomId(currentRoom.room_id);
-          setRoomInfo({
-            ...currentRoom,
-            building_name:
-              currentRoom.building_name || currentRoom.building?.name || "",
+        // 2. Các phòng khác từ lịch sử (Active Contract)
+        if (roomRes?.data?.contract_history && Array.isArray(roomRes.data.contract_history)) {
+          const activeContracts = roomRes.data.contract_history.flat().filter(c => c.status === 'active');
+          activeContracts.forEach(c => {
+            // Tránh duplicate nếu current_room đã có
+            if (!roomsList.find(r => r.room_id === c.room.room_id)) {
+              roomsList.push({
+                room_id: c.room.room_id,
+                room_number: c.room.room_number,
+                building_name: c.room.building_name || "Tòa nhà"
+              });
+            }
           });
-          console.log("Set Current Room:", currentRoom);
-        } else {
-          Alert.alert(
-            "Thông báo",
-            "Tài khoản của bạn chưa được gán vào phòng nào."
-          );
         }
+
+        setMyRooms(roomsList);
+
+        // Auto-select nếu chỉ có 1 phòng
+        if (roomsList.length === 1) {
+          setRoomId(roomsList[0].room_id);
+        } else if (roomsList.length > 1) {
+          // Nếu nhiều phòng, có thể set default là phòng đầu tiên hoặc để null bắt user chọn
+          setRoomId(roomsList[0].room_id);
+        } else {
+          Alert.alert("Thông báo", "Bạn chưa có phòng nào đang thuê.");
+        }
+
       } catch (err) {
         console.error("Room Init Error:", err);
         Alert.alert("Lỗi", "Không thể lấy thông tin phòng.");
@@ -107,14 +121,11 @@ const CreateMaintenanceRequestScreen = () => {
 
   const handleSubmit = async () => {
     if (!title || !description || !category) {
-      Alert.alert(
-        "Thiếu thông tin",
-        "Vui lòng điền đầy đủ thông tin bắt buộc."
-      );
+      Alert.alert("Thiếu thông tin", "Vui lòng điền đầy đủ thông tin bắt buộc.");
       return;
     }
     if (!roomId) {
-      Alert.alert("Lỗi", "Không tìm thấy thông tin phòng của bạn.");
+      Alert.alert("Lỗi", "Vui lòng chọn phòng cần bảo trì.");
       return;
     }
 
@@ -143,6 +154,9 @@ const CreateMaintenanceRequestScreen = () => {
     }
   };
 
+  // Helper tìm tên phòng đang chọn để hiển thị Banner (nếu chỉ có 1 phòng)
+  const selectedRoomInfo = myRooms.find(r => r.room_id === roomId);
+
   return (
     <View style={styles.container}>
       <Header title="Tạo yêu cầu" isHome={false} />
@@ -155,25 +169,43 @@ const CreateMaintenanceRequestScreen = () => {
           contentContainerStyle={{ paddingBottom: 60 }}
           showsVerticalScrollIndicator={false}
         >
-          {roomInfo.room_number ? (
-            <View style={styles.roomBanner}>
-              <Ionicons name="home" size={18} color={colors.brand} />
-              <Text style={styles.roomText}>
-                Phòng {roomInfo.room_number} - {roomInfo.building_name}
-              </Text>
+          {/* [UPDATE] LOGIC HIỂN THỊ PHÒNG */}
+          {myRooms.length > 1 ? (
+            // Nếu có nhiều phòng -> Hiển thị Dropdown chọn
+            <View style={styles.roomSelectContainer}>
+              <Text style={styles.label}>Chọn phòng cần bảo trì <Text style={{ color: 'red' }}>*</Text></Text>
+              <View style={styles.pickerWrapper}>
+                <RNPickerSelect
+                  onValueChange={(value) => setRoomId(value)}
+                  value={roomId}
+                  items={myRooms.map(r => ({
+                    label: `P.${r.room_number} - ${r.building_name}`,
+                    value: r.room_id
+                  }))}
+                  placeholder={{ label: "Chọn phòng...", value: null, color: '#9CA3AF' }}
+                  style={pickerSelectStyles}
+                  useNativeAndroidPickerStyle={false}
+                  Icon={() => <Ionicons name="chevron-down" size={20} color="#9CA3AF" style={{ marginTop: 12, marginRight: 10 }} />}
+                />
+              </View>
             </View>
           ) : (
-            <View
-              style={[
-                styles.roomBanner,
-                { borderColor: "#EF4444", backgroundColor: "#FEF2F2" },
-              ]}
-            >
-              <Ionicons name="alert-circle" size={18} color="#EF4444" />
-              <Text style={[styles.roomText, { color: "#EF4444" }]}>
-                Chưa có thông tin phòng
-              </Text>
-            </View>
+            // Nếu chỉ có 1 phòng (hoặc 0) -> Hiển thị Banner tĩnh như cũ
+            selectedRoomInfo ? (
+              <View style={styles.roomBanner}>
+                <Ionicons name="home" size={18} color={colors.brand} />
+                <Text style={styles.roomText}>
+                  Phòng {selectedRoomInfo.room_number} - {selectedRoomInfo.building_name}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.roomBanner, { borderColor: "#EF4444", backgroundColor: "#FEF2F2" }]}>
+                <Ionicons name="alert-circle" size={18} color="#EF4444" />
+                <Text style={[styles.roomText, { color: "#EF4444" }]}>
+                  Chưa có thông tin phòng
+                </Text>
+              </View>
+            )
           )}
 
           <View style={styles.card}>
@@ -291,6 +323,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xl + 24,
   },
+
+  // Style cho Select Room khi có nhiều phòng
+  roomSelectContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
+  },
+
   roomBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -303,6 +345,7 @@ const styles = StyleSheet.create({
     borderColor: "#DBEAFE",
   },
   roomText: { fontSize: 14, color: "#1E40AF", fontWeight: "600" },
+
   card: {
     backgroundColor: "white",
     borderRadius: 16,
