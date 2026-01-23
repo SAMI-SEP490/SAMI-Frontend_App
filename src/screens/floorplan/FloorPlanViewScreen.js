@@ -221,7 +221,8 @@ function FloorPlanCanvas({ layout }) {
           }
 
           // default: block (Phòng)
-          const label = data.label || "Phòng";
+          // ✅ ưu tiên room_number (web đang lưu ở data.room_number)
+          const label = data.room_number || data.label || "Phòng";
           const borderColor = data.color || "#1e40af";
 
           return (
