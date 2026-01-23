@@ -55,7 +55,9 @@ export default function ProfileScreen() {
 
   const [user, setUser] = useState(null);
   const [tenantInfo, setTenantInfo] = useState(null);
-  const [roomInfo, setRoomInfo] = useState(null);
+
+  // 🔥 FIX 1: Đổi tên state từ roomInfo thành rooms và khởi tạo là mảng rỗng []
+  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async () => {
@@ -78,13 +80,13 @@ export default function ProfileScreen() {
       /* 2. Get tenant + room info */
       if (u?.user_id) {
         const response = await getRoomsByUserId(u.user_id);
+        const data = response?.data || response; // Handle data wrapper if needed
 
-        console.log("Fetched Rooms:", response);
-
-        const data = response?.data;
         if (!data) return;
 
         setTenantInfo(data.tenant_info || null);
+
+        // Logic set rooms
         if (Array.isArray(data.rooms)) {
           setRooms(data.rooms);
         } else if (data.current_room) {
@@ -96,8 +98,8 @@ export default function ProfileScreen() {
     } catch (e) {
       console.log("Profile Fetch Error:", e);
       Alert.alert(
-        "Lỗi",
-        e?.response?.data?.message || e.message || "Không tải được hồ sơ"
+          "Lỗi",
+          e?.response?.data?.message || e.message || "Không tải được hồ sơ"
       );
     } finally {
       setLoading(false);
@@ -106,9 +108,9 @@ export default function ProfileScreen() {
 
   /* Reload when screen focus */
   useFocusEffect(
-    useCallback(() => {
-      fetchProfile();
-    }, [])
+      useCallback(() => {
+        fetchProfile();
+      }, [])
   );
 
   /* =====================
@@ -116,12 +118,12 @@ export default function ProfileScreen() {
    * ===================== */
   if (loading && !user) {
     return (
-      <View style={styles.container}>
-        <Header title="Hồ sơ cá nhân" isHome={false} />
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color="white" />
+        <View style={styles.container}>
+          <Header title="Hồ sơ cá nhân" isHome={false} />
+          <View style={styles.centerBox}>
+            <ActivityIndicator size="large" color="white" />
+          </View>
         </View>
-      </View>
     );
   }
 
@@ -129,113 +131,113 @@ export default function ProfileScreen() {
    * Render
    * ===================== */
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="transparent"
-        translucent
-      />
+      <View style={styles.container}>
+        <StatusBar
+            barStyle="light-content"
+            backgroundColor="transparent"
+            translucent
+        />
 
-      <Header title="Hồ sơ cá nhân" isHome={false} />
+        <Header title="Hồ sơ cá nhân" isHome={false} />
 
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.card}>
-          {/* Avatar */}
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{
-                uri: user?.avatar_url || "https://placehold.co/120x120",
-              }}
-              style={styles.avatar}
-            />
-            <Text style={styles.userName}>{user?.full_name || user?.name}</Text>
-            <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>Tenant</Text>
+        <ScrollView
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card}>
+            {/* Avatar */}
+            <View style={styles.avatarContainer}>
+              <Image
+                  source={{
+                    uri: user?.avatar_url || "https://placehold.co/120x120",
+                  }}
+                  style={styles.avatar}
+              />
+              <Text style={styles.userName}>{user?.full_name || user?.name}</Text>
+              <View style={styles.roleBadge}>
+                <Text style={styles.roleText}>Tenant</Text>
+              </View>
+            </View>
+
+            {/* Basic Info */}
+            <Section title="Thông tin cơ bản">
+              <InfoRow
+                  label="Ngày tham gia"
+                  value={formatDate(tenantInfo?.tenant_since)}
+              />
+              <InfoRow label="CCCD / CMND" value={tenantInfo?.id_number} />
+            </Section>
+
+            {/* Contact Info */}
+            <Section title="Thông tin liên hệ">
+              <InfoRow label="Email" value={user?.email} />
+              <InfoRow label="Số điện thoại" value={user?.phone} />
+            </Section>
+
+            <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+              <Text style={styles.sectionTitle}>Thông tin cư trú ({rooms.length})</Text>
+            </View>
+
+            {rooms && rooms.length > 0 ? (
+                rooms.map((room, index) => (
+                    <View key={index} style={styles.roomContainer}>
+                      {/* Badge Vai trò */}
+                      <View style={styles.roomHeader}>
+                        <Text style={styles.roomTitle}>
+                          {room.building_name} - P.{room.room_number}
+                        </Text>
+                        <View style={[
+                          styles.residenceBadge,
+                          room.role === 'Primary' ? { backgroundColor: '#DCFCE7' } : { backgroundColor: '#DBEAFE' }
+                        ]}>
+                          <Text style={[
+                            styles.residenceText,
+                            room.role === 'Primary' ? { color: '#16A34A' } : { color: '#2563EB' }
+                          ]}>
+                            {room.role === 'Primary' ? 'Chủ HĐ' : 'Thành viên'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <InfoRow label="Địa chỉ" value={room.building_address} />
+                      <InfoRow
+                          label="Tầng"
+                          value={room.floor !== undefined ? `Tầng ${room.floor}` : null}
+                      />
+                      <InfoRow
+                          label="Diện tích"
+                          value={room.size ? `${room.size} m²` : null}
+                      />
+                      <InfoRow
+                          label="Ngày vào ở"
+                          value={formatDate(room.moved_in_at)}
+                      />
+                    </View>
+                ))
+            ) : (
+                <Text style={{textAlign: 'center', color: '#6B7280', marginVertical: 10, fontStyle: 'italic'}}>
+                  Chưa có thông tin phòng
+                </Text>
+            )}
+
+            {/* Actions */}
+            <View style={styles.buttonRow}>
+              <Button
+                  title="Đổi mật khẩu"
+                  variant="outline"
+                  onPress={() => navigation.navigate("ChangePasswordScreen")}
+                  style={styles.outlineBtn}
+                  textStyle={{ color: colors.brand }}
+              />
+              <Button
+                  title="Chỉnh sửa"
+                  onPress={() => navigation.navigate("EditProfile", { user })}
+                  style={styles.filledBtn}
+              />
             </View>
           </View>
-
-          {/* Basic Info */}
-          <Section title="Thông tin cơ bản">
-            <InfoRow
-              label="Ngày bắt đầu thuê"
-              value={formatDate(tenantInfo?.tenant_since)}
-            />
-            <InfoRow label="CCCD / CMND" value={tenantInfo?.id_number} />
-          </Section>
-
-          {/* Contact Info */}
-          <Section title="Thông tin liên hệ">
-            <InfoRow label="Email" value={user?.email} />
-            <InfoRow label="Số điện thoại" value={user?.phone} />
-          </Section>
-          <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-            <Text style={styles.sectionTitle}>Thông tin cư trú ({rooms.length})</Text>
-          </View>
-
-          {rooms && rooms.length > 0 ? (
-              rooms.map((room, index) => (
-                  <View key={index} style={styles.roomContainer}>
-                    {/* Badge Vai trò */}
-                    <View style={styles.roomHeader}>
-                      <Text style={styles.roomTitle}>
-                        {room.building_name} - P.{room.room_number}
-                      </Text>
-                      <View style={[
-                        styles.residenceBadge,
-                        room.role === 'Primary' ? { backgroundColor: '#DCFCE7' } : { backgroundColor: '#DBEAFE' }
-                      ]}>
-                        <Text style={[
-                          styles.residenceText,
-                          room.role === 'Primary' ? { color: '#16A34A' } : { color: '#2563EB' }
-                        ]}>
-                          {room.role === 'Primary' ? 'Chủ HĐ' : 'Thành viên'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <InfoRow label="Địa chỉ" value={room.building_address} />
-                    <InfoRow
-                        label="Tầng"
-                        value={room.floor !== undefined ? `Tầng ${room.floor}` : null}
-                    />
-                    {/* Chỉ hiện diện tích nếu là Primary để tránh rối mắt, hoặc hiện cả 2 tùy bạn */}
-                    <InfoRow
-                        label="Diện tích"
-                        value={room.size ? `${room.size} m²` : null}
-                    />
-                    <InfoRow
-                        label="Ngày vào ở"
-                        value={formatDate(room.moved_in_at)}
-                    />
-                  </View>
-              ))
-          ) : (
-              <Text style={{textAlign: 'center', color: '#6B7280', marginVertical: 10, fontStyle: 'italic'}}>
-                Chưa có thông tin phòng
-              </Text>
-          )}
-
-          {/* Actions */}
-          <View style={styles.buttonRow}>
-            <Button
-              title="Đổi mật khẩu"
-              variant="outline"
-              onPress={() => navigation.navigate("ChangePasswordScreen")}
-              style={styles.outlineBtn}
-              textStyle={{ color: colors.brand }}
-            />
-            <Button
-              title="Chỉnh sửa"
-              onPress={() => navigation.navigate("EditProfile", { user })}
-              style={styles.filledBtn}
-            />
-          </View>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
   );
 }
 
@@ -244,21 +246,21 @@ export default function ProfileScreen() {
  * ===================== */
 function Section({ title, children }) {
   return (
-    <>
-      <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-      <View style={styles.infoContainer}>{children}</View>
-    </>
+      <>
+        <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        <View style={styles.infoContainer}>{children}</View>
+      </>
   );
 }
 
 function InfoRow({ label, value }) {
   return (
-    <View style={styles.infoRow}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value || "---"}</Text>
-    </View>
+      <View style={styles.infoRow}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.value}>{value || "---"}</Text>
+      </View>
   );
 }
 
@@ -371,4 +373,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.brand,
   },
+
+  // 🔥 FIX 2: Thêm styles cho Room List (Phần này trước bị thiếu)
+  roomContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
+  },
+  roomHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  roomTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827'
+  },
+  residenceBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  residenceText: {
+    fontSize: 11,
+    fontWeight: '700'
+  }
 });
