@@ -4,7 +4,7 @@
     "slug": "SAMI",
     "scheme": "sami",
     "extra": {
-      "apiUrl": "http://192.168.88.168:3000/api"
+      "apiUrl": "https://sami-backend-production.eastasia.cloudapp.azure.com/api"
     },
     "version": "1.0.0",
     "orientation": "portrait",
