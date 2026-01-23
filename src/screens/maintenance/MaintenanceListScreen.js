@@ -59,43 +59,37 @@ const MaintenanceListScreen = () => {
 
   const fetchMaintenanceData = async () => {
     try {
-      if(!refreshing) setLoading(true);
+      if (!refreshing) setLoading(true);
       const userId = user?.id || user?.user_id;
       if (!userId) return;
 
       const roomRes = await getRoomsByUserId(userId);
-      
-      // Lấy danh sách ID các phòng active
+      const data = roomRes.data || roomRes;
+
       let targetRoomIds = [];
-      
-      // 1. Current Room
-      if (roomRes?.data?.current_room) {
-          targetRoomIds.push({
-              id: roomRes.data.current_room.room_id,
-              name: roomRes.data.current_room.room_number,
-              building: roomRes.data.current_room.building_name
-          });
+
+      // [FIX] Lấy từ mảng 'rooms' (logic mới)
+      if (data.rooms && Array.isArray(data.rooms)) {
+        targetRoomIds = data.rooms.map(r => ({
+          id: r.room_id,
+          name: r.room_number,
+          building: r.building_name
+        }));
       }
-      
-      // 2. Contract History (Active)
-      if (roomRes?.data?.contract_history) {
-          const activeContracts = roomRes.data.contract_history.flat().filter(c => c.status === 'active');
-          activeContracts.forEach(c => {
-             if (!targetRoomIds.find(t => t.id === c.room.room_id)) {
-                 targetRoomIds.push({
-                     id: c.room.room_id,
-                     name: c.room.room_number,
-                     building: c.room.building_name
-                 });
-             }
-          });
+      // Fallback logic cũ
+      else if (data.current_room) {
+        targetRoomIds.push({
+          id: data.current_room.room_id,
+          name: data.current_room.room_number,
+          building: data.current_room.building_name
+        });
       }
 
       if (targetRoomIds.length === 0) {
-          setMaintenanceData([]);
-          setFilteredData([]);
-          setLoading(false);
-          return;
+        setMaintenanceData([]);
+        setFilteredData([]);
+        setLoading(false);
+        return;
       }
 
       // Gọi API lấy history cho TẤT CẢ các phòng (Parallel)
