@@ -62,52 +62,39 @@ const CreateMaintenanceRequestScreen = () => {
         if (!userId) return;
 
         const roomRes = await getRoomsByUserId(userId);
-
-        // --- LOGIC MỚI: Lấy tất cả phòng active ---
-        // Backend `getRoomsByUserId` trả về: { current_room, contract_history, ... }
-        // Hoặc có thể backend đã update để trả về danh sách các phòng đang ở.
-        // Dựa vào code backend bạn gửi (room.service.js -> getRoomsByUserId), nó trả về `current_room` (object) 
-        // VÀ `contract_history` (array).
-        // Tuy nhiên, logic backend hiện tại `findFirst` ở `currentRoom` chỉ lấy 1 phòng.
-        // Để hỗ trợ nhiều phòng, backend cần sửa `findFirst` thành `findMany`.
-        // NHƯNG, giả sử backend VẪN CHỈ TRẢ VỀ `current_room` là 1 object, 
-        // ta tạm thời xử lý theo những gì API trả về.
-
-        // Nếu bạn muốn hỗ trợ nhiều phòng, API backend `getRoomsByUserId` cần trả về `current_rooms` (array).
-        // Dựa trên code cũ bạn cung cấp, ta sẽ cố gắng lấy từ `current_room` và `contract_history` (lọc active).
-
+        
+        // [FIX] Lấy danh sách phòng từ field 'rooms' (theo logic backend mới)
+        // API trả về: { user_id, rooms: [...], contract_history: [...] }
+        // Unwrap trả về data trực tiếp hoặc trong .data tùy interceptor
+        const data = roomRes.data || roomRes; 
+        
         let roomsList = [];
 
-        // 1. Phòng hiện tại (Primary)
-        if (roomRes?.data?.current_room) {
-          roomsList.push(roomRes.data.current_room);
+        // 1. Lấy từ mảng 'rooms' (Danh sách phòng đang ở)
+        if (data.rooms && Array.isArray(data.rooms)) {
+            roomsList = data.rooms.map(r => ({
+                room_id: r.room_id,
+                room_number: r.room_number,
+                building_name: r.building_name || "Tòa nhà"
+            }));
+        }
+        // Fallback: Nếu backend chưa update kịp mà vẫn trả current_room
+        else if (data.current_room) {
+            roomsList.push({
+                room_id: data.current_room.room_id,
+                room_number: data.current_room.room_number,
+                building_name: data.current_room.building_name
+            });
         }
 
-        // 2. Các phòng khác từ lịch sử (Active Contract)
-        if (roomRes?.data?.contract_history && Array.isArray(roomRes.data.contract_history)) {
-          const activeContracts = roomRes.data.contract_history.flat().filter(c => c.status === 'active');
-          activeContracts.forEach(c => {
-            // Tránh duplicate nếu current_room đã có
-            if (!roomsList.find(r => r.room_id === c.room.room_id)) {
-              roomsList.push({
-                room_id: c.room.room_id,
-                room_number: c.room.room_number,
-                building_name: c.room.building_name || "Tòa nhà"
-              });
-            }
-          });
-        }
-
+        console.log("Found Rooms:", roomsList);
         setMyRooms(roomsList);
 
-        // Auto-select nếu chỉ có 1 phòng
-        if (roomsList.length === 1) {
-          setRoomId(roomsList[0].room_id);
-        } else if (roomsList.length > 1) {
-          // Nếu nhiều phòng, có thể set default là phòng đầu tiên hoặc để null bắt user chọn
-          setRoomId(roomsList[0].room_id);
+        // Auto-select
+        if (roomsList.length > 0) {
+            setRoomId(roomsList[0].room_id);
         } else {
-          Alert.alert("Thông báo", "Bạn chưa có phòng nào đang thuê.");
+             Alert.alert("Thông báo", "Bạn chưa có phòng nào đang thuê.");
         }
 
       } catch (err) {
